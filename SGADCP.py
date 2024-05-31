@@ -103,11 +103,19 @@ def main() -> int:
             continue
         ds.set_auto_mask(False)
 
+        # Read real-time and adcp_raw (if present)
         try:
-            sg_data, micro_data = ADCPFiles.ADCPReadSGNCF(ds, ncf_name)
+            sg_data, adcp_data = ADCPFiles.ADCPReadSGNCF(ds, ncf_name)
         except Exception:
             log_error("Failed to read {ncf_name}", "exc")
-        log_info(sg_data)
+            continue
+
+        try:
+            ADCPRealtime.ConvertToGlider(sg_data)
+        except:
+            log_error("Failed to converting to glider frame {ncf_name}", "exc")
+
+            continue
 
         ### Read input files
 

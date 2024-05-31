@@ -46,20 +46,24 @@ from ADCPLog import log_error
 
 @dataclass
 class SGData(ExtendedDataClass.ExtendedDataClass):
-    temperature: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
-    temperature_qc: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
-    ctd_depth: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
-    ctd_time: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
-    salinity: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
-    salinity_qc: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
-    latitude: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
-    longitude: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
-    speed: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
-    speed_gsm: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
-    speed_qc: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
-    depth_avg_curr_east: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
-    depth_avg_curr_north: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
-    dive: float = 0
+    # temperature: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
+    # temperature_qc: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
+    # ctd_depth: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
+    # ctd_time: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
+    # salinity: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
+    # salinity_qc: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
+    # latitude: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
+    # longitude: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
+    # speed: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
+    # speed_gsm: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
+    # speed_qc: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
+    # depth_avg_curr_east: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
+    # depth_avg_curr_north: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
+    # dive: float = 0
+    VelENU: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
+    Pitch: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
+    Roll: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
+    Heading: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
 
 
 @dataclass
@@ -70,17 +74,23 @@ class ADCPData(ExtendedDataClass.ExtendedDataClass):
 def ADCPReadSGNCF(ds: netCDF4.Dataset, ncf_name: pathlib.Path) -> Tuple[SGData, ADCPData] | Tuple[None, None]:
     sg_data = SGData()
     adcp_data = ADCPData()
-    for k, v in sg_data.items():
-        if isinstance(v, np.ndarray):
-            try:
-                sg_data[k] = ds.variables[k][:]
-            except Exception:
-                log_error(f"Failed to load {k}", "exc")
-                return (None, None)
-            if k.endswith("_qc"):
-                sg_data[k] = np.array(list(map(ord, sg_data[k])), np.float64) - ord("0")
-        elif k == "dive":
-            sg_data[k] = ds.variables["trajectory"][0]
-        else:
-            log_error(f"Don't know how to handle {k}")
+    sg_data.VelENU = np.array([ds.variables[f"ad2cp_vel{ii}"][:] for ii in ("X", "Y", "Z")])
+    sg_data.VelXYZ = sg_data.VelENU * np.nan
+    sg_data.Pitch = dsi.variables["ad2cp_pitch"][:]
+    sg_data.Roll = dsi.variables["ad2cp_roll"][:]
+    sg_data.Heading = dsi.variables["ad2cp_heading"][:]
+
+    # for k, v in sg_data.items():
+    #     if isinstance(v, np.ndarray):
+    #         try:
+    #             sg_data[k] = ds.variables[k][:]
+    #         except Exception:
+    #             log_error(f"Failed to load {k}", "exc")
+    #             return (None, None)
+    #         if k.endswith("_qc"):
+    #             sg_data[k] = np.array(list(map(ord, sg_data[k])), np.float64) - ord("0")
+    #     elif k == "dive":
+    #         sg_data[k] = ds.variables["trajectory"][0]
+    #     else:
+    #         log_error(f"Don't know how to handle {k}")
     return (sg_data, adcp_data)
