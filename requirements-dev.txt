@@ -1,0 +1,18 @@
+-r requirements.txt
+#
+# Development related
+## Static Typing
+mypy
+types-PyYAML
+## Testing
+pytest
+pytest-cov
+## Documentation (fill in)
+mkdocs
+mkdocstrings[python]
+mkdocs-material
+## Linting
+ruff
+## Misc
+ipython
+flynt

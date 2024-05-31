@@ -1,0 +1,8 @@
+# Application
+# Note - these apply to the project being run stand-alone
+# When running via the Seaglider Basestation extension, the requirements.txt for the project
+# should be used.
+numpy>=1.19.1,<2
+scipy>=1.9.0
+gsw==3.6.16
+netCDF4>=1.5.8

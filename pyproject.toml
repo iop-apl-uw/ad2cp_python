@@ -1,0 +1,43 @@
+[tool.mypy]
+plugins = ['numpy.typing.mypy_plugin']
+# This only applies to the basestation extension being checked
+mypy_path = '..'
+files = ['SGADCPStructure.py','ExtendedDataClass.py','ADCPUtils.py','ADCPLog.py','ADCPOpts.py','ADCPConfig.py']
+strict = true
+
+# Much of the numerical computing stack doesn't have type annotations yet.
+[[tool.mypy.overrides]]
+ignore_missing_imports = true
+module = [
+    "gsw.*",
+    "seawater.*",
+    "netCDF4.*",
+    "scipy.*",
+]
+
+[tool.pytest.ini_options]
+pythonpath = "."
+
+[tool.ruff]
+line-length = 120
+output-format = 'pylint'
+
+[tool.ruff.lint]
+select = [
+    # pycodestyle
+    "E",
+    # Pyflakes
+    "F",
+    # pyupgrade
+    "UP",
+    # flake8-bugbear
+    "B",
+    # flake8-simplify
+    "SIM",
+    # isort
+    "I",
+]
+ignore = [
+  # redundant-open-modes
+  "UP015",
+]
