@@ -44,6 +44,7 @@ import netCDF4
 import ADCPConfig
 import ADCPFiles
 import ADCPOpts
+import ADCPRealtime
 import ADCPUtils
 from ADCPLog import ADCPLogger, log_critical, log_debug, log_error, log_info
 
@@ -105,36 +106,22 @@ def main() -> int:
 
         # Read real-time and adcp_raw (if present)
         try:
-            sg_data, adcp_data = ADCPFiles.ADCPReadSGNCF(ds, ncf_name)
+            adcp_realtime_data, adcp_data = ADCPFiles.ADCPReadSGNCF(ds, ncf_name)
         except Exception:
             log_error("Failed to read {ncf_name}", "exc")
             continue
 
-        try:
-            ADCPRealtime.ConvertToGlider(sg_data)
-        except:
-            log_error("Failed to converting to glider frame {ncf_name}", "exc")
+        ds.close()
 
+        # Transform velocites to instrument frame
+        try:
+            ADCPRealtime.TransformToInstrument(adcp_realtime_data)
+        except Exception:
+            log_error("Failed to converting to glider frame {ncf_name}", "exc")
             continue
 
-        ### Read input files
-
-        ### Calc the physical variables
-
-        ### T spec scaling
-
-        ### T least squares fit
-
-        ### T with Rudidicks method
-
-        ### S spec scaling
-
-        ### S least squares fit
-
-        ### S with Rudidicks method
-
-        ### Update netcdf file
-        ds.close()
+        # Add a "cone plot" here - x y z is lon, lat, depth and u v w is from ADCP
+        log_debug(adcp_realtime_data.U, adcp_realtime_data.V, adcp_realtime_data.W)
 
     return 0
 
