@@ -84,8 +84,8 @@ class ADCPLogger:
             ADCPLogger.log.setLevel(logging.DEBUG)
 
             # create a file handler if log filename is specified in opts
-            if opts is not None and opts.micro_log is not None and opts.micro_log != "":
-                fh = logging.FileHandler(opts.micro_log)
+            if opts is not None and opts.adcp_log is not None and opts.adcp_log != "":
+                fh = logging.FileHandler(opts.adcp_log)
                 # fh.setLevel(logging.NOTSET) # messages of all levels will be recorded
                 self.setHandler(fh, opts, include_time)
 

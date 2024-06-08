@@ -46,8 +46,27 @@ from ADCPLog import log_error
 
 @dataclass
 class ADCPRealtimeData(ExtendedDataClass.ExtendedDataClass):
-    """Realtime data from the seaglider netcdf file"""
+    """ADCP Realtime data from the seaglider netcdf file"""
 
+    # Velocities in earth co-ordinates
+    U: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
+    V: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
+    W: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
+    # Velocities in instrument frame co-ordinates
+    Ux: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
+    Uy: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
+    Uz: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
+    # Compass output from ADCP
+    Pitch: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
+    Roll: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
+    Heading: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
+
+
+@dataclass
+class SGData(ExtendedDataClass.ExtendedDataClass):
+    """Glider data from the seaglider netcdf file"""
+
+    pass
     # temperature: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
     # temperature_qc: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
     # ctd_depth: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
@@ -62,22 +81,24 @@ class ADCPRealtimeData(ExtendedDataClass.ExtendedDataClass):
     # depth_avg_curr_east: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
     # depth_avg_curr_north: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
     # dive: float = 0
-    U: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
-    V: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
-    W: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
-    Pitch: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
-    Roll: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
-    Heading: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
 
 
 @dataclass
-class ADCPData(ExtendedDataClass.ExtendedDataClass):
-    pass
+class SGData(ExtendedDataClass.ExtendedDataClass):
+    """Glider data from the seaglider netcdf file"""
 
 
-def ADCPReadSGNCF(ds: netCDF4.Dataset, ncf_name: pathlib.Path) -> Tuple[ADCPRealtimeData, ADCPData] | Tuple[None, None]:
+# @dataclass
+# class ADCPData(ExtendedDataClass.ExtendedDataClass):
+#    pass
+
+
+def ADCPReadSGNCF(
+    ds: netCDF4.Dataset, ncf_name: pathlib.Path
+) -> Tuple[SGDAta, GPSData, ADCPRealtimeData] | Tuple[None, None, None]:
     adcp_realtime_data = ADCPRealtimeData()
-    adcp_data = ADCPData()
+    glider = SGData()
+    gps = GPSData()
     try:
         adcp_realtime_data.U = ds.variables["ad2cp_velX"][:]
         adcp_realtime_data.V = ds.variables["ad2cp_velY"][:]

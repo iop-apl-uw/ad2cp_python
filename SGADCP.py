@@ -74,26 +74,41 @@ def main() -> int:
         return 1
 
     # Read the config file
-    if not adcp_opts.config_file.exists():
-        log_error(f"Config file {adcp_opts.config_file} does not exist")
+    opts_p = ADCPConfig.ProcessConfigFile(adcp_opts.config_file)
+    if not opts_p:
         return 1
 
-    opts_p = ADCPConfig.ProcessConfigFile(adcp_opts.config_file)
-    if opts_p is None:
-        return 1
+    # param.gz = (0:param.dz:1000)';
+    # TODO - not sure the transposition is the right thing, but its in the matlab code
+    opts_p.gz = np.arange(0, 1000 + opts_p.dz, opts_p.dz)[:, np.newaxis]
+
+    # Mission-long corrections - not used in the 2024 version of the code
+    # if exist('dpitch','var')
+    # param.dpitch = dpitch;
+    # end
+    # if exist('dpitch','var')
+    # param.droll = droll;
+    # end
+    # if exist('dpitch','var')
+    # param.dheading = dheading;
+    # end
 
     log_debug(opts_p)
 
+    # timeseries_adcp.time = [];
+    # timeseries_adcp.Ux = [];
+    # timeseries_adcp.Uy = [];
+    # timeseries_adcp.Uz = [];
+
     dive_nc_filenames: list[pathlib.Path] = []
-    for dd in opts_p.dives:
-        try:
-            tmp_name = opts_p.dir_profiles.joinpath(f"p{opts_p.sg}{dd:04d}.nc")
-            if tmp_name.exists():
-                dive_nc_filenames.append(tmp_name)
-            else:
-                log_info(f"{tmp_name} not found - skipping")
-        except Exception:
-            log_error(f"Failed processing dive {dd}", "exc")
+
+    if adcp_opts.ncf_files:
+        for ff in adcp_opts.ncf_files:
+            dive_nc_filenames.append(adcp_opts.mission_dir / ff)
+    else:
+        for m in adcp_opts.mission_dir.glob("p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].nc"):
+            dive_nc_filenames.append(m)
+    dive_nc_filenames = sorted(dive_nc_filenames)
 
     for ncf_name in dive_nc_filenames:
         log_info(f"Processing {ncf_name}")
@@ -104,24 +119,26 @@ def main() -> int:
             continue
         ds.set_auto_mask(False)
 
-        # Read real-time and adcp_raw (if present)
-        try:
-            adcp_realtime_data, adcp_data = ADCPFiles.ADCPReadSGNCF(ds, ncf_name)
-        except Exception:
-            log_error("Failed to read {ncf_name}", "exc")
-            continue
+        if not opts_p.sg:
+            opts_sg = ds.glider
 
-        ds.close()
-
-        # Transform velocites to instrument frame
         try:
+            # Read real-time and adcp_raw (if present)
+            glider, gps, adcp_realtime_data = ADCPFiles.ADCPReadSGNCF(ds, ncf_name)
+
+            ds.close()
+            # Transform velocites to instrument frame
             ADCPRealtime.TransformToInstrument(adcp_realtime_data)
-        except Exception:
-            log_error("Failed to converting to glider frame {ncf_name}", "exc")
-            continue
 
-        # Add a "cone plot" here - x y z is lon, lat, depth and u v w is from ADCP
-        log_debug(adcp_realtime_data.U, adcp_realtime_data.V, adcp_realtime_data.W)
+            # Add a "cone plot" here - x y z is lon, lat, depth and u v w is from ADCP
+            # log_debug((adcp_realtime_data.Ux, adcp_realtime_data.Uy, adcp_realtime_data.Uz))
+
+        except Exception:
+            if DEBUG_PDB:
+                _, __, traceb = sys.exc_info()
+                traceback.print_exc()
+                pdb.post_mortem(traceb)
+            log_error(f"Failed processing {ncf_name}", "exc")
 
     return 0
 
