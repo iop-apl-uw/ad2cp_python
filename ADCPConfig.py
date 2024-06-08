@@ -34,8 +34,8 @@ ADCPConfig.py - Routines to process SG ADCP config file
 import pathlib
 from dataclasses import dataclass, field
 
-# import numpy as np
-# import numpy.typing as npt
+import numpy as np
+import numpy.typing as npt
 import yaml
 
 import ExtendedDataClass

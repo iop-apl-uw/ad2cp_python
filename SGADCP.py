@@ -40,6 +40,7 @@ import time
 import traceback
 
 import netCDF4
+from numpy import np
 
 import ADCPConfig
 import ADCPFiles
@@ -120,7 +121,7 @@ def main() -> int:
         ds.set_auto_mask(False)
 
         if not opts_p.sg:
-            opts_sg = ds.glider
+            opts_p.sg = ds.glider
 
         try:
             # Read real-time and adcp_raw (if present)

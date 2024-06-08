@@ -57,9 +57,9 @@ class ADCPRealtimeData(ExtendedDataClass.ExtendedDataClass):
     Uy: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
     Uz: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
     # Compass output from ADCP
-    Pitch: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
-    Roll: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
-    Heading: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
+    pitch: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
+    roll: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
+    heading: npt.ArrayLike = field(default_factory=(lambda: np.empty(0)))
 
 
 @dataclass
@@ -84,30 +84,56 @@ class SGData(ExtendedDataClass.ExtendedDataClass):
 
 
 @dataclass
-class SGData(ExtendedDataClass.ExtendedDataClass):
+class GPSData(ExtendedDataClass.ExtendedDataClass):
     """Glider data from the seaglider netcdf file"""
 
 
+# For full ADCP data sets
 # @dataclass
 # class ADCPData(ExtendedDataClass.ExtendedDataClass):
 #    pass
 
 
+def identity_f(x):
+    """ Helper function for conversions"""
+    return x
+
+# Add needed vars are in this table
+adcp_namemapping = {
+    "ad2cp_velX":("U", identity_f),
+    "ad2cp_velY":("V", identity_f),
+    "ad2cp_velZ":("W", identity_f),
+    "ad2cp_pitch":("pitch", identity_f),
+    "ad2cp_roll":("roll", lambda x :x),
+    "ad2cp_heading":("heading", identity_f),
+    "adcp_soundvel":("SVel", lambda x: x / 10.0),
+}
+
 def ADCPReadSGNCF(
     ds: netCDF4.Dataset, ncf_name: pathlib.Path
-) -> Tuple[SGDAta, GPSData, ADCPRealtimeData] | Tuple[None, None, None]:
+) -> Tuple[SGData, GPSData, ADCPRealtimeData] | Tuple[None, None, None]:
     adcp_realtime_data = ADCPRealtimeData()
     glider = SGData()
     gps = GPSData()
+
+    # Extract the needed adcp_realtime variables
+    f_missing_vars = False
+    for var_n in adcp_namemapping:
+        if var_n not in ds.variables:
+            f_missing_vars = True
+            log_error(f"Could not find {var_n} in {ncf_name}")
+    if f_missing_vars:
+        return (glider, gps, adcp_realtime_data)
+    
     try:
-        adcp_realtime_data.U = ds.variables["ad2cp_velX"][:]
-        adcp_realtime_data.V = ds.variables["ad2cp_velY"][:]
-        adcp_realtime_data.W = ds.variables["ad2cp_velZ"][:]
-        adcp_realtime_data.Pitch = ds.variables["ad2cp_pitch"][:]
-        adcp_realtime_data.Roll = ds.variables["ad2cp_roll"][:]
-        adcp_realtime_data.Heading = ds.variables["ad2cp_heading"][:]
+        for var_n in ds.variables:
+            if var_n.startswith("ad2cp_"):
+                if var_n in adcp_namemapping:
+                    adcp_realtime_data[adcp_namemapping[var_n][0]] = adcp_namemapping[var_n][1](ds.variables[var_n])
+                else:
+                    adcp_realtime_data[var_n.split("_",1)[1]] = ds.variables[var_n]
     except Exception:
         log_error("Failed loading realtime data", "exc")
         return (None, None)
 
-    return (adcp_realtime_data, adcp_data)
+    return (glider, gps, adcp_realtime_data)

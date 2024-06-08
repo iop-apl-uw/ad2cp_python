@@ -40,9 +40,9 @@ def TransformToInstrument(adcp_realtime: ADCPFiles.ADCPRealtimeData) -> None:
         #   hh = pi*(B.Heading(nn)-90)/180';
         #   pp = pi*B.Pitch(nn)/180';
         #   rr = pi*B.Roll(nn)/180';
-        hh = np.pi * (adcp_realtime.Heading[nn] - 90.0) / 180.0
-        pp = np.pi * adcp_realtime.Pitch[nn] / 180.0
-        rr = np.pi * adcp_realtime.Roll[nn] / 180.0
+        hh = np.pi * (adcp_realtime.heading[nn] - 90.0) / 180.0
+        pp = np.pi * adcp_realtime.pitch[nn] / 180.0
+        rr = np.pi * adcp_realtime.roll[nn] / 180.0
 
         #   ENU = [B.VelENU(:,nn,1)';...
         #     B.VelENU(:,nn,2)';...
