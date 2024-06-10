@@ -34,7 +34,6 @@ ADCPOpts.py - SG ADCP processing options and command-line parsing
 import argparse
 import os
 import pathlib
-import pdb
 from typing import Any, Sequence
 
 

@@ -32,16 +32,14 @@ ADCPFiles.py - Routines to process Seaglider ADCP files
 """
 
 import pathlib
-import pdb
 from dataclasses import dataclass, field
-from typing import Tuple, Any
+from typing import Any, Tuple
 
 import netCDF4
 import numpy as np
 import numpy.typing as npt
 
 import ExtendedDataClass
-from ADCPLog import log_error
 
 
 def fetch_var(x: netCDF4._netCDF4.Variable) -> Any:
@@ -102,7 +100,7 @@ class ADCPRealtimeData(ExtendedDataClass.ExtendedDataClass):
         "ad2cp_soundspeed": ("SVel", lambda x: fetch_var(x) / 10.0),
         "ad2cp_cellSize": ("cellSize", fetch_var),
         "ad2cp_blanking": ("blanking", fetch_var),
-        # "ad2cp_foobar": ("foobar", fetch_var), # for testing
+        # "ad2cp_foobar": ("foobar", fetch_var),  # for testing
     }
 
     def init(self, ds: netCDF4.Dataset, ncf_name: pathlib.Path) -> None:
@@ -166,9 +164,9 @@ class GPSData(ExtendedDataClass.ExtendedDataClass):
 
 
 # For full ADCP data sets
-# @dataclass
-# class ADCPData(ExtendedDataClass.ExtendedDataClass):
-#    pass
+@dataclass
+class ADCPData(ExtendedDataClass.ExtendedDataClass):
+    pass
 
 
 def ADCPReadSGNCF(ds: netCDF4.Dataset, ncf_name: pathlib.Path) -> Tuple[SGData, GPSData, ADCPRealtimeData]:

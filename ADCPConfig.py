@@ -55,7 +55,7 @@ class OptionsProcessing(ExtendedDataClass.ExtendedDataClass):
     # param.index_bins = 1:15
     index_bins: npt.ArrayLike = field(default_factory=(lambda: np.arange(1, 16)))
     # 'gsm' or 'FlightModel'
-    VEHICLE_MODEL = "FlightModel"
+    VEHICLE_MODEL: str = "FlightModel"
 
 
 def ProcessConfigFile(config_file_name: pathlib.PosixPath) -> OptionsProcessing:

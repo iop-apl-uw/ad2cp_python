@@ -42,6 +42,7 @@ import traceback
 import netCDF4
 import numpy as np
 
+import ADCP
 import ADCPConfig
 import ADCPFiles
 import ADCPOpts
@@ -50,6 +51,14 @@ import ADCPUtils
 from ADCPLog import ADCPLogger, log_critical, log_debug, log_error, log_info
 
 DEBUG_PDB = True
+
+
+def DEBUG_PDB_F() -> None:
+    """Enter the debugger on exceptions"""
+    if DEBUG_PDB:
+        _, __, traceb = sys.exc_info()
+        traceback.print_exc()
+        pdb.post_mortem(traceb)
 
 
 def main() -> int:
@@ -75,13 +84,13 @@ def main() -> int:
         return 1
 
     # Read the config file
-    opts_p = ADCPConfig.ProcessConfigFile(adcp_opts.config_file)
-    if not opts_p:
+    param = ADCPConfig.ProcessConfigFile(adcp_opts.config_file)
+    if not param:
         return 1
 
     # param.gz = (0:param.dz:1000)';
     # TODO - not sure the transposition is the right thing, but its in the matlab code
-    opts_p.gz = np.arange(0, 1000 + opts_p.dz, opts_p.dz)[:, np.newaxis]
+    param.gz = np.arange(0, 1000 + param.dz, param.dz)[:, np.newaxis]
 
     # Mission-long corrections - not used in the 2024 version of the code
     # if exist('dpitch','var')
@@ -94,7 +103,7 @@ def main() -> int:
     # param.dheading = dheading;
     # end
 
-    log_debug(opts_p)
+    log_debug(param)
 
     # timeseries_adcp.time = [];
     # timeseries_adcp.Ux = [];
@@ -120,34 +129,54 @@ def main() -> int:
             continue
         ds.set_auto_mask(False)
 
-        if not opts_p.sg:
-            opts_p.sg = ds.glider
+        if not param.sg:
+            param.sg = ds.glider
 
+        # Read real-time and adcp_raw (if present)
         try:
-            # Read real-time and adcp_raw (if present)
-            try:
-                glider, gps, adcp_realtime_data = ADCPFiles.ADCPReadSGNCF(ds, ncf_name)
-            except Exception:
-                log_error("Problem loading data", "exc")
-                continue
-
-            ds.close()
-            # Transform velocites to instrument frame
-            try:
-                ADCPRealtime.TransformToInstrument(adcp_realtime_data)
-            except Exception:
-                log_error("Problem transforming compass data", "exc")
-                continue
-
-            # Add a "cone plot" here - x y z is lon, lat, depth and u v w is from ADCP
-            # log_debug((adcp_realtime_data.Ux, adcp_realtime_data.Uy, adcp_realtime_data.Uz))
-
+            glider, gps, adcp_realtime_data = ADCPFiles.ADCPReadSGNCF(ds, ncf_name)
         except Exception:
-            if DEBUG_PDB:
-                _, __, traceb = sys.exc_info()
-                traceback.print_exc()
-                pdb.post_mortem(traceb)
-            log_error(f"Failed processing {ncf_name}", "exc")
+            DEBUG_PDB_F()
+            log_error("Problem loading data", "exc")
+            continue
+
+        ds.close()
+        # Transform velocites to instrument frame
+        try:
+            ADCPRealtime.TransformToInstrument(adcp_realtime_data)
+        except Exception:
+            DEBUG_PDB_F()
+            log_error("Problem transforming compass data", "exc")
+            continue
+
+        # TODO: Add a "cone plot" here - x y z is lon, lat, depth and u v w is from ADCP
+        # TODO: Compare frame Ux, Uy, Uz with matlab output
+
+        # Clean up adcp data
+        try:
+            ADCP.CleanADCP(adcp_realtime_data, glider, param)
+        except Exception:
+            DEBUG_PDB_F()
+            log_error("Problem cleaning realtime adcp data", "exc")
+            continue
+
+        # TODO: Compare ??? with matlab output
+
+        # TODO - weights need to be loadable from the config
+        # Setup weights
+        weights = None
+
+        # Perfrom inverse
+        try:
+            D, profile, variables_for_plot = ADCP.Inverse5(adcp_realtime_data, gps, glider, weights, param)
+        except Exception:
+            DEBUG_PDB_F()
+            log_error("Problem performing inverse calculation", "exc")
+            continue
+
+        # Plot output
+
+        # Save back generated columns
 
     return 0
 
@@ -159,10 +188,7 @@ if __name__ == "__main__":
     try:
         ret_val = main()
     except Exception:
-        if DEBUG_PDB:
-            _, __, traceb = sys.exc_info()
-            traceback.print_exc()
-            pdb.post_mortem(traceb)
+        DEBUG_PDB_F()
         log_critical("Unhandled exception in main -- exiting", "exc")
 
     sys.exit(ret_val)
