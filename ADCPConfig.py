@@ -51,9 +51,9 @@ class OptionsProcessing(ExtendedDataClass.ExtendedDataClass):
     # surface blank (if W_SURFACE ~=0, glider velocity is zero AND ADCP data is ignored above that depth
     sfc_blank: float = 3.0
     # restrict range bins
-    gz: npt.ArrayLink = field(default_factory=(lambda: np.zeros(0)))
+    gz: npt.ArrayLike = field(default_factory=(lambda: np.zeros(0)))
     # param.index_bins = 1:15
-    index_bins: npt.ArrayLink = field(default_factory=(lambda: np.arange(1, 16)))
+    index_bins: npt.ArrayLike = field(default_factory=(lambda: np.arange(1, 16)))
     # 'gsm' or 'FlightModel'
     VEHICLE_MODEL = "FlightModel"
 

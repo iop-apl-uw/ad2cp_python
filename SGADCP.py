@@ -40,7 +40,7 @@ import time
 import traceback
 
 import netCDF4
-from numpy import np
+import numpy as np
 
 import ADCPConfig
 import ADCPFiles
@@ -125,11 +125,19 @@ def main() -> int:
 
         try:
             # Read real-time and adcp_raw (if present)
-            glider, gps, adcp_realtime_data = ADCPFiles.ADCPReadSGNCF(ds, ncf_name)
+            try:
+                glider, gps, adcp_realtime_data = ADCPFiles.ADCPReadSGNCF(ds, ncf_name)
+            except Exception:
+                log_error("Problem loading data", "exc")
+                continue
 
             ds.close()
             # Transform velocites to instrument frame
-            ADCPRealtime.TransformToInstrument(adcp_realtime_data)
+            try:
+                ADCPRealtime.TransformToInstrument(adcp_realtime_data)
+            except Exception:
+                log_error("Problem transforming compass data", "exc")
+                continue
 
             # Add a "cone plot" here - x y z is lon, lat, depth and u v w is from ADCP
             # log_debug((adcp_realtime_data.Ux, adcp_realtime_data.Uy, adcp_realtime_data.Uz))

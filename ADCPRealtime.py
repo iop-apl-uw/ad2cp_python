@@ -35,7 +35,7 @@ def TransformToInstrument(adcp_realtime: ADCPFiles.ADCPRealtimeData) -> None:
     VelXYZ = VelENU * np.nan
 
     # for nn = 1:length(B.Pitch)
-    for nn in range(np.shape(adcp_realtime.Pitch)[0]):
+    for nn in range(np.shape(adcp_realtime.pitch)[0]):
         #   % heading, pitch and roll are the angles output in the data in degrees
         #   hh = pi*(B.Heading(nn)-90)/180';
         #   pp = pi*B.Pitch(nn)/180';
