@@ -56,6 +56,8 @@ class OptionsProcessing(ExtendedDataClass.ExtendedDataClass):
     index_bins: npt.ArrayLike = field(default_factory=(lambda: np.arange(1, 16)))
     # 'gsm' or 'FlightModel'
     VEHICLE_MODEL: str = "FlightModel"
+    # Use the glider pressure sensor
+    use_glider_pressure = True
 
 
 def ProcessConfigFile(config_file_name: pathlib.PosixPath) -> OptionsProcessing:

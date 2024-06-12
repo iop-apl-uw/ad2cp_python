@@ -92,7 +92,7 @@ def main() -> int:
     # TODO - not sure the transposition is the right thing, but its in the matlab code
     param.gz = np.arange(0, 1000 + param.dz, param.dz)[:, np.newaxis]
 
-    # Mission-long corrections - not used in the 2024 version of the code
+    # Mission-long corrections - not used in the 2024 version of the real-time code
     # if exist('dpitch','var')
     # param.dpitch = dpitch;
     # end
@@ -132,7 +132,7 @@ def main() -> int:
         if not param.sg:
             param.sg = ds.glider
 
-        # Read real-time and adcp_raw (if present)
+        # Read real-time
         try:
             glider, gps, adcp_realtime_data = ADCPFiles.ADCPReadSGNCF(ds, ncf_name)
         except Exception:
