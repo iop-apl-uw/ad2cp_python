@@ -47,7 +47,8 @@ def TransformToInstrument(adcp_realtime: ADCPFiles.ADCPRealtimeData) -> None:
         #   ENU = [B.VelENU(:,nn,1)';...
         #     B.VelENU(:,nn,2)';...
         #     B.VelENU(:,nn,3)'];
-        ENU = np.array([VelENU[ii, nn, :] for ii in range(3)])
+        ## ENU = np.array([VelENU[ii, nn, :] for ii in range(3)])
+        ENU = np.array([VelENU[ii, :, nn] for ii in range(3)])
 
         #   % Make heading matrix
         #   H = [cos(hh) sin(hh) 0; -sin(hh) cos(hh) 0; 0 0 1];
@@ -77,7 +78,8 @@ def TransformToInstrument(adcp_realtime: ADCPFiles.ADCPRealtimeData) -> None:
         for ii in range(3):
             # VelXYZ[ii, :, nn] = xyz[ii, :]
             # FORTRAN vs C
-            VelXYZ[ii, nn, :] = xyz[ii, :]
+            # VelXYZ[ii, nn, :] = xyz[ii, :]
+            VelXYZ[ii, :, nn] = xyz[ii, :]
 
         # adcp_realtime.Ux = B.VelXYZ(:,:,1);
         # adcp_realtime.Uy = B.VelXYZ(:,:,2);

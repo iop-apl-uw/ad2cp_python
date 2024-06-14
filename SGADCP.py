@@ -39,6 +39,7 @@ import sys
 import time
 import traceback
 
+import h5py
 import netCDF4
 import numpy as np
 
@@ -134,7 +135,7 @@ def main() -> int:
 
         # Read real-time
         try:
-            glider, gps, adcp_realtime_data = ADCPFiles.ADCPReadSGNCF(ds, ncf_name)
+            glider, gps, adcp_realtime_data = ADCPFiles.ADCPReadSGNCF(ds, ncf_name, param)
         except Exception:
             DEBUG_PDB_F()
             log_error("Problem loading data", "exc")
@@ -176,7 +177,12 @@ def main() -> int:
 
         # Plot output
 
-        # Save back generated columns
+        # Save back generated columns to netcdf store
+
+        # Save out - for comparision with other processing
+        with h5py.File("test.hdf5", "w") as hdf:
+            adcp_realtime_data.save_to_hdf5("adcp_realtime", hdf)
+            glider.save_to_hdf5("glider", hdf)
 
     return 0
 

@@ -80,10 +80,14 @@ class ExtendedDataClass:
         # case in the constructor for a field that a mutable - the attribute is not yet set,
         # but the member has been added to the dictionary
         if not hasattr(self, key) and key not in self.__dataclass_fields__:
+            # ruff: noqa: UP031
             raise TypeError("%r is a frozen class" % self)
         object.__setattr__(self, key, value)
 
     # Allows iteration over the data fields like a dictionary
-    def items(self) -> typing.Generator[typing.Tuple[str, typing.Any], None, None]:
+    def items(self) -> typing.Generator[typing.Tuple[typing.Any, typing.Any], None, None]:
         for item in self.__dataclass_fields__:
             yield item, getattr(self, item)
+
+    def keys(self) -> typing.Generator[typing.Tuple[typing.Any, typing.Any], None, None]:
+        yield from self.__dataclass_fields__

@@ -33,6 +33,10 @@ ADCPUtils.py - Utility functions
 
 import sys
 
+import numpy as np
+import numpy.typing as npt
+import scipy
+
 from ADCPLog import log_error
 
 
@@ -50,3 +54,23 @@ def check_versions() -> int:
         return 1
 
     return 0
+
+
+def intnan(y: npt.NDArray[np.float64]) -> None:
+    """Interpolate over NaNs.  Leading and trailing NaNs are replaced wtih the first/last
+    non-nan value. Works on one dimensional items only
+    """
+    sz = y.size
+    good_mask = np.logical_not(np.isnan(y))
+    i_good = np.nonzero(good_mask)
+    # Fill in the tails
+    y[0 : np.min(i_good)] = y[np.min(i_good)]
+    y[np.max(i_good) + 1 :] = y[np.max(i_good)]
+    t = np.arange(sz)
+    f = scipy.interpolate.interp1d(
+        t[good_mask],
+        y[good_mask],
+        bounds_error=False,
+        fill_value="extrapolate",
+    )
+    y[np.logical_not(good_mask)] = f(t[np.logical_not(good_mask)])

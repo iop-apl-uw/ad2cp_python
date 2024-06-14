@@ -32,15 +32,15 @@ ADCPFiles.py - Routines to process Seaglider ADCP files
 """
 
 import pathlib
+import pdb
 from dataclasses import dataclass, field
 from typing import Any, Tuple
-
-import pdb
 
 import netCDF4
 import numpy as np
 import numpy.typing as npt
 
+import ADCPConfig
 import ExtendedDataClass
 from ADCPLog import log_error
 
@@ -57,8 +57,16 @@ def fetch_var(x: netCDF4._netCDF4.Variable) -> Any:
     return x
 
 
+class SaveToHDF5:
+    def save_to_hdf5(self, group_name: str, hdf) -> None:
+        """Persist the dataclass fields to a group in a HDF5 file"""
+        grp = hdf.create_group(group_name)
+        for var_n in self.__dataclass_fields__:
+            grp.create_dataset(var_n, data=getattr(self, var_n))
+
+
 @dataclass
-class ADCPRealtimeData(ExtendedDataClass.ExtendedDataClass):
+class ADCPRealtimeData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
     """ADCP Realtime data from the seaglider netcdf file"""
 
     #
@@ -81,7 +89,7 @@ class ADCPRealtimeData(ExtendedDataClass.ExtendedDataClass):
     time: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
 
     # ADCP's sound velocity, later glider's soundvelocty interpolated on the adcp grid
-    SVel: float | npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
+    Svel: float | npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     blanking: float = 0
     cellSize: float = 0
 
@@ -103,49 +111,39 @@ class ADCPRealtimeData(ExtendedDataClass.ExtendedDataClass):
     Z: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
 
     # Add needed vars are in this table
-    adcp_namemapping = {
-        "ad2cp_velX": ("U", fetch_var),
-        "ad2cp_velY": ("V", fetch_var),
-        "ad2cp_velZ": ("W", fetch_var),
-        "ad2cp_pitch": ("pitch", fetch_var),
-        "ad2cp_roll": ("roll", fetch_var),
-        "ad2cp_heading": ("heading", fetch_var),
-        "ad2cp_soundspeed": ("SVel", lambda x: fetch_var(x) / 10.0),
-        "ad2cp_cellSize": ("cellSize", fetch_var),
-        "ad2cp_blanking": ("blanking", fetch_var),
-        "ad2cp_pressure": ("pressure", fetch_var),
-        "ad2cp_time": ("time", fetch_var),
-        # "ad2cp_foobar": ("foobar", fetch_var),  # for testing
-    }
+    def adcp_namemapping(self):
+        return {
+            "ad2cp_velX": ("U", lambda x: fetch_var(x).T),
+            "ad2cp_velY": ("V", lambda x: fetch_var(x).T),
+            "ad2cp_velZ": ("W", lambda x: fetch_var(x).T),
+            "ad2cp_pitch": ("pitch", fetch_var),
+            "ad2cp_roll": ("roll", fetch_var),
+            "ad2cp_heading": ("heading", fetch_var),
+            "ad2cp_soundspeed": ("Svel", lambda x: fetch_var(x) / 10.0),
+            "ad2cp_cellSize": ("cellSize", fetch_var),
+            "ad2cp_blanking": ("blanking", fetch_var),
+            "ad2cp_pressure": ("pressure", fetch_var),
+            "ad2cp_time": ("time", fetch_var),
+            # "ad2cp_foobar": ("foobar", fetch_var),  # for testing
+        }
 
     def init(self, ds: netCDF4.Dataset, ncf_name: pathlib.Path) -> None:
         # Load variables from dataset
-        for var_n in self.adcp_namemapping:
+        for var_n in self.adcp_namemapping():
             if var_n not in ds.variables:
                 raise KeyError(f"Could not find {var_n} in {ncf_name}")
-            self[self.adcp_namemapping[var_n][0]] = self.adcp_namemapping[var_n][1](ds.variables[var_n])
+            self[self.adcp_namemapping()[var_n][0]] = self.adcp_namemapping()[var_n][1](ds.variables[var_n])
 
         # Tilt factor : the Z component of (0,0,1) vector transformed
         # adcp_realtime.TiltFactor =  cos(pi*adcp_realtime.pitch/180).*cos(pi*adcp_realtime.roll/180);
         self.TiltFactor = np.cos(np.pi * self.pitch / 180.0) * np.cos(np.pi * self.roll / 180)
         # adcp_realtime.Range = (1:size(adcp_realtime.U,1))'*adcp_realtime.cellSize/1000+adcp_realtime.blanking/100;
-        self.Range = np.arange(1, np.shape(self.U)[1] + 1) * self.cellSize / 1000.0 + self.blanking / 100.0
+        self.Range = np.arange(1, np.shape(self.U)[0] + 1) * self.cellSize / 1000.0 + self.blanking / 100.0
 
 
 @dataclass
-class SGData(ExtendedDataClass.ExtendedDataClass):
+class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
     """Glider data from the seaglider netcdf file and derived values"""
-
-    load_vars = [
-        "longitude",
-        "latitude",
-        "longitude",
-        "latitude",
-        "ctd_depth",
-        "ctd_time",
-        "vert_speed",
-        "sound_velocity",
-    ]
 
     # From the netcdf file
     longitude: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
@@ -162,16 +160,31 @@ class SGData(ExtendedDataClass.ExtendedDataClass):
     #
 
     #  horizontal velocity of glider, with DAC in it, in ENU coordinate
-    UV0: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
+    ##UV0: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     #   vertical velocity of glider, from dp/dp
-    W0: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
+    ##W0: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     # horizontal velocity of glider, without DAC in it, in ENU coordinate
-    UV1: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
-    # total horizontal displacement of the glider, with DAC.
-    xy: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
+    ##UV1: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
+    # total horizontal displacement of the glider, with DAC, from the active model.
+    ##xy: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
+    # vertical speed of the glider from active model
+    Wmod: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
 
-    def init(self, ds: netCDF4.Dataset, ncf_name: pathlib.Path) -> None:
-        for var_n in self.load_vars:
+    def load_vars(self) -> list[str]:
+        """List of variables to be loaded from the netcdf file"""
+        return [
+            "longitude",
+            "latitude",
+            "longitude_gsm",
+            "latitude_gsm",
+            "ctd_depth",
+            "ctd_time",
+            "vert_speed",
+            "sound_velocity",
+        ]
+
+    def init(self, ds: netCDF4.Dataset, ncf_name: pathlib.Path, param: ADCPConfig.OptionsProcessing) -> None:
+        for var_n in self.load_vars():
             v = self[var_n]
             if isinstance(v, np.ndarray):
                 try:
@@ -185,7 +198,7 @@ class SGData(ExtendedDataClass.ExtendedDataClass):
                 self[var_n] = ds.variables["trajectory"][0]
             else:
                 log_error(f"Don't know how to handle {var_n}")
-        for var_n in self.load_vars:
+        for var_n in self.load_vars():
             if var_n.endswith("_qc"):
                 continue
             qc_var = f"{var_n}_qc"
@@ -193,40 +206,33 @@ class SGData(ExtendedDataClass.ExtendedDataClass):
                 # TODO - apply QC to data
                 pass
 
-    # temperature: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
-    # temperature_qc: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
-    # ctd_depth: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
-    # ctd_time: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
-    # salinity: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
-    # salinity_qc: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
-    # latitude: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
-    # longitude: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
-    # speed: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
-    # speed_gsm: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
-    # speed_qc: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
-    # depth_avg_curr_east: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
-    # depth_avg_curr_north: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
-    # dive: float = 0
+        # Derived/calculated
+        if param.VEHICLE_MODEL == "gsm":
+            self.Wmod = self.vert_speed_gsm / 100.0
+        else:
+            self.Wmod = self.vert_speed / 100.0
 
 
 @dataclass
-class GPSData(ExtendedDataClass.ExtendedDataClass):
+class GPSData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
     """Glider data from the seaglider netcdf file"""
 
 
 # For full ADCP data sets
 @dataclass
-class ADCPData(ExtendedDataClass.ExtendedDataClass):
+class ADCPData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
     pass
 
 
-def ADCPReadSGNCF(ds: netCDF4.Dataset, ncf_name: pathlib.Path) -> Tuple[SGData, GPSData, ADCPRealtimeData]:
+def ADCPReadSGNCF(
+    ds: netCDF4.Dataset, ncf_name: pathlib.Path, param: ADCPConfig.OptionsProcessing
+) -> Tuple[SGData, GPSData, ADCPRealtimeData]:
     """ """
     adcp_realtime_data = ADCPRealtimeData()
     adcp_realtime_data.init(ds, ncf_name)
 
     glider = SGData()
-    glider.init(ds, ncf_name)
+    glider.init(ds, ncf_name, param)
 
     gps = GPSData()
     # gps.init(ds, ncf_name)

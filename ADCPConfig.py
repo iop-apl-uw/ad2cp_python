@@ -53,7 +53,7 @@ class OptionsProcessing(ExtendedDataClass.ExtendedDataClass):
     # restrict range bins
     gz: npt.ArrayLike = field(default_factory=(lambda: np.zeros(0)))
     # param.index_bins = 1:15
-    index_bins: npt.ArrayLike = field(default_factory=(lambda: np.arange(1, 16)))
+    index_bins: npt.ArrayLike = field(default_factory=(lambda: np.arange(15)))
     # 'gsm' or 'FlightModel'
     VEHICLE_MODEL: str = "FlightModel"
     # Use the glider pressure sensor

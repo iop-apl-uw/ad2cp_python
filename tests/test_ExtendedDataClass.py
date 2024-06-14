@@ -72,6 +72,11 @@ def test_key_access(edc):
         assert v == [True, True]
 
 
+def test_key_enumeration(edc):
+    # ruff: noqa: SIM118
+    assert [ii for ii in edc.keys()] == ["x", "y"]
+
+
 def test_key_assigment(edc):
     edc["x"] = [True]
     with pytest.raises(TypeError):
