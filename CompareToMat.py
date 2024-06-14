@@ -42,7 +42,7 @@ import h5py
 import numpy as np
 
 import ADCPOpts
-from ADCPLog import ADCPLogger, log_critical, log_info
+from ADCPLog import ADCPLogger, log_critical, log_info, log_debug, log_error
 
 DEBUG_PDB = True
 
@@ -107,16 +107,34 @@ def main() -> None:
     python_file = h5py.File(args.python_file, "r")
 
     # log_info(np.allclose(python_file["adcp_realtime"]["Z"],  mat_file["adcp_realtime"]["ZZ"]))
+    mat_group_name = "adcp"
     for py_grp, py_name, mat_grp, mat_name in (
-        ("adcp_realtime", "Z", "adcp_realtime", "Z"),
-        ("adcp_realtime", "Z0", "adcp_realtime", "Z0"),
-        ("adcp_realtime", "U", "adcp_realtime", "U"),
+        ("adcp_realtime", "Z", mat_group_name, "Z"),
+        ("adcp_realtime", "Z0", mat_group_name, "Z0"),
+        ("adcp_realtime", "Svel", mat_group_name, "Svel"),
+        ("adcp_realtime", "U", mat_group_name, "U"),
     ):
-        log_info(
-            f"Comparing Python:{py_grp}:{py_name}, Matlab:{mat_grp}:{mat_name} "
-            f"allclose:{np.allclose(python_file[py_grp][py_name],  mat_file[mat_grp][mat_name])}"
-        )
-        log_info(f"{np.shape(python_file[py_grp][py_name])} {np.shape(python_file[py_grp][py_name])}")
+        py_shape = np.shape(python_file[py_grp][py_name])
+        mat_shape = np.shape(mat_file[mat_grp][mat_name])
+        name_str = f"Comparing Python:{py_grp}:{py_name}, Matlab:{mat_grp}:{mat_name}"
+        if py_shape != mat_shape:
+            log_error(f"{name_str} shapes don't match ({py_shape}:{mat_shape}")
+            continue
+        atol = 1.0
+        while np.allclose(python_file[py_grp][py_name], mat_file[mat_grp][mat_name], equal_nan=True, atol=atol):
+            atol = atol / 10
+            if atol < 1e-10:
+                break
+        if atol >= 1e-10:
+            close = np.isclose(python_file[py_grp][py_name], mat_file[mat_grp][mat_name], equal_nan=True, atol=atol)
+            tot_pts = close.size
+            not_close_pts = np.count_nonzero(np.logical_not(close))
+            close_str = f"NOT_CLOSE atol:{atol:g} {not_close_pts}/{tot_pts}"
+            log_warning(f"{name_str} {close_str}")
+        else:
+            log_info(f"{name_str} all_close")
+
+        log_debug(f"{np.shape(python_file[py_grp][py_name])} {np.shape(python_file[py_grp][py_name])}")
 
 
 if __name__ == "__main__":
