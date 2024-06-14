@@ -92,12 +92,14 @@ def CleanADCP(
     f = scipy.interpolate.interp1d(
         glider.ctd_time,
         glider.sound_velocity,
-        bounds_error=False,
-        fill_value="extrapolate",
+        # bounds_error=False,
+        # fill_value="extrapolate",
     )
     Svel = f(adcp.time)
 
     ADCPUtils.intnan(Svel)
+
+    adcp.Svel = Svel
 
     scale_v = Svel / adcp.Svel
     for var_n in ["U", "V", "W"]:
@@ -131,6 +133,8 @@ def CleanADCP(
     #   end
     # end
 
+    # Good to here
+
     # % surface mask
     # % mask = adcp.Z<(adcp.Z0*0.1+adcp.CellSize) | adcp.Z<sfc_blank;
     # mask = (adcp.Z<=param.sfc_blank);
@@ -142,9 +146,11 @@ def CleanADCP(
         adcp[var_n][surf_mask] = np.nan
     # MAX_TILT = 0.8;
     # mask = adcp.TiltFactor<MAX_TILT;
-    # adcp.U(mask) = NaN;
-    # adcp.V(mask) = NaN;
-    # adcp.W(mask) = NaN;
+    # adcp.U(:,mask) = NaN;
+    # adcp.V(:,mask) = NaN;
+    # adcp.W(:,mask) = NaN;
+
+    # Good to here
 
     # Maximum tilt
     # TODO - Make a param?  Ask Luc
@@ -180,6 +186,8 @@ def CleanADCP(
     for var_n in ["U", "V", "W"]:
         adcp[var_n][w_mask] = np.nan
 
+    # Good to here
+
     # % maximum relative velocity?
     # UMAX = 0.5;
     # mask = sqrt(adcp.U.^2+adcp.V.^2)>UMAX;
@@ -213,6 +221,7 @@ def CleanADCP(
         #    adcp[var_n] = adcp[var_n][ine]
         if len(var_s) > 1 and var_s[1] == nens:
             adcp[var_n] = adcp[var_n][:, ine]
+
     return
 
 
