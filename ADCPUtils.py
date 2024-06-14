@@ -66,11 +66,14 @@ def intnan(y: npt.NDArray[np.float64]) -> None:
     # Fill in the tails
     y[0 : np.min(i_good)] = y[np.min(i_good)]
     y[np.max(i_good) + 1 :] = y[np.max(i_good)]
+    # Regen mask now that the tails are filled in
+    good_mask = np.logical_not(np.isnan(y))
+    i_good = np.nonzero(good_mask)
     t = np.arange(sz)
     f = scipy.interpolate.interp1d(
         t[good_mask],
         y[good_mask],
-        bounds_error=False,
-        fill_value="extrapolate",
+        # bounds_error=False,
+        # fill_value="extrapolate",
     )
     y[np.logical_not(good_mask)] = f(t[np.logical_not(good_mask)])
