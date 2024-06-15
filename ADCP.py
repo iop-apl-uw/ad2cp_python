@@ -217,9 +217,9 @@ def CleanADCP(
     nens = np.shape(adcp.U)[1]
     for var_n in adcp.keys():
         var_s = np.shape(adcp[var_n])
-        # if len(var_s) == 1 and var_s[0] == nens:
-        #    adcp[var_n] = adcp[var_n][ine]
-        if len(var_s) > 1 and var_s[1] == nens:
+        if len(var_s) == 1 and var_s[0] == nens:
+            adcp[var_n] = adcp[var_n][ine]
+        elif len(var_s) > 1 and var_s[1] == nens:
             adcp[var_n] = adcp[var_n][:, ine]
 
     return
