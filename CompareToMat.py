@@ -42,7 +42,7 @@ import h5py
 import numpy as np
 
 import ADCPOpts
-from ADCPLog import ADCPLogger, log_critical, log_info, log_debug, log_error
+from ADCPLog import ADCPLogger, log_critical, log_debug, log_error, log_info, log_warning
 
 DEBUG_PDB = True
 
@@ -114,12 +114,19 @@ def main() -> None:
         ("adcp_realtime", "Svel", mat_group_name, "Svel"),
         ("adcp_realtime", "U", mat_group_name, "U"),
     ):
-        py_shape = np.shape(python_file[py_grp][py_name])
-        mat_shape = np.shape(mat_file[mat_grp][mat_name])
+        py_var = python_file[py_grp][py_name]
+        mat_var = mat_file[mat_grp][mat_name]
+        py_shape = np.shape(py_var)
+        mat_shape = np.shape(mat_var)
         name_str = f"Comparing Python:{py_grp}:{py_name}, Matlab:{mat_grp}:{mat_name}"
         if py_shape != mat_shape:
-            log_error(f"{name_str} shapes don't match ({py_shape}:{mat_shape}")
-            continue
+            try:
+                _ = np.broadcast(py_var, mat_var)
+            except ValueError:
+                log_error(f"{name_str} shapes don't match ({py_shape}:{mat_shape} and NOT broadcastable")
+            else:
+                log_warning(f"{name_str} shapes don't match ({py_shape}:{mat_shape}, but is broadcastable")
+            # continue
         atol = 1.0
         while np.allclose(python_file[py_grp][py_name], mat_file[mat_grp][mat_name], equal_nan=True, atol=atol):
             atol = atol / 10
