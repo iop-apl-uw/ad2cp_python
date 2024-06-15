@@ -41,8 +41,8 @@ import traceback
 
 import h5py
 import netCDF4
-import numpy as np
 
+# import numpy as np
 import ADCP
 import ADCPConfig
 import ADCPFiles
@@ -85,13 +85,14 @@ def main() -> int:
         return 1
 
     # Read the config file
-    param = ADCPConfig.ProcessConfigFile(adcp_opts.config_file)
+    param, weights = ADCPConfig.ProcessConfigFile(adcp_opts.config_file)
     if not param:
         return 1
 
     # param.gz = (0:param.dz:1000)';
+    # Done on ADCPConfig
     # TODO - not sure the transposition is the right thing, but its in the matlab code
-    param.gz = np.arange(0, 1000 + param.dz, param.dz)[:, np.newaxis]
+    # param.gz = np.arange(0, 1000 + param.dz, param.dz)[:, np.newaxis]
 
     # Mission-long corrections - not used in the 2024 version of the real-time code
     # if exist('dpitch','var')
@@ -135,7 +136,7 @@ def main() -> int:
 
         # Read real-time
         try:
-            glider, gps, adcp_realtime_data = ADCPFiles.ADCPReadSGNCF(ds, ncf_name, param)
+            glider, gps, adcp_realtime = ADCPFiles.ADCPReadSGNCF(ds, ncf_name, param)
         except Exception:
             DEBUG_PDB_F()
             log_error("Problem loading data", "exc")
@@ -144,7 +145,7 @@ def main() -> int:
         ds.close()
         # Transform velocites to instrument frame
         try:
-            ADCPRealtime.TransformToInstrument(adcp_realtime_data)
+            ADCPRealtime.TransformToInstrument(adcp_realtime)
         except Exception:
             DEBUG_PDB_F()
             log_error("Problem transforming compass data", "exc")
@@ -155,21 +156,19 @@ def main() -> int:
 
         # Clean up adcp data
         try:
-            ADCP.CleanADCP(adcp_realtime_data, glider, param)
+            ADCP.CleanADCP(adcp_realtime, glider, param)
         except Exception:
             DEBUG_PDB_F()
             log_error("Problem cleaning realtime adcp data", "exc")
             continue
 
-        # TODO: Compare ??? with matlab output
-
-        # TODO - weights need to be loadable from the config
-        # Setup weights
-        weights = None
+        # From matlab code - caclulated but unused
+        # time_diff = np.diff(adcp_realtime.time)
+        # dt = np.max([15.0, np.median(time_diff[time_diff > 2.0])])
 
         # Perfrom inverse
         try:
-            D, profile, variables_for_plot = ADCP.Inverse5(adcp_realtime_data, gps, glider, weights, param)
+            D, profile, variables_for_plot = ADCP.Inverse5(adcp_realtime, gps, glider, weights, param)
         except Exception:
             DEBUG_PDB_F()
             log_error("Problem performing inverse calculation", "exc")
@@ -181,7 +180,7 @@ def main() -> int:
 
         # Save out - for comparision with other processing
         with h5py.File("test.hdf5", "w") as hdf:
-            adcp_realtime_data.save_to_hdf5("adcp_realtime", hdf)
+            adcp_realtime.save_to_hdf5("adcp_realtime", hdf)
             glider.save_to_hdf5("glider", hdf)
 
     return 0
