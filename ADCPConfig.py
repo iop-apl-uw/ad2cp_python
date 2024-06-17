@@ -33,7 +33,7 @@ ADCPConfig.py - Routines to process SG ADCP config file
 
 import pathlib
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Tuple
 
 import numpy as np
 import numpy.typing as npt
@@ -127,7 +127,7 @@ class Weights(ExtendedDataClass.ExtendedDataClass):
         init_helper(self, config_file_name, cfg_dict, "weights", self.params_conversion)
 
 
-def ProcessConfigFile(config_file_name: pathlib.PosixPath) -> tuple(Params, Weights):
+def ProcessConfigFile(config_file_name: pathlib.PosixPath) -> Tuple[Params, Weights]:
     """Return the default set of options, with updated by a config file if present
 
     Args:

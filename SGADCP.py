@@ -40,8 +40,8 @@ import time
 import traceback
 
 import h5py
-import netCDF4
 
+# import netCDF4
 # import numpy as np
 import ADCP
 import ADCPConfig
@@ -124,12 +124,9 @@ def main() -> int:
 
     for ncf_name in dive_nc_filenames:
         log_info(f"Processing {ncf_name}")
-        try:
-            ds = netCDF4.Dataset(ncf_name, "r")
-        except Exception:
-            log_error(f"Failed to open {ncf_name}", "exc")
+        ds = ADCPUtils.open_netcdf_file(ncf_name)
+        if ds is None:
             continue
-        ds.set_auto_mask(False)
 
         if not param.sg:
             param.sg = ds.glider

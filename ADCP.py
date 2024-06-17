@@ -45,7 +45,7 @@ import ADCPUtils
 def CleanADCP(
     adcp: ADCPFiles.ADCPData | ADCPFiles.ADCPRealtimeData,
     glider: ADCPFiles.SGData,
-    param: ADCPConfig.OptionsProcessing,
+    param: ADCPConfig.Params,
 ) -> None:
     """Performs some housekeeping cleanup on the adcp data"""
 
@@ -230,6 +230,6 @@ def Inverse5(
     gps: ADCPFiles.GPSData,
     glider: ADCPFiles.SGData,
     weights: Any,
-    param: ADCPConfig.OptionsProcessing,
+    param: ADCPConfig.Params,
 ) -> Any:
     return (None, None, None)

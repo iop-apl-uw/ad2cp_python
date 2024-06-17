@@ -31,8 +31,10 @@
 ADCPUtils.py - Utility functions
 """
 
+import pathlib
 import sys
 
+import netCDF4
 import numpy as np
 import numpy.typing as npt
 import scipy
@@ -54,6 +56,16 @@ def check_versions() -> int:
         return 1
 
     return 0
+
+
+def open_netcdf_file(ncf_name: pathlib.Path) -> None | netCDF4.Dataset:
+    try:
+        ds = netCDF4.Dataset(ncf_name, "r")
+    except Exception:
+        log_error(f"Failed to open {ncf_name}", "exc")
+        return None
+    ds.set_auto_mask(False)
+    return ds
 
 
 def intnan(y: npt.NDArray[np.float64]) -> None:
