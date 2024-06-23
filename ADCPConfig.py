@@ -33,7 +33,7 @@ ADCPConfig.py - Routines to process SG ADCP config file
 
 import pathlib
 from dataclasses import dataclass, field
-from typing import Any, Tuple
+from typing import Any, Tuple, Dict
 
 import numpy as np
 import numpy.typing as npt
@@ -44,7 +44,7 @@ from ADCPLog import log_error
 
 
 def init_helper(
-    config_obj: Any, config_file_name: pathlib.PosixPath, cfg_dict: dict, section_name: str, convert_fn: Any
+    config_obj: Any, config_file_name: pathlib.PosixPath, cfg_dict: Dict, section_name: str, convert_fn: Any
 ) -> None:
     if section_name in cfg_dict and isinstance(cfg_dict[section_name], dict):
         for k, v in cfg_dict[section_name].items():
@@ -79,12 +79,12 @@ class Params(ExtendedDataClass.ExtendedDataClass):
     # restrict range bins
     gz: npt.ArrayLike = field(default_factory=(lambda: np.zeros(0)))
 
-    def params_conversion(self) -> dict:
+    def params_conversion(self) -> Dict:
         return {
             "sg": int,
             "dz": float,
             "sfc_blank": float,
-            "index_bins": lambda x: np.array(x, np.int),
+            "index_bins": lambda x: np.array(x, np.int32),
             "VEHICLE_MODEL": str,
             "use_glider_pressure": bool,
         }

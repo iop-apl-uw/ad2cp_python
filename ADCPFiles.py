@@ -146,13 +146,15 @@ class ADCPRealtimeData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
 class GPSData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
     """Glider data from the seaglider netcdf file"""
 
-    log_gps_time: npt.NDArray[np.complex64] = field(default_factory=(lambda: np.empty(0)))
+    log_gps_time: npt.NDArray[np.complex128] = field(default_factory=(lambda: np.empty(0)))
     #
     # Derived/calculated
     #
 
     # GPS lat/lon on a complex plane
-    LL: npt.NDArray[np.complex64] = field(default_factory=(lambda: np.empty(0)))
+    LL: npt.NDArray[np.complex128] = field(default_factory=(lambda: np.empty(0)))
+    # Distance from origin point on complex plane
+    XY: npt.NDArray[np.complex128] = field(default_factory=(lambda: np.empty(0)))
 
 
 @dataclass
@@ -168,6 +170,7 @@ class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
     ctd_depth: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     ctd_time: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     vert_speed: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
+    vert_speed_gsm: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     sound_velocity: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     log_gps_time: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     log_gps_lat: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
@@ -185,8 +188,13 @@ class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
     ##UV1: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     # total horizontal displacement of the glider, with DAC, from the active model.
     ##xy: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
+
     # vertical speed of the glider from active model
     Wmod: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
+    # Time for last GPS fix before dive
+    time0: np.float64 = 0
+    # Time for first GPS fix after dive
+    time1: np.float64 = 0
 
     def load_vars(self) -> list[str]:
         """List of variables to be loaded from the netcdf file"""
@@ -199,6 +207,7 @@ class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
             "ctd_depth",
             "ctd_time",
             "vert_speed",
+            "vert_speed_gsm",
             "sound_velocity",
             "log_gps_time",
             "log_gps_lat",
@@ -213,7 +222,7 @@ class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
                     self[var_n] = ds.variables[var_n][:]
                 except Exception:
                     log_error(f"Failed to load {var_n}", "exc")
-                    return (None, None)
+                    continue
                 if var_n.endswith("_qc"):
                     self[var_n] = np.array(list(map(ord, self[var_n])), np.float64) - ord("0")
             elif var_n == "dive":
@@ -229,10 +238,6 @@ class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
                 pass
 
         # Derived/calculated
-        if param.VEHICLE_MODEL == "gsm":
-            self.Wmod = self.vert_speed_gsm / 100.0
-        else:
-            self.Wmod = self.vert_speed / 100.0
 
         # gps.LL = glider.log_gps_lon+1i*glider.log_gps_lat;
         # gps.Mtime = glider.log_gps_time/86400+datenum(1970,1,1);
@@ -254,7 +259,7 @@ class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
             ds = ADCPUtils.open_netcdf_file(next_dive_ncf)
             if ds:
                 gps.LL = np.array((gps.LL, ds["log_gps_lon"][:2] + 1j * ds["log_gps_lon"][:2]))
-                gps.time = np.array((gps.time, ds["log_gps_time"][:2]))
+                gps.log_gps_time = np.array((gps.log_gps_time, ds["log_gps_time"][:2]))
 
         # LLgsm = glider.longitude_gsm+1i*glider.latitude_gsm;
         # LL = glider.longitude+1i*glider.latitude; % best estimate? includes dac.
@@ -278,7 +283,10 @@ class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
         # First GPS after the dive
         ig2 = np.where(gps.log_gps_time > self.ctd_time[-1])[0].min()
         # Origin
-        LL0 = gps.LL(ig1)
+        LL0 = gps.LL[ig1]
+        self.time0 = gps.log_gps_time[ig1]
+        self.time1 = gps.log_gps_time[ig2]
+        gps.XY = ADCPUtils.latlon2xy(gps.LL, LL0) * 1e3  # in meters
 
         # if strcmp(param.VEHICLE_MODEL,'gsm')
         #   xy = latlon2xy(LLgsm,LL0);
@@ -293,8 +301,32 @@ class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
         #   h = course_interp(glider.time/86400+datenum(1970,1,1),glider.eng_head,glider.Mtime)+glider.magnetic_variation;
         #   glider.UV1 = sqrt(glider.speed.^2-glider.vert_speed.^2)/100.*cos((90-h)*pi/180) + 1i*sqrt(glider.speed.^2-glider.vert_speed.^2)/100.*sin((90-h)*pi/180);
         # end
+
+        h = ADCPUtils.course_interp(self.time, self.eng_head, self.ctd_time) + self.magnetic_variation
+        if param.VEHICLE_MODEL == "gsm":
+            xy = ADCPUtils.latlon2xy(LLgsm, LL0)
+            self.Wmod = self.vert_speed_gsm / 100.0
+            vert_speed_var = "vert_speed_gsm"
+            speed_var = "speed_gsm"
+        else:
+            xy = ADCPUtils.latlon2xy(LL, LL0)
+            self.Wmod = self.vert_speed / 100.0
+            vert_speed_var = "vert_speed"
+            speed_var = "speed"
+
+        # from the flight model:
+        self.UV1 = np.sqrt(self[speed_var] ** 2 - self[vert_speed_var] ** 2) / 100 * np.cos(
+            (90 - h) * np.pi / 180
+        ) + 1j * np.sqrt(self[speed_var] ** 2 - self[vert_speed_var] ** 2) / 100 * sin((90 - h) * np.pi / 180)
+
+        ###
+        # NYI and untested from here down
+        ###
+
         # glider.xy = black_filt(xy,5);
         # clear xy
+        self.xy = ADCPUtils.black_filt(xy, 5)
+
         # UV0 = (diff(glider.xy)*1e3)./diff(glider.Mtime)/86400; % estimated horizontal glider speed from flight model (including dac).
         # glider.UV0 = [UV0(1) ; 0.5*(UV0(1:end-1)+UV0(2:end)) ; UV0(end)];
         # clear UV0

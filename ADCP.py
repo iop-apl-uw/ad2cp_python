@@ -43,7 +43,7 @@ import ADCPUtils
 
 
 def CleanADCP(
-    adcp: ADCPFiles.ADCPData | ADCPFiles.ADCPRealtimeData,
+    adcp: ADCPFiles.ADCPRealtimeData,
     glider: ADCPFiles.SGData,
     param: ADCPConfig.Params,
 ) -> None:

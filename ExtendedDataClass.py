@@ -89,5 +89,5 @@ class ExtendedDataClass:
         for item in self.__dataclass_fields__:
             yield item, getattr(self, item)
 
-    def keys(self) -> typing.Generator[typing.Tuple[typing.Any, typing.Any], None, None]:
+    def keys(self) -> typing.Generator[typing.Any, None, None]:
         yield from self.__dataclass_fields__
