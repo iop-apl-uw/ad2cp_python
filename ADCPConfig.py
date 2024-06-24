@@ -33,7 +33,7 @@ ADCPConfig.py - Routines to process SG ADCP config file
 
 import pathlib
 from dataclasses import dataclass, field
-from typing import Any, Tuple, Dict
+from typing import Any, Dict, Tuple
 
 import numpy as np
 import numpy.typing as npt

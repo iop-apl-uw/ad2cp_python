@@ -137,33 +137,56 @@ def latlon2xy(ll: npt.NDArray[np.complex128], ll0: npt.NDArray[np.complex128]) -
     return xy * 1e-3
 
 
-# function[yi] = IT_sg_interp_AP(x,y,xi)
-# % complex interpolation, where the amplitude and phase of y are linearly interpolated...
-# % This does not require a regular xi.
-# %
-# % Luc Rainville 4/13/12
-
-# ii = find(isfinite(x));
-
-# % Amplitude - easy
-# if length(x(ii))==1
-#   Ai = abs(y(ii));
-# else
-#   Ai = interp1(x(ii),abs(y(ii)), xi);
-# end
-
-# % Phase - a little more tricky
-# P = unwrap(angle(y(ii)));
-# if length(x(ii))==1
-#   Pi = P(ii);
-# else
-#   Pi = interp1(x(ii),P, xi);
-# end
-# yi = Ai.*exp(1i*Pi);
-
-
 def IT_sg_interp_AP(x, y, xi):
-    return None
+    """complex interpolation, where the amplitude and phase of y are linearly interpolated
+    does not require a regular xi.
+    """
+    # ii = find(isfinite(x));
+    ii = np.nonzero(np.isfinite(x))[0]
+
+    # % Amplitude - easy
+    # if length(x(ii))==1
+    #   Ai = abs(y(ii));
+    # else
+    #   Ai = interp1(x(ii),abs(y(ii)), xi);
+    # end
+
+    # Amplitude - easy
+    if np.shape(x[ii])[0] == 1:
+        Ai = np.abs(y[ii])
+    else:
+        f = scipy.interpolate.interp1d(
+            x[ii],
+            np.abs(y[ii]),
+            bounds_error=False,
+            fill_value="extrapolate",
+        )
+        Ai = f(xi)
+
+    # % Phase - a little more tricky
+    # P = unwrap(angle(y(ii)));
+    # if length(x(ii))==1
+    #   Pi = P(ii);
+    # else
+    #   Pi = interp1(x(ii),P, xi);
+    # end
+    # yi = Ai.*exp(1i*Pi);
+
+    # Phase - a little more tricky
+    P = np.unwrap(np.angle(y[ii]))
+    if np.shape(x[ii])[0] == 1:
+        Pi = P[ii]
+    else:
+        f = scipy.interpolate.interp1d(
+            x[ii],
+            P,
+            bounds_error=False,
+            fill_value="extrapolate",
+        )
+        Pi = f(xi)
+
+    yi = Ai * np.exp(1j * Pi)
+    return yi
 
 
 # function[yi]=course_interp(x,y,xi)
@@ -173,8 +196,14 @@ def IT_sg_interp_AP(x, y, xi):
 # yi(yi<0)=yi(yi<0)+360;
 
 
-def course_interp(time, heading, ctd_time):
-    return None
+def course_interp(
+    time: npt.NDArray[np.float64], heading: npt.NDArray[np.float64], new_time: npt.NDArray[np.float64]
+) -> npt.NDArray[np.float64]:
+    """Interpolate course (heading) onto new time grid"""
+    time0 = IT_sg_interp_AP(time, np.exp(1j * heading * np.pi / 180), new_time)
+    timei = np.angle(time0) * 180 / np.pi
+    timei[timei < 0] = timei[timei < 0] + 360
+    return timei
 
 
 #
