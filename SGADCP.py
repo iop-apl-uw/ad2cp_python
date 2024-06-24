@@ -179,6 +179,7 @@ def main() -> int:
         with h5py.File("test.hdf5", "w") as hdf:
             adcp_realtime.save_to_hdf5("adcp_realtime", hdf)
             glider.save_to_hdf5("glider", hdf)
+            gps.save_to_hdf5("gps", hdf)
 
     return 0
 

@@ -240,7 +240,7 @@ class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
                     self[var_n] = np.array(list(map(ord, self[var_n])), np.float64) - ord("0")
             elif var_n == "dive":
                 self[var_n] = ds.variables["trajectory"][0]
-            elif isinstance(v, int) or isinstance(v, float):
+            elif isinstance(v, (int, float)):
                 self[var_n] = ds.variables[var_n][0]
             else:
                 log_error(f"Don't know how to handle {var_n}")
@@ -253,10 +253,6 @@ class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
                 pass
 
         # Derived/calculated
-
-        ###
-        # Not tested vs matlab from here down
-        ###
 
         # gps.LL = glider.log_gps_lon+1i*glider.log_gps_lat;
         # gps.Mtime = glider.log_gps_time/86400+datenum(1970,1,1);
