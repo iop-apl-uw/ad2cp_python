@@ -107,15 +107,28 @@ def main() -> None:
     python_file = h5py.File(args.python_file, "r")
 
     # log_info(np.allclose(python_file["adcp_realtime"]["Z"],  mat_file["adcp_realtime"]["ZZ"]))
-    mat_group_name = "adcp"
+    # mat_group_name = "adcp"
+    mat_group_name = "adcp_realtime"
     for py_grp, py_name, mat_grp, mat_name in (
         ("adcp_realtime", "Z", mat_group_name, "Z"),
         ("adcp_realtime", "Z0", mat_group_name, "Z0"),
         ("adcp_realtime", "Svel", mat_group_name, "Svel"),
         ("adcp_realtime", "U", mat_group_name, "U"),
+        ("gps", "XY", "gps", "XY"),
+        ("glider", "Wmod", "glider", "Wmod"),
+        ("glider", "UV1", "glider", "UV1"),
     ):
         py_var = python_file[py_grp][py_name]
-        mat_var = mat_file[mat_grp][mat_name]
+        # Note: By applying np.squeeze here, matlab column vectors are converted to row.
+        # This has several effects:
+        # 1) Masks the differnt orientations between the python and matlab.  A possible downside.
+        # 2) Avoids some ammount of warnings for mismatched shapes, that are handled during implict
+        #    rebroadcasting inside the allclose and isclose calls
+        # 3) Main reason - a row python array that starts with np.nan, followed by values and matlab
+        #    column array that starts with np.nan, followed by values will fail np.allclose - something
+        #    in the broadcasting maybe, but didn't dig into it further.
+        mat_var = np.squeeze(mat_file[mat_grp][mat_name])
+        # mat_var = mat_file[mat_grp][mat_name]
         py_shape = np.shape(py_var)
         mat_shape = np.shape(mat_var)
         name_str = f"Comparing Python:{py_grp}:{py_name}, Matlab:{mat_grp}:{mat_name}"
@@ -127,13 +140,25 @@ def main() -> None:
             else:
                 log_warning(f"{name_str} shapes don't match ({py_shape}:{mat_shape}, but is broadcastable")
             # continue
+        # Matlab complex is stored as separate real and imaginary
+        if py_var.dtype in (np.complex64, np.complex128) and mat_var.dtype != py_var.dtype:
+            mat_var = np.squeeze(mat_var)
+            tmp = np.zeros(np.shape(mat_var), dtype=py_var.dtype)
+            if len(np.shape(mat_var)) == 1:
+                for ii in range(np.shape(mat_var)[0]):
+                    # np.apply_along_axis(lambda x: x["real"] + 1j * x["imag"], 0, mat_var)
+                    tmp[ii] = mat_var[ii]["real"] + 1j * mat_var[ii]["imag"]
+                mat_var = tmp
+            else:
+                log_error("Multi-dim NYI")
         atol = 1.0
-        while np.allclose(python_file[py_grp][py_name], mat_file[mat_grp][mat_name], equal_nan=True, atol=atol):
+        while np.allclose(py_var, mat_var, equal_nan=True, atol=atol):
             atol = atol / 10
             if atol < 1e-10:
                 break
         if atol >= 1e-10:
-            close = np.isclose(python_file[py_grp][py_name], mat_file[mat_grp][mat_name], equal_nan=True, atol=atol)
+            pdb.set_trace()
+            close = np.isclose(py_var, mat_var, equal_nan=True, atol=atol)
             tot_pts = close.size
             not_close_pts = np.count_nonzero(np.logical_not(close))
             close_str = f"NOT_CLOSE atol:{atol:g} {not_close_pts}/{tot_pts}"
@@ -141,7 +166,7 @@ def main() -> None:
         else:
             log_info(f"{name_str} all_close")
 
-        log_debug(f"{np.shape(python_file[py_grp][py_name])} {np.shape(python_file[py_grp][py_name])}")
+        log_debug(f"{np.shape(py_var)} {np.shape(mat_var)}")
 
 
 if __name__ == "__main__":
