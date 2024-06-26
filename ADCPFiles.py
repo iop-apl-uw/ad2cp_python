@@ -32,8 +32,7 @@ ADCPFiles.py - Routines to process Seaglider ADCP files
 """
 
 import pathlib
-
-# import pdb
+import pdb
 from dataclasses import dataclass, field
 from typing import Any, Tuple
 
@@ -324,45 +323,18 @@ class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
         h = ADCPUtils.course_interp(self.time, self.eng_head, self.ctd_time) + self.magnetic_variation
         if param.VEHICLE_MODEL == "gsm":
             xy = ADCPUtils.latlon2xy(LLgsm, LL0)
-            self.Wmod = self.vert_speed_gsm / 100.0
             vert_speed_var = "vert_speed_gsm"
             speed_var = "speed_gsm"
         else:
             xy = ADCPUtils.latlon2xy(LL, LL0)
-            self.Wmod = self.vert_speed / 100.0
             vert_speed_var = "vert_speed"
             speed_var = "speed"
 
+        self.Wmod = self[vert_speed_var] / 100.0
         # from the flight model:
         self.UV1 = np.sqrt(self[speed_var] ** 2 - self[vert_speed_var] ** 2) / 100 * np.cos(
             (90 - h) * np.pi / 180
         ) + 1j * np.sqrt(self[speed_var] ** 2 - self[vert_speed_var] ** 2) / 100 * np.sin((90 - h) * np.pi / 180)
-
-        ###
-        # NYI from here down
-        ###
-
-        # glider.xy = black_filt(xy,5);
-        # clear xy
-
-        # self.xy = ADCPUtils.black_filt(xy, 5)
-
-        # % estimated horizontal glider speed from flight model (including dac).
-        # UV0 = (diff(glider.xy)*1e3)./diff(glider.Mtime)/86400;
-        # glider.UV0 = [UV0(1) ; 0.5*(UV0(1:end-1)+UV0(2:end)) ; UV0(end)];
-        # clear UV0
-
-        # % Vertical speed.
-        # W0 = -(diff(glider.ctd_depth))./diff(glider.Mtime)/86400; % estimated vertical glider speed
-        # W0 = [W0(1) ; 0.5*(W0(1:end-1)+W0(2:end)) ; W0(end)];
-        # % smooth W0
-        # glider.W0 = conv2P(W0,ones(3,1)/3);
-        # clear W0
-
-        # % % time gap -
-        # glider.UV0(abs(glider.UV0)>1)=NaN;
-        # ii = find(diff(glider.Mtime)*86400>60);
-        # glider.UV0([ii ii+1])=NaN; % larger than a minute
 
 
 # For full ADCP data sets
