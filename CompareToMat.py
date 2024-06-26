@@ -107,8 +107,8 @@ def main() -> None:
     python_file = h5py.File(args.python_file, "r")
 
     # log_info(np.allclose(python_file["adcp_realtime"]["Z"],  mat_file["adcp_realtime"]["ZZ"]))
-    # mat_group_name = "adcp"
-    mat_group_name = "adcp_realtime"
+    mat_group_name = "adcp"
+    # mat_group_name = "adcp_realtime"
     for py_grp, py_name, mat_grp, mat_name in (
         ("adcp_realtime", "Z", mat_group_name, "Z"),
         ("adcp_realtime", "Z0", mat_group_name, "Z0"),
@@ -117,6 +117,14 @@ def main() -> None:
         ("gps", "XY", "gps", "XY"),
         ("glider", "Wmod", "glider", "Wmod"),
         ("glider", "UV1", "glider", "UV1"),
+        ("glider", "ctd_depth", "glider", "ctd_depth"),
+        ("glider", "ctd_time", "glider", "Mtime"),
+        ("D", "time", "D", "Mtime"),
+        ("D", "Z0", "D", "Z0"),
+        ("D", "UV", "D", "UV"),
+        ("D", "W", "D", "W"),
+        ("D", "Z", "D", "Z"),
+        ("D", "upcast", "D", "upcast"),
     ):
         py_var = python_file[py_grp][py_name]
         # Note: By applying np.squeeze here, matlab column vectors are converted to row.
@@ -131,6 +139,9 @@ def main() -> None:
         # mat_var = mat_file[mat_grp][mat_name]
         py_shape = np.shape(py_var)
         mat_shape = np.shape(mat_var)
+        # Convert any Mtime vars to unix epoch
+        if mat_name == "Mtime":
+            mat_var = (mat_var - 719529) * 86400
         name_str = f"Comparing Python:{py_grp}:{py_name}, Matlab:{mat_grp}:{mat_name}"
         if py_shape != mat_shape:
             try:
@@ -150,23 +161,30 @@ def main() -> None:
                     tmp[ii] = mat_var[ii]["real"] + 1j * mat_var[ii]["imag"]
                 mat_var = tmp
             else:
-                log_error("Multi-dim NYI")
+                for ii in range(np.shape(mat_var)[0]):
+                    for jj in range(np.shape(mat_var)[1]):
+                        tmp[ii, jj] = mat_var[ii, jj]["real"] + 1j * mat_var[ii, jj]["imag"]
+                mat_var = tmp
         atol = 1.0
         while np.allclose(py_var, mat_var, equal_nan=True, atol=atol):
             atol = atol / 10
             if atol < 1e-10:
                 break
         if atol >= 1e-10:
-            pdb.set_trace()
+            # pdb.set_trace()
             close = np.isclose(py_var, mat_var, equal_nan=True, atol=atol)
             tot_pts = close.size
             not_close_pts = np.count_nonzero(np.logical_not(close))
             close_str = f"NOT_CLOSE atol:{atol:g} {not_close_pts}/{tot_pts}"
             log_warning(f"{name_str} {close_str}")
+            bad_pts = np.nonzero(np.logical_not(close))[0]
+            log_debug("    index:py_var:mat_var")
+            for ii in bad_pts:
+                log_debug(f"    {ii}:{py_var[ii]}:{mat_var[ii]}")
         else:
             log_info(f"{name_str} all_close")
 
-        log_debug(f"{np.shape(py_var)} {np.shape(mat_var)}")
+        # log_debug(f"{np.shape(py_var)} {np.shape(mat_var)}")
 
 
 if __name__ == "__main__":
