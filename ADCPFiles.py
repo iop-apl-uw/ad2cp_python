@@ -331,11 +331,9 @@ class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
 
         h = ADCPUtils.course_interp(self.time, self.eng_head, self.ctd_time) + self.magnetic_variation
         if param.VEHICLE_MODEL == "gsm":
-            xy = ADCPUtils.latlon2xy(LLgsm, LL0)
             vert_speed_var = "vert_speed_gsm"
             speed_var = "speed_gsm"
         else:
-            xy = ADCPUtils.latlon2xy(LL, LL0)
             vert_speed_var = "vert_speed"
             speed_var = "speed"
 
@@ -374,3 +372,34 @@ def ADCPReadSGNCF(
     # end
 
     return (glider, gps, adcp_realtime_data)
+
+
+@dataclass
+class ADCPProfile(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
+    """ADCP profile results"""
+
+    z: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
+    UVocn: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
+    UVttw_solution: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
+    UVttw_model: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
+    time: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
+    UVerr: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
+    Wocn: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
+    Wttw_solution: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
+    Wttw_model: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
+
+
+@dataclass
+class ADCPTemp(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
+    """ADCP Temp results?"""
+
+    time: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
+    Z0: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
+    # observed horizontal velocity (relative)
+    UV: npt.NDArray[np.complex128] = field(default_factory=(lambda: np.empty(0)))
+    # observed vertical velocity (relative)
+    W: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
+    # observed depth
+    Z: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
+    # Boolean array to identify down and upcasts
+    upcast: npt.NDArray[bool] = field(default_factory=(lambda: np.empty(0)))

@@ -74,7 +74,11 @@ class Params(ExtendedDataClass.ExtendedDataClass):
     # Use the glider pressure sensor
     use_glider_pressure = True
 
-    # Calculated
+    # Not configurable - set from glider data
+    # CONSIDER - move to glider object?
+
+    # Min and max time for each data set
+    time_limits: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
 
     # restrict range bins
     gz: npt.ArrayLike = field(default_factory=(lambda: np.zeros(0)))

@@ -42,7 +42,7 @@ import traceback
 import h5py
 
 # import netCDF4
-# import numpy as np
+import numpy as np
 import ADCP
 import ADCPConfig
 import ADCPFiles
@@ -140,6 +140,9 @@ def main() -> int:
             continue
 
         ds.close()
+
+        param.time_limits = np.array((np.min(gps.log_gps_time), np.max(gps.log_gps_time)))
+
         # Transform velocites to instrument frame
         try:
             ADCPRealtime.TransformToInstrument(adcp_realtime)
@@ -165,7 +168,7 @@ def main() -> int:
 
         # Perfrom inverse
         try:
-            D, profile, variables_for_plot = ADCP.Inverse5(adcp_realtime, gps, glider, weights, param)
+            D, profile, variables_for_plot = ADCP.Inverse(adcp_realtime, gps, glider, weights, param)
         except Exception:
             DEBUG_PDB_F()
             log_error("Problem performing inverse calculation", "exc")
@@ -180,6 +183,8 @@ def main() -> int:
             adcp_realtime.save_to_hdf5("adcp_realtime", hdf)
             glider.save_to_hdf5("glider", hdf)
             gps.save_to_hdf5("gps", hdf)
+            D.save_to_hdf5("D", hdf)
+            profile.save_to_hdf5("profile", hdf)
 
     return 0
 

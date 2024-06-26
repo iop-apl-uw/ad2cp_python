@@ -159,7 +159,7 @@ def IT_sg_interp_AP(x, y, xi):
             x[ii],
             np.abs(y[ii]),
             bounds_error=False,
-            fill_value="extrapolate",
+            # fill_value="extrapolate",
         )
         Ai = f(xi)
 
@@ -181,7 +181,7 @@ def IT_sg_interp_AP(x, y, xi):
             x[ii],
             P,
             bounds_error=False,
-            fill_value="extrapolate",
+            # fill_value="extrapolate",
         )
         Pi = f(xi)
 
@@ -204,3 +204,34 @@ def course_interp(
     timei = np.angle(time0) * 180 / np.pi
     timei[timei < 0] = timei[timei < 0] + 360
     return timei
+
+
+# Not currently used
+def interp1d(first_epoch_time_s_v, data_v, second_epoch_time_s_v, kind="linear"):
+    """For each data point data_v at first_epoch_time_s_v, determine the value at second_epoch_time_s_v
+    Interpolate according to type
+    Assumes both epoch_time_s_v arrays increase monotonically
+    Ensures first_epoch_time_s_v and data_v cover second_epoch_time_s_v using 'nearest' values
+    """
+    # add 'nearest' data item to the ends of data and first_epoch_time_s_v
+    if second_epoch_time_s_v[0] < first_epoch_time_s_v[0]:
+        # Copy the first value below the interpolation range
+        data_v = np.append(np.array([data_v[0]]), data_v)
+        first_epoch_time_s_v = np.append(np.array([second_epoch_time_s_v[0]]), first_epoch_time_s_v)
+
+    if second_epoch_time_s_v[-1] > first_epoch_time_s_v[-1]:
+        # Copy the last value above the interpolation range
+        data_v = np.append(data_v, np.array([data_v[-1]]))
+        first_epoch_time_s_v = np.append(first_epoch_time_s_v, np.array([second_epoch_time_s_v[-1]]))
+
+    interp_data_v = scipy.interpolate.interp1d(first_epoch_time_s_v, data_v, kind=kind)(second_epoch_time_s_v)
+    return interp_data_v
+
+
+# function[in]=find_nearest(x,y)
+# % for each element of x, find the closest to y (???)
+
+# in = zeros(size(y))*NaN;
+# for n=1:length(in)
+#   [~,in(n)]=min(abs(x-y(n)));
+# end
