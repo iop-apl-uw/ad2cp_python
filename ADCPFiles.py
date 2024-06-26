@@ -54,7 +54,12 @@ def fetch_var(x: netCDF4._netCDF4.Variable) -> Any:
         return x[0]
     else:
         # Array
-        return x[:]
+        tmp = x[:]
+        if "FillValue" in x.ncattrs():
+            # Generally, unneeded since by default, the _FillValue for seaglider netcdf files is
+            # NaN
+            tmp[tmp == x.getncattr("FillValue")] = np.nan
+        return tmp
     return x
 
 
@@ -237,6 +242,10 @@ class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
                     continue
                 if var_n.endswith("_qc"):
                     self[var_n] = np.array(list(map(ord, self[var_n])), np.float64) - ord("0")
+                else:
+                    # Generally, unneeded since by default, the _FillValue for seaglider netcdf files is NaN
+                    if "_FillValue" in ds.variables[var_n].ncattrs():
+                        self[var_n][self[var_n] == ds.variables[var_n].getncattr("_FillValue")] = np.nan
             elif var_n == "dive":
                 self[var_n] = ds.variables["trajectory"][0]
             elif isinstance(v, (int, float)):
