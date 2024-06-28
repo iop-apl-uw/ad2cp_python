@@ -288,8 +288,10 @@ def Inverse(
     D.time = D.time + np.mean(toff)
 
     # D.Mtime(in) = adcp.Mtime; % now some of the times match, and others are close
-    # D.UV = nan(size(adcp.Z,1),length(D.Mtime)); D.UV(:,in) = (adcp.U+1i*adcp.V);  % observed horizontal velocity (relative)
-    # D.W = nan(size(adcp.Z,1),length(D.Mtime)); D.W(:,in) =  adcp.W;               % observed vertical velocity (relative)
+    # % observed horizontal velocity (relative)
+    # D.UV = nan(size(adcp.Z,1),length(D.Mtime)); D.UV(:,in) = (adcp.U+1i*adcp.V);
+    # % observed vertical velocity (relative)
+    # D.W = nan(size(adcp.Z,1),length(D.Mtime)); D.W(:,in) =  adcp.W;
     # D.Z = nan(size(adcp.Z,1),length(D.Mtime));D.Z(:,in) = adcp.Z;
 
     # now some of the times match, and others are close
@@ -328,5 +330,409 @@ def Inverse(
     # separate down/up casts
     ibot = np.argmax(D.Z0)
     D.upcast = np.arange(D.time.shape[0]) > ibot
+
+    # % model velocity
+    # % UV1 does not include DAC
+    # D.UVttw_model = interp1(glider.Mtime, glider.UV1, D.Mtime); % make sure the model is available at all times
+    # D.UVttw_model(isnan(D.UVttw_model)) = 0;
+
+    # D.Wttw_model = interp1(glider.Mtime, glider.Wmod, D.Mtime); % make sure the model is available at all times
+
+    # model velocity
+    # UV1 does not include DAC
+
+    # make sure the model is available at all times
+    D.UVttw_model = scipy.interpolate.interp1d(
+        glider.ctd_time,
+        glider.UV1,
+        bounds_error=False,
+        # fill_value="extrapolate",
+        fill_value=np.nan,
+    )(D.time)
+    D.UVttw_model[np.isnan(D.UVttw_model)] = 0
+
+    # make sure the model is available at all times
+    D.Wttw_model = scipy.interpolate.interp1d(
+        glider.ctd_time,
+        glider.Wmod,
+        bounds_error=False,
+        # fill_value="extrapolate",
+        fill_value=np.nan,
+    )(D.time)
+
+    ## prepare the inverse
+    # the unknown state vector consists of U_ttw (one for each ping) and
+    # U_ocean (on a regular vertical grid gz), down- and up-casts back-to-front
+    # Vehicle velocity is TTW, Ocean velocity is Earth-referenced,
+    # So,
+    # ADCP measurement = U_ocean - (U_ttw+U_drift);
+    # Total vehicle motion = (U_ttw+U_drift)
+    # through-the-water motion =  U_ttw;
+    # where U_drift is U_ocean interpolated onto the vehicle location
+
+    # gz=gz(gz<max(glider.ctd_depth)+median(diff(gz)));
+    # Nz = numel(gz);
+    gz = gz[gz < np.max(glider.ctd_depth) + np.median(np.diff(gz))]
+    (Nbin, Nt) = np.shape(D.UV)
+
+    # dc = D.UV;
+
+    # measured speed relative to the glider.
+    dc = D.UV
+
+    # ia = ~isnan(dc);
+    # d_adcp = W_MEAS*dc(ia);
+
+    # select valid data
+    ia = np.logical_not(np.isnan(dc))
+    # RHS, long vector of weighted measured velocities
+    d_adcp = weights.W_MEAS * dc[ia]
+
+    # dw_adcp = W_MEAS*D.W(ia);
+
+    # RHS, long vector of weighted measured vertical velocities
+    dw_adcp = weights.W_MEAS * D.W[ia]
+    # z = D.Z(ia); % ...and depth
+    # D.T=ones(size(dc,1),1)*D.Mtime; % Time of each observations
+    # TT=D.T(ia);
+    # Z0 = ones(size(D.Z,1),1)*D.Z0; % depth of the glider at each observation
+    # Z0 = Z0(ia);
+
+    z = D.Z[ia]  # ...and depth
+    # Time of each observations
+    TT = (np.atleast_2d(np.ones(np.shape(dc)[0])).T * D.time)[ia]
+    # depth of the glider at each observation
+    Z0 = (np.atleast_2d(np.ones(np.shape(D.Z)[0])).T * D.Z0)[ia]
+
+    pdb.set_trace()
+
+    # upcast = repmat(D.upcast,size(D.Z,1),1);
+    # upcast = upcast(ia);
+    # Na = numel(d_adcp);
+
+    upcast = np.tile(D.upcast, (np.shape(D.Z)[0],1)))[ia]
+    Na = d_adcp.size
+
+    # %%%%%%%%%% 
+    # % Av is matrix selecting the vehicle ttw velocity at the time of each ADCP measurement
+    # jprof = cumsum(ones(Nbin,Nt),2);  %corresponding profile number (i.e. U_ttw index)
+    # jprof = jprof (ia);
+    # Av = sparse(1:Na, jprof, ones(1,Na),Na,Nt); 
+
+    # corresponding profile number (i.e. U_ttw index)
+    jprof = np.cumsum(np.ones((Nbin,Nt)),2)  
+    jprof = jprof[ia]
+    #Av = sparse(1:Na, jprof, np.ones((1,Na)),Na,Nt)
+
+    # %%%%%%%%%% 
+    # % AiM is a matrix assigning the vertical (ocean profile) grid to the measurement position
+
+    # % Since the bins don't exactly match the ocean grid, we use 'fractional'
+    # % indices to indicate how much each ocean bin contributes to the
+    # % measurements. In the end, sum(AiM,2)==1 everywhere. 
+
+    # % % interpolation from the vertical grid to the measurement positions
+    # rz = (z(:)-gz(1))/dz; % fractional z-index
+    # iz = [floor(rz)+1,floor(rz)+2]; % interpolant indices
+    # wz = [1-(rz-floor(rz)), rz-floor(rz)]; % interpolant weights
+    # % to allow for down-/up-cast...
+    # iz(upcast,:) = iz(upcast,:)+Nz;
+    # % Two ocean profiles
+    # AiM = sparse(repmat( (1:Na)',1,2 ), iz, wz,Na,2*Nz);        
+
+    # %%%%%%%%%%
+    # % AiO is a matrix assigning the vertical (ocean profile) grid at the vehicle position
+    # % AiG is a matrix assigning the vertical (ocean profile) grid at the vehicle position, expressed at every measurement position
+
+    # % interpolation from the vertical grid to the vehicle position
+    # rz = (D.Z0(:)-gz(1))/dz; % fractional z-index
+    # iz = [floor(rz)+1,floor(rz)+2]; % interpolant indices ** this shouldn't be larger than Nz, but technically can!?! 
+    # wz = [1-(rz-floor(rz)), rz-floor(rz)]; % interpolant weights
+    # % to allow for down-/up-cast...
+    # iz(D.upcast,:) = iz(D.upcast,:)+Nz;
+    # % Two ocean profiles, each with Nz depths
+    # Ai0 = sparse(repmat( (1:Nt)',1,2 ), iz, wz,Nt, 2*Nz);
+
+    # AiG = Av*Ai0;
+
+    # %%%%%%%%%%
+
+    # % G_adcp = W_MEAS*[-Av, AiM];  % "G" matrix (Eq. B4; in Todd et al. 2011)
+    # G_adcp = W_MEAS*[-Av, AiM-Av*Ai0];  % 
+
+
+    # %% CONSTRAINTS
+
+    # %% SURFACE and GPS
+    # % Note that we may have multiple GPS fixes - add a constraint per each
+    # % pair. This may automatically constrain the surface velocity!
+
+    # % Constrain the glider speed to be zero before and after the dive. 
+    # if W_SURFACE~=0
+    #   ii_surface = find(D.Z0<=param.sfc_blank);
+    #   G_sfc = sparse(length(ii_surface),Nt+2*Nz);
+    #   for kk=1:length(ii_surface)
+    #     G_sfc(kk,ii_surface(kk))=1;
+    #   end
+    #   d_sfc = zeros(length(ii_surface),1);  
+    # else
+    #   G_sfc =[];
+    #   d_sfc =[];
+    # end
+
+
+    # clear gps_constraints
+    # for k=1:length(gps.Mtime)-1 % all GPS
+    #     %  for k=length(gps.Mtime)-1% just two last GPS
+    #     Dt = diff(gps.Mtime([k k+1]))*86400; % sec, dive time
+    #     UVbt = diff(gps.XY([k k+1]))./Dt; % mean velocity during this segment (vehicle + ocean)
+    #     ii = find(within(D.Mtime,gps.Mtime([k k+1])));
+    #     if length(ii)<5
+    #       continue
+    #     end
+    #     if Dt>3600 || max(D.Z0(ii))==max(D.Z0)
+    #       % dive DAC
+
+    #       gps_constraints.dac(k) = 1;
+    #       gps_constraints.TL(k,1:2) = D.Mtime(ii([1 end]));
+    #       gps_constraints.UVbt(k) = UVbt;  
+
+    #       dti = diff(D.Mtime(ii))*86400;
+    #       % make it so that the individual weights *average* (or sum?) to 1
+    #       % (needs to be consistent below!)
+    #       %     dt = dt/mean(dt)*WBT ; %AVG! This is a stronger constatint (I think...)
+    #       dti = dti/sum(dti) ; %SUM!
+
+    #       % time-average using trapezoid rule
+    #       w = D.Mtime*0;
+    #       w(ii(1:end-1)) = 0.5*dti;
+    #       w(ii(2:end)) = w(ii(2:end)) + 0.5*dti; % "w" is non zero only during the time of these measurements...
+
+    #       G_dac = [+w w*Ai0]*W_DAC;
+    #       d_dac = UVbt*W_DAC;
+
+    #     elseif Dt<3600 && W_SURFACE~=0
+    #       % Surface drift (-> Constrain OCEAN VELOCITY to be like drift, glider speed to be zero)
+
+    #       gps_constraints.dac(k) = 0;
+    #       gps_constraints.UVbt(k) = UVbt;  
+    #       gps_constraints.TL(k,1:2) = D.Mtime(ii([1 end]));
+
+    #       dti = diff(D.Mtime(ii))*86400;
+    #       dti = dti/sum(dti) ; %SUM!
+    #       % time-average using trapezoid rule
+    #       w = D.Mtime*0;
+    #       w(ii(1:end-1)) = 0.5*dti;
+    #       w(ii(2:end)) = w(ii(2:end)) + 0.5*dti; % "w" is non zero only during the time of these measurements...
+
+    #       G_sfc = [G_sfc ; [zeros(size(w)) w*Ai0]*W_SURFACE];
+    #       d_sfc = [d_sfc ; UVbt*W_SURFACE ];
+    #     end 
+    # end
+
+    # %% %%%%%%  % Flight model dac
+    # if exist('W_MODEL_DAC','var')
+
+    #   ii = find(D.Z0)>3;
+    #   % time-average using trapezoid rule
+    #   dti = diff(D.Mtime(ii))*86400;
+    #   dti = dti/sum(dti) ; %SUM!
+    #   w = D.Mtime*0;
+    #   w(ii(1:end-1)) = 0.5*dti;
+    #   w(ii(2:end)) = w(ii(2:end)) + 0.5*dti; % "w" is non zero only during the time of these measurements...
+
+    #   MODEL_DAC = glider.depth_avg_curr_east+1i*glider.depth_avg_curr_north;
+
+    #   G_dac = [G_dac ; [+w*0 w*Ai0]*W_MODEL_DAC]; % averaged ocean velocity is the flight model dac
+    #   d_dac = [d_dac ; MODEL_DAC*W_MODEL_DAC];
+    # end
+
+
+    # %% %% REGULARIZATION
+    # % regularization of ocean velocity profile
+    # % dd = spdiags(repmat([-1 1]/dz, 2*Nz-1,1),[0 1], 2*Nz-1,2*Nz); % d/dz
+    # % % instead of Nz:Nz+1 continuity at the bottom of the profile (Nz+1 is surface!), enforce Nz,2*Nz continuity:
+    # % dd(Nz,:) = 0;
+    # % dd(Nz,Nz) = -0.5; dd(Nz,2*Nz) = +0.5;
+    # % Do = [ sparse(2*Nz-1,Nt), dd ]*OCN_SMOOTH;
+    # % clear dd
+
+    # if OCN_SMOOTH~=0
+    #   % Smoothness of ocean velocity
+    #   dd = spdiags(repmat([-1 2 -1]/dz, 2*Nz-2,1),[0 1 2], 2*Nz-2,2*Nz);
+    #   dd(Nz,:) = 0;
+    #   dd(Nz,Nz-1) = -1/dz; dd(Nz,Nz) = 2/dz; dd(Nz,2*Nz) = -1/dz;
+    #   Do = [ sparse(2*Nz-2,Nt), dd ]*OCN_SMOOTH;
+    # else
+    #   Do = [];
+    # end
+
+    # % Up and down ocean profile should be similar... (weighted by time interval)
+    # if exist('W_OCN_DNUP','var')
+    #   dd = speye(Nz,Nz);
+    #   [~,imax]=max(glider.ctd_depth);
+    #   time1 = interp_nm(glider.ctd_depth(1:imax), glider.Mtime(1:imax), gz);
+    #   time2 = interp_nm(glider.ctd_depth(imax:end), glider.Mtime(imax:end), gz);
+    #   ss = 1-(time2-time1); % 1-diff in days
+    #   ss(ss<0)=0; % limit to zero.
+    #   for k=1:length(ss)
+    #     dd(k,k)=ss(k);
+    #   end
+    #   ii = find(ss>0 & isfinite(ss));
+    #   dd=dd(ii,:);
+    #   % dd = diag(ss);
+    #   Do2 = [sparse(length(ii),Nt) dd/dz -dd/dz]*W_OCN_DNUP; % constrait (weight) is effectively less as time increases.
+    # else
+    #   Do2 = [];
+    # end
+
+    # % Smoothness of vehicle velocity
+    # Dv = [spdiags(repmat([-1 2 -1], Nt-2,1),[0 1 2], Nt-2,Nt), sparse(Nt-2,2*Nz) ]*VEH_SMOOTH  ; % d/dt
+
+    # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    # %% %%EXTRA CONSTRAINTS
+
+    # % % Make the vehicle speed close to the model solution
+    # %       THIS is pretty unstable, because there isn't much contraining the
+    # %       low-frequency ocean velocity. The ADCP data is all about the  
+    # %       relative velocity... 
+    # %
+    # % However, I use this to make the vehicle speed close to the fligth model  
+    # % solution if I don't have ADCP data there (one-way profile)
+
+    # if exist('W_MODEL','var')
+
+    #   ii_no_adcp = find(isnan(mean(real(D.UV),1,'omitnan')));
+    #   G_model = sparse(length(ii_no_adcp),Nt+2*Nz);
+    #   for kk=1:length(ii_no_adcp)
+    #     G_model(kk,ii_no_adcp(kk))=1;
+    #   end
+    #   d_model = W_MODEL*transpose(D.UVttw_model(ii_no_adcp));  
+    # else
+    #   G_model = [];
+    #   d_model = [];
+    # end
+
+    # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    # % Make deep ocean velocity small...  
+    # % That can be useful to make the velocity profiles look nice, to get rid of
+    # % large mean shear bias. 
+
+    # if exist('W_deep','var')
+    #   ii = find(gz>W_deep_z0); % depths above the place were we minimize deep velocities
+    #   tmp = hanning(length(ii)*2);
+    #   ww = [tmp(1:length(ii)) ; ones(Nz-length(ii),1)];
+    #   dd = speye(Nz,Nz);
+    #   for k=1:length(ww)
+    #     dd(k,k)=ww(k);
+    #   end
+    #   dd=dd(ii,:);
+    #   G_deep = [sparse(length(ii),Nt) dd dd]*W_deep;
+    #   d_deep=zeros(size(G_deep,1),1);
+    # else
+    #   G_deep=[];
+    #   d_deep=[];
+    # end
+
+
+    # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    # % % Make the ttw speed zero at the bottom (when the flight model says it's zero)
+    # if exist('W_MODEL_bottom','var')
+    #   ii = find(D.UVttw_model==0 & D.Z0>0.5*max(D.Z0));
+    #   G_bottom = zeros(length(ii), size(G_adcp,2));
+    #   for k=1:length(ii)
+    #     G_bottom(k,ii(k))=W_MODEL_bottom;
+    #   end
+    #   d_bottom = zeros(length(ii),1);
+    # else
+    #   G_bottom = [];
+    #   d_bottom = [];
+    # end
+
+    # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    # %% so we have a LSQ problem
+    # % [H;D;Dv]*M-[d;0;0] = 0
+
+    # M = [G_adcp;G_dac;G_sfc;Do;Do2;Dv;G_model;G_deep;G_bottom]\[d_adcp;d_dac;d_sfc;zeros(size(Do,1)+size(Do2,1)+size(Dv,1),1);d_model; d_deep; d_bottom];
+
+    # UVttw = transpose(M(1:Nt)); % solved-for TTW component
+
+    # UVocn = M(Nt+1:end);
+    # UVocn = reshape(UVocn,[],2);
+
+    # % INVERSE SOLUTION
+
+    # % U_drift = Ocean velocity at the glider
+    # D.UVocn_solution = transpose(Ai0*UVocn(:));
+
+    # % Glider speed through the water
+    # D.UVttw_solution = UVttw;
+
+    # % Total vehicle speed: U_ttw (speed through the water) + U_drift (ocean speed at the glider). 
+    # D.UVveh_solution =  UVttw+transpose(Ai0*UVocn(:));
+
+    # % ADCP measurement (D.UV) = u_ocean(t,z) - u_drift( u_ocean @ glider) - u_ttw(@ glider)
+    # % Ocean velocity at the measurement location:
+    # D.UVocn_adcp= D.UV+D.UVttw_solution + D.UVocn_solution; % Measured ocean velocity measurements
+
+    # D.UVerr = D.UVocn_adcp-D.UVocn_solution;
+
+    # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    # %%  Vertical velocity inverse
+
+    # Gv_adcp = W_MEAS*[-Av, AiM-Av*Ai0];  % same as the horizontal velocity. 
+
+    # M = [Gv_adcp;G_dac;G_sfc;2*Do;2*Do2;Dv]\[dw_adcp;0*d_dac;0*d_sfc;zeros(size(Do,1)+size(Do2,1)+size(Dv,1),1)];
+
+    # % Glider speed through the water
+    # D.Wttw_solution = transpose(M(1:Nt)); % solved-for TTW component
+
+    # % Ocean velocity
+    # Wocn = M(Nt+1:end);
+    # Wocn = reshape(Wocn,[],2);
+
+    # % U_drift = Ocean velocity at the glider
+    # D.Wocn_solution = transpose(Ai0*Wocn(:));
+
+
+    # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    # %% Gridded version (on the ocean vertical grid). 
+
+    # [~,iiz, itmp] = intersect(gz, profile.z);
+
+    # profile.UVocn(itmp,:) = UVocn(iiz,:);
+    # idn = find(D.upcast==0);
+    # iup = find(D.upcast==1);
+    # profile.UVttw_solution(itmp,1)=bindata_AS(D.Z0(idn), D.UVttw_solution(idn),gz(iiz));
+    # profile.UVttw_solution(itmp,2)=bindata_AS(D.Z0(iup), D.UVttw_solution(iup),gz(iiz));
+    # profile.UVttw_model(itmp,1)=bindata_AS(D.Z0(idn), D.UVttw_model(idn),gz(iiz));
+    # profile.UVttw_model(itmp,2)=bindata_AS(D.Z0(iup), D.UVttw_model(iup),gz(iiz));
+
+    # profile.time(itmp,1)=bindata_AS(D.Z0(idn), D.Mtime(idn),gz(iiz));
+    # profile.time(itmp,2)=bindata_AS(D.Z0(iup), D.Mtime(iup),gz(iiz));
+
+    # profile.UVerr(itmp,1)=bindata_AS(D.Z0(idn), std(D.UVerr(:,idn),'omitnan'),gz(iiz));
+    # profile.UVerr(itmp,2)=bindata_AS(D.Z0(iup), std(D.UVerr(:,iup),'omitnan'),gz(iiz));
+
+    # profile.Wttw_solution(itmp,1)=bindata_AS(D.Z0(idn), D.Wttw_solution(idn),gz(iiz));
+    # profile.Wttw_solution(itmp,2)=bindata_AS(D.Z0(iup), D.Wttw_solution(iup),gz(iiz));
+    # profile.Wttw_model(itmp,1)=bindata_AS(D.Z0(idn), D.Wttw_model(idn),gz(iiz));
+    # profile.Wttw_model(itmp,2)=bindata_AS(D.Z0(iup), D.Wttw_model(iup),gz(iiz));
+
+    # profile.Wocn(itmp,:) = Wocn(iiz,:);
+
+    # %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    # variables_for_plots.gps_constraints = gps_constraints;
+    # variables_for_plots.TT=TT;
+    # variables_for_plots.G_adcp = G_adcp;
+    # variables_for_plots.M = M;
+    # variables_for_plots.AiM = AiM;
+    # variables_for_plots.AiG = AiG;
+    # variables_for_plots.Av = Av;
+    # variables_for_plots.Nt = Nt;
+    # variables_for_plots.Nz = Nz;
+
 
     return (D, profile, None)

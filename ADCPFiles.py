@@ -169,10 +169,10 @@ class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
 
     # From the current dives netcdf file
     dive: int = 0
-    longitude: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
-    latitude: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
-    longitude_gsm: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
-    latitude_gsm: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
+    # longitude: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
+    # latitude: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
+    # longitude_gsm: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
+    # latitude_gsm: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     ctd_depth: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     ctd_time: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     speed: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
@@ -212,10 +212,10 @@ class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
         """List of variables to be loaded from the netcdf file"""
         return [
             "dive",
-            "longitude",
-            "latitude",
-            "longitude_gsm",
-            "latitude_gsm",
+            # "longitude",
+            # "latitude",
+            # "longitude_gsm",
+            # "latitude_gsm",
             "ctd_depth",
             "ctd_time",
             "speed",
@@ -286,8 +286,6 @@ class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
 
         # LLgsm = glider.longitude_gsm+1i*glider.latitude_gsm;
         # LL = glider.longitude+1i*glider.latitude; % best estimate? includes dac.
-        LLgsm = self.longitude_gsm + 1j * self.latitude_gsm
-        LL = self.longitude + 1j * self.latitude
 
         # glider.Mtime = glider.ctd_time/86400+datenum(1970,1,1);
 
@@ -403,3 +401,7 @@ class ADCPTemp(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
     Z: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     # Boolean array to identify down and upcasts
     upcast: npt.NDArray[bool] = field(default_factory=(lambda: np.empty(0)))
+    # horizontal velocity of glider, without DAC in it, in ENU coordinate - on the ADCP time grid
+    UVttw_model: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
+    # vertical speed of the glider from active model - on the ADCP time grid
+    Wttw_model: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))

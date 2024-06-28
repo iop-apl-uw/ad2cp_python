@@ -125,6 +125,8 @@ def main() -> None:
         ("D", "W", "D", "W"),
         ("D", "Z", "D", "Z"),
         ("D", "upcast", "D", "upcast"),
+        ("D", "UVttw_model", "D", "UVttw_model"),
+        ("D", "Wttw_model", "D", "Wttw_model"),
     ):
         py_var = python_file[py_grp][py_name]
         # Note: By applying np.squeeze here, matlab column vectors are converted to row.
