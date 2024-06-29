@@ -410,26 +410,29 @@ def Inverse(
     # upcast = upcast(ia);
     # Na = numel(d_adcp);
 
-    upcast = np.tile(D.upcast, (np.shape(D.Z)[0],1)))[ia]
+    upcast = np.tile(D.upcast, (np.shape(D.Z)[0], 1))[ia]
     Na = d_adcp.size
 
-    # %%%%%%%%%% 
+    # %%%%%%%%%%
     # % Av is matrix selecting the vehicle ttw velocity at the time of each ADCP measurement
     # jprof = cumsum(ones(Nbin,Nt),2);  %corresponding profile number (i.e. U_ttw index)
     # jprof = jprof (ia);
-    # Av = sparse(1:Na, jprof, ones(1,Na),Na,Nt); 
+    # Av = sparse(1:Na, jprof, ones(1,Na),Na,Nt);
 
     # corresponding profile number (i.e. U_ttw index)
-    jprof = np.cumsum(np.ones((Nbin,Nt)),2)  
+    jprof = np.cumsum(np.ones((Nbin, Nt)), 2)
     jprof = jprof[ia]
-    #Av = sparse(1:Na, jprof, np.ones((1,Na)),Na,Nt)
+    # From https://stackoverflow.com/questions/40890960/numpy-scipy-equivalent-of-matlabs-sparse-function
+    # CONSIDER - is documentation suggests *_array version is what to use
+    # CONSIDER - Is csr_* the appropriate thing?
+    Av = scipy.sparse.csr_matrix(np.arange(Na), (jprof, np.ones(Na)), np.shape(Na, Nt))
 
-    # %%%%%%%%%% 
+    # %%%%%%%%%%
     # % AiM is a matrix assigning the vertical (ocean profile) grid to the measurement position
 
     # % Since the bins don't exactly match the ocean grid, we use 'fractional'
     # % indices to indicate how much each ocean bin contributes to the
-    # % measurements. In the end, sum(AiM,2)==1 everywhere. 
+    # % measurements. In the end, sum(AiM,2)==1 everywhere.
 
     # % % interpolation from the vertical grid to the measurement positions
     # rz = (z(:)-gz(1))/dz; % fractional z-index
@@ -438,15 +441,16 @@ def Inverse(
     # % to allow for down-/up-cast...
     # iz(upcast,:) = iz(upcast,:)+Nz;
     # % Two ocean profiles
-    # AiM = sparse(repmat( (1:Na)',1,2 ), iz, wz,Na,2*Nz);        
+    # AiM = sparse(repmat( (1:Na)',1,2 ), iz, wz,Na,2*Nz);
 
     # %%%%%%%%%%
     # % AiO is a matrix assigning the vertical (ocean profile) grid at the vehicle position
-    # % AiG is a matrix assigning the vertical (ocean profile) grid at the vehicle position, expressed at every measurement position
+    # % AiG is a matrix assigning the vertical (ocean profile) grid at the vehicle position,
+    # % expressed at every measurement position
 
     # % interpolation from the vertical grid to the vehicle position
     # rz = (D.Z0(:)-gz(1))/dz; % fractional z-index
-    # iz = [floor(rz)+1,floor(rz)+2]; % interpolant indices ** this shouldn't be larger than Nz, but technically can!?! 
+    # iz = [floor(rz)+1,floor(rz)+2]; % interpolant indices ** this shouldn't be larger than Nz, but technically can!?!
     # wz = [1-(rz-floor(rz)), rz-floor(rz)]; % interpolant weights
     # % to allow for down-/up-cast...
     # iz(D.upcast,:) = iz(D.upcast,:)+Nz;
@@ -458,8 +462,7 @@ def Inverse(
     # %%%%%%%%%%
 
     # % G_adcp = W_MEAS*[-Av, AiM];  % "G" matrix (Eq. B4; in Todd et al. 2011)
-    # G_adcp = W_MEAS*[-Av, AiM-Av*Ai0];  % 
-
+    # G_adcp = W_MEAS*[-Av, AiM-Av*Ai0];  %
 
     # %% CONSTRAINTS
 
@@ -467,19 +470,18 @@ def Inverse(
     # % Note that we may have multiple GPS fixes - add a constraint per each
     # % pair. This may automatically constrain the surface velocity!
 
-    # % Constrain the glider speed to be zero before and after the dive. 
+    # % Constrain the glider speed to be zero before and after the dive.
     # if W_SURFACE~=0
     #   ii_surface = find(D.Z0<=param.sfc_blank);
     #   G_sfc = sparse(length(ii_surface),Nt+2*Nz);
     #   for kk=1:length(ii_surface)
     #     G_sfc(kk,ii_surface(kk))=1;
     #   end
-    #   d_sfc = zeros(length(ii_surface),1);  
+    #   d_sfc = zeros(length(ii_surface),1);
     # else
     #   G_sfc =[];
     #   d_sfc =[];
     # end
-
 
     # clear gps_constraints
     # for k=1:length(gps.Mtime)-1 % all GPS
@@ -495,7 +497,7 @@ def Inverse(
 
     #       gps_constraints.dac(k) = 1;
     #       gps_constraints.TL(k,1:2) = D.Mtime(ii([1 end]));
-    #       gps_constraints.UVbt(k) = UVbt;  
+    #       gps_constraints.UVbt(k) = UVbt;
 
     #       dti = diff(D.Mtime(ii))*86400;
     #       % make it so that the individual weights *average* (or sum?) to 1
@@ -515,7 +517,7 @@ def Inverse(
     #       % Surface drift (-> Constrain OCEAN VELOCITY to be like drift, glider speed to be zero)
 
     #       gps_constraints.dac(k) = 0;
-    #       gps_constraints.UVbt(k) = UVbt;  
+    #       gps_constraints.UVbt(k) = UVbt;
     #       gps_constraints.TL(k,1:2) = D.Mtime(ii([1 end]));
 
     #       dti = diff(D.Mtime(ii))*86400;
@@ -527,7 +529,7 @@ def Inverse(
 
     #       G_sfc = [G_sfc ; [zeros(size(w)) w*Ai0]*W_SURFACE];
     #       d_sfc = [d_sfc ; UVbt*W_SURFACE ];
-    #     end 
+    #     end
     # end
 
     # %% %%%%%%  % Flight model dac
@@ -546,7 +548,6 @@ def Inverse(
     #   G_dac = [G_dac ; [+w*0 w*Ai0]*W_MODEL_DAC]; % averaged ocean velocity is the flight model dac
     #   d_dac = [d_dac ; MODEL_DAC*W_MODEL_DAC];
     # end
-
 
     # %% %% REGULARIZATION
     # % regularization of ocean velocity profile
@@ -581,7 +582,8 @@ def Inverse(
     #   ii = find(ss>0 & isfinite(ss));
     #   dd=dd(ii,:);
     #   % dd = diag(ss);
-    #   Do2 = [sparse(length(ii),Nt) dd/dz -dd/dz]*W_OCN_DNUP; % constrait (weight) is effectively less as time increases.
+    #   % constrait (weight) is effectively less as time increases.
+    #   Do2 = [sparse(length(ii),Nt) dd/dz -dd/dz]*W_OCN_DNUP;
     # else
     #   Do2 = [];
     # end
@@ -594,10 +596,10 @@ def Inverse(
 
     # % % Make the vehicle speed close to the model solution
     # %       THIS is pretty unstable, because there isn't much contraining the
-    # %       low-frequency ocean velocity. The ADCP data is all about the  
-    # %       relative velocity... 
+    # %       low-frequency ocean velocity. The ADCP data is all about the
+    # %       relative velocity...
     # %
-    # % However, I use this to make the vehicle speed close to the fligth model  
+    # % However, I use this to make the vehicle speed close to the fligth model
     # % solution if I don't have ADCP data there (one-way profile)
 
     # if exist('W_MODEL','var')
@@ -607,16 +609,16 @@ def Inverse(
     #   for kk=1:length(ii_no_adcp)
     #     G_model(kk,ii_no_adcp(kk))=1;
     #   end
-    #   d_model = W_MODEL*transpose(D.UVttw_model(ii_no_adcp));  
+    #   d_model = W_MODEL*transpose(D.UVttw_model(ii_no_adcp));
     # else
     #   G_model = [];
     #   d_model = [];
     # end
 
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    # % Make deep ocean velocity small...  
+    # % Make deep ocean velocity small...
     # % That can be useful to make the velocity profiles look nice, to get rid of
-    # % large mean shear bias. 
+    # % large mean shear bias.
 
     # if exist('W_deep','var')
     #   ii = find(gz>W_deep_z0); % depths above the place were we minimize deep velocities
@@ -633,7 +635,6 @@ def Inverse(
     #   G_deep=[];
     #   d_deep=[];
     # end
-
 
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -670,7 +671,7 @@ def Inverse(
     # % Glider speed through the water
     # D.UVttw_solution = UVttw;
 
-    # % Total vehicle speed: U_ttw (speed through the water) + U_drift (ocean speed at the glider). 
+    # % Total vehicle speed: U_ttw (speed through the water) + U_drift (ocean speed at the glider).
     # D.UVveh_solution =  UVttw+transpose(Ai0*UVocn(:));
 
     # % ADCP measurement (D.UV) = u_ocean(t,z) - u_drift( u_ocean @ glider) - u_ttw(@ glider)
@@ -682,7 +683,7 @@ def Inverse(
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     # %%  Vertical velocity inverse
 
-    # Gv_adcp = W_MEAS*[-Av, AiM-Av*Ai0];  % same as the horizontal velocity. 
+    # Gv_adcp = W_MEAS*[-Av, AiM-Av*Ai0];  % same as the horizontal velocity.
 
     # M = [Gv_adcp;G_dac;G_sfc;2*Do;2*Do2;Dv]\[dw_adcp;0*d_dac;0*d_sfc;zeros(size(Do,1)+size(Do2,1)+size(Dv,1),1)];
 
@@ -696,9 +697,8 @@ def Inverse(
     # % U_drift = Ocean velocity at the glider
     # D.Wocn_solution = transpose(Ai0*Wocn(:));
 
-
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    # %% Gridded version (on the ocean vertical grid). 
+    # %% Gridded version (on the ocean vertical grid).
 
     # [~,iiz, itmp] = intersect(gz, profile.z);
 
@@ -733,6 +733,5 @@ def Inverse(
     # variables_for_plots.Av = Av;
     # variables_for_plots.Nt = Nt;
     # variables_for_plots.Nz = Nz;
-
 
     return (D, profile, None)
