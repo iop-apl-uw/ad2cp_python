@@ -127,7 +127,7 @@ def lat_to_m(dlat: npt.NDArray[np.float64], alat: np.float64) -> npt.NDArray[np.
     return dlat * m
 
 
-def latlon2xy(ll: npt.NDArray[np.complex128], ll0: npt.NDArray[np.complex128]) -> npt.NDArray[np.complex128]:
+def latlon2xy(ll: npt.NDArray[np.complex128], ll0: np.complex128) -> npt.NDArray[np.complex128]:
     ll -= ll0
 
     # xy =      lon_to_m(real(ll),imag(ll0))+...
