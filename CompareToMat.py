@@ -127,6 +127,13 @@ def main() -> None:
         ("D", "upcast", "D", "upcast"),
         ("D", "UVttw_model", "D", "UVttw_model"),
         ("D", "Wttw_model", "D", "Wttw_model"),
+        ("inverse_tmp", "d_adcp", "inverse_tmp", "d_adcp"),
+        ("inverse_tmp", "z", "inverse_tmp", "z"),
+        ("inverse_tmp", "TT", "inverse_tmp", "TT"),
+        ("inverse_tmp", "Z0", "inverse_tmp", "Z0"),
+        ("inverse_tmp", "upcast", "inverse_tmp", "upcast"),
+        ("inverse_tmp", "jprof", "inverse_tmp", "jprof"),
+        ("inverse_tmp", "Av", "inverse_tmp", "Av"),
     ):
         py_var = python_file[py_grp][py_name]
         # Note: By applying np.squeeze here, matlab column vectors are converted to row.
@@ -142,7 +149,7 @@ def main() -> None:
         py_shape = np.shape(py_var)
         mat_shape = np.shape(mat_var)
         # Convert any Mtime vars to unix epoch
-        if mat_name == "Mtime":
+        if mat_name in ("Mtime", "TT"):
             mat_var = (mat_var - 719529) * 86400
         name_str = f"Comparing Python:{py_grp}:{py_name}, Matlab:{mat_grp}:{mat_name}"
         if py_shape != mat_shape:
@@ -179,10 +186,15 @@ def main() -> None:
             not_close_pts = np.count_nonzero(np.logical_not(close))
             close_str = f"NOT_CLOSE atol:{atol:g} {not_close_pts}/{tot_pts}"
             log_warning(f"{name_str} {close_str}")
-            bad_pts = np.nonzero(np.logical_not(close))[0]
+            # bad_pts = np.nonzero(np.logical_not(close))[0]
+            bad_pts = np.argwhere(np.logical_not(close))
             log_debug("    index:py_var:mat_var")
-            for ii in bad_pts:
-                log_debug(f"    {ii}:{py_var[ii]}:{mat_var[ii]}")
+            if len(py_var.shape) == 1:
+                for ii in bad_pts:
+                    log_debug(f"    [{ii}]:{py_var[ii]}:{mat_var[ii]}")
+            else:
+                for ii, jj in bad_pts:
+                    log_debug(f"    [{ii},{jj}]:{py_var[ii,jj]}:{mat_var[ii,jj]}")
         else:
             log_info(f"{name_str} all_close")
 
