@@ -62,17 +62,17 @@ def init_helper(
 @dataclass
 class Params(ExtendedDataClass.ExtendedDataClass):
     # Gilder number int
-    sg: int = 0
+    sg: int = field(default=0)
     # Size of vertical grid bins used in inverse solution
-    dz: float = 5.0
+    dz: float = field(default=5.0)
     # surface blank (if W_SURFACE ~=0, glider velocity is zero AND ADCP data is ignored above that depth
-    sfc_blank: float = 3.0
+    sfc_blank: float = field(default=3.0)
     # param.index_bins = 1:15
     index_bins: npt.ArrayLike = field(default_factory=(lambda: np.arange(15)))
     # 'gsm' or 'FlightModel'
-    VEHICLE_MODEL: str = "FlightModel"
+    VEHICLE_MODEL: str = field(default="FlightModel")
     # Use the glider pressure sensor
-    use_glider_pressure = True
+    use_glider_pressure: bool = field(default=True)
 
     # Not configurable - set from glider data
     # CONSIDER - move to glider object?
@@ -96,22 +96,23 @@ class Params(ExtendedDataClass.ExtendedDataClass):
     def init(self, cfg_dict: dict, config_file_name: pathlib.PosixPath) -> None:
         init_helper(self, config_file_name, cfg_dict, "params", self.params_conversion)
 
-        self.gz = np.arange(0, 1000 + self.dz, self.dz)[:, np.newaxis]
+        # Transposition - was in the matlab code, but doesn't look right for the python case
+        # self.gz = np.arange(0, 1000 + self.dz, self.dz)[:, np.newaxis]
+        self.gz = np.arange(0, 1000 + self.dz, self.dz)
 
 
 @dataclass
 class Weights(ExtendedDataClass.ExtendedDataClass):
-    W_MEAS = 1  # measurement weight: ~ 1/(0.05);
-    OCN_SMOOTH = 1  # 100/param.dz; % smoothness factors
-    VEH_SMOOTH = 1  # smoothness factors
-    W_DAC = 4  # Weight for the total barotropic constraint (gps)
-    W_MODEL = 1  # vehicle flight model weight (when we don't have ADCP data).
-    W_MODEL_DAC = 2  # vehicle model dac weight
-    W_SURFACE = 1  # Weight for surface constraint (gps - surface drift)
-    W_OCN_DNUP = 2  # Weight for down and up ocean profile to be the same.
-
-    W_deep = 0.1  # Weight to make velocities below W_deep_z0 small
-    W_deep_z0 = 500
+    W_MEAS: float = field(default=1)  # measurement weight: ~ 1/(0.05);
+    OCN_SMOOTH: float = field(default=1)  # 100/param.dz; % smoothness factors
+    VEH_SMOOTH: float = field(default=1)  # smoothness factors
+    W_DAC: float = field(default=4)  # Weight for the total barotropic constraint (gps)
+    W_MODEL: float = field(default=1)  # vehicle flight model weight (when we don't have ADCP data).
+    W_MODEL_DAC: float = field(default=2)  # vehicle model dac weight
+    W_SURFACE: float = field(default=1)  # Weight for surface constraint (gps - surface drift)
+    W_OCN_DNUP: float = field(default=2)  # Weight for down and up ocean profile to be the same.
+    W_deep: float = field(default=0.1)  # Weight to make velocities below W_deep_z0 small
+    W_deep_z0: float = field(default=5)
 
     def params_conversion(self) -> dict:
         return {

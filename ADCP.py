@@ -233,20 +233,21 @@ def Inverse(
     weights: ADCPConfig.Weights,
     param: ADCPConfig.Params,
 ) -> Any:
-    gz = param.gz
-    dz = param.dz
+    inverse_tmp = {}
+    # gz = param.gz
+    # dz = param.dz
 
     profile = ADCPFiles.ADCPProfile()
 
-    profile.z = gz
-    profile.UVocn = np.zeros((len(gz), 2)) * np.nan
-    profile.UVttw_solution = np.zeros((len(gz), 2)) * np.nan
-    profile.UVttw_model = np.zeros((len(gz), 2)) * np.nan
-    profile.time = np.zeros((len(gz), 2)) * np.nan
-    profile.UVerr = np.zeros((len(gz), 2)) * np.nan
-    profile.Wocn = np.zeros((len(gz), 2)) * np.nan
-    profile.Wttw_solution = np.zeros((len(gz), 2)) * np.nan
-    profile.Wttw_model = np.zeros((len(gz), 2)) * np.nan
+    profile.z = param.gz
+    profile.UVocn = np.zeros((len(param.gz), 2)) * np.nan
+    profile.UVttw_solution = np.zeros((len(param.gz), 2)) * np.nan
+    profile.UVttw_model = np.zeros((len(param.gz), 2)) * np.nan
+    profile.time = np.zeros((len(param.gz), 2)) * np.nan
+    profile.UVerr = np.zeros((len(param.gz), 2)) * np.nan
+    profile.Wocn = np.zeros((len(param.gz), 2)) * np.nan
+    profile.Wttw_solution = np.zeros((len(param.gz), 2)) * np.nan
+    profile.Wttw_model = np.zeros((len(param.gz), 2)) * np.nan
 
     # Make a new regular time grid, from the first to the last gps fixes, which
     # has the same time interval as most ADCP emsembles.
@@ -372,7 +373,8 @@ def Inverse(
 
     # gz=gz(gz<max(glider.ctd_depth)+median(diff(gz)));
     # Nz = numel(gz);
-    gz = gz[gz < np.max(glider.ctd_depth) + np.median(np.diff(gz))]
+    gz = param.gz[param.gz < np.max(glider.ctd_depth) + np.nanmedian(np.diff(param.gz))]
+    Nz = gz.size
     (Nbin, Nt) = np.shape(D.UV)
 
     # dc = D.UV;
@@ -386,32 +388,45 @@ def Inverse(
     # select valid data
     ia = np.logical_not(np.isnan(dc))
     # RHS, long vector of weighted measured velocities
-    d_adcp = weights.W_MEAS * dc[ia]
+    # *matlab* - transpose to preserve matlab order
+    d_adcp = weights.W_MEAS * dc.T[ia.T]
+    Na = d_adcp.size
+    inverse_tmp["d_adcp"] = d_adcp
 
     # dw_adcp = W_MEAS*D.W(ia);
 
     # RHS, long vector of weighted measured vertical velocities
-    dw_adcp = weights.W_MEAS * D.W[ia]
+    # *matlab* - transpose to preserve matlab order
+    dw_adcp = weights.W_MEAS * D.W.T[ia.T]
+
+    inverse_tmp["dw_adcp"] = dw_adcp
     # z = D.Z(ia); % ...and depth
     # D.T=ones(size(dc,1),1)*D.Mtime; % Time of each observations
     # TT=D.T(ia);
     # Z0 = ones(size(D.Z,1),1)*D.Z0; % depth of the glider at each observation
     # Z0 = Z0(ia);
 
-    z = D.Z[ia]  # ...and depth
+    # *matlab* - transpose to preserve matlab order
+    z = D.Z.T[ia.T]  # ...and depth
     # Time of each observations
-    TT = (np.atleast_2d(np.ones(np.shape(dc)[0])).T * D.time)[ia]
+    # *matlab* - transpose to preserve matlab order
+    TT = (np.atleast_2d(np.ones(np.shape(dc)[0])).T * D.time).T[ia.T]
     # depth of the glider at each observation
-    Z0 = (np.atleast_2d(np.ones(np.shape(D.Z)[0])).T * D.Z0)[ia]
+    # *matlab* - transpose to preserve matlab order
+    Z0 = (np.atleast_2d(np.ones(np.shape(D.Z)[0])).T * D.Z0).T[ia.T]
 
-    pdb.set_trace()
+    inverse_tmp["z"] = z
+    inverse_tmp["TT"] = TT
+    inverse_tmp["Z0"] = Z0
+
+    # pdb.set_trace()
 
     # upcast = repmat(D.upcast,size(D.Z,1),1);
     # upcast = upcast(ia);
     # Na = numel(d_adcp);
 
-    upcast = np.tile(D.upcast, (np.shape(D.Z)[0], 1))[ia]
-    Na = d_adcp.size
+    upcast = np.tile(D.upcast, (np.shape(D.Z)[0], 1)).T[ia.T]
+    inverse_tmp["upcast"] = upcast
 
     # %%%%%%%%%%
     # % Av is matrix selecting the vehicle ttw velocity at the time of each ADCP measurement
@@ -420,12 +435,18 @@ def Inverse(
     # Av = sparse(1:Na, jprof, ones(1,Na),Na,Nt);
 
     # corresponding profile number (i.e. U_ttw index)
-    jprof = np.cumsum(np.ones((Nbin, Nt)), 2)
-    jprof = jprof[ia]
+    jprof = np.cumsum(np.ones((Nbin, Nt)), 1)
+    jprof = jprof.T[ia.T]
+
+    # Good to here
+
+    # TODO - try to construct a dense matrix first - then convert (?)
+
     # From https://stackoverflow.com/questions/40890960/numpy-scipy-equivalent-of-matlabs-sparse-function
-    # CONSIDER - is documentation suggests *_array version is what to use
-    # CONSIDER - Is csr_* the appropriate thing?
-    Av = scipy.sparse.csr_matrix(np.arange(Na), (jprof, np.ones(Na)), np.shape(Na, Nt))
+    Av = scipy.sparse.csr_array((np.arange(Na), (jprof, np.ones(Na))), shape=(Na, Nt))
+    pdb.set_trace()
+    inverse_tmp["jprof"] = jprof
+    inverse_tmp["Av"] = Av.todense()
 
     # %%%%%%%%%%
     # % AiM is a matrix assigning the vertical (ocean profile) grid to the measurement position
@@ -435,7 +456,7 @@ def Inverse(
     # % measurements. In the end, sum(AiM,2)==1 everywhere.
 
     # % % interpolation from the vertical grid to the measurement positions
-    # rz = (z(:)-gz(1))/dz; % fractional z-index
+    # rz = (z(:)-gz(1))/param.dz; % fractional z-index
     # iz = [floor(rz)+1,floor(rz)+2]; % interpolant indices
     # wz = [1-(rz-floor(rz)), rz-floor(rz)]; % interpolant weights
     # % to allow for down-/up-cast...
@@ -443,13 +464,23 @@ def Inverse(
     # % Two ocean profiles
     # AiM = sparse(repmat( (1:Na)',1,2 ), iz, wz,Na,2*Nz);
 
+    # interpolation from the vertical grid to the measurement positions
+    ##NOT YET    rz = (z - gz[0]) / param.dz  # fractional z-index
+    ##NOT YET    iz = np.array((np.floor(rz) + 1, np.floor(rz) + 2))  # interpolant indices
+    ##NOT YET    wz = np.array((1 - (rz - np.floor(rz)), rz - np.floor(rz)))  # interpolant weights
+    ##NOT YET    # to allow for down-/up-cast...
+    ##NOT YET    iz[upcast, :] = iz[upcast, :] + Nz
+    ##NOT YET    # Two ocean profiles
+    ##NOT YET    # AiM = sparse(repmat( (1:Na)',1,2 ), iz, wz,Na,2*Nz);
+    ##NOT YET    AiM = scipy.sparse.csr_array((np.tile(D.np.arange(1, Na), (1, 2)), (iz, wz)), shape=(Na, 2 * Nz))
+    ##NOT YET    inverse_tmp["AiM"] = AiM.todense()
     # %%%%%%%%%%
     # % AiO is a matrix assigning the vertical (ocean profile) grid at the vehicle position
     # % AiG is a matrix assigning the vertical (ocean profile) grid at the vehicle position,
     # % expressed at every measurement position
 
     # % interpolation from the vertical grid to the vehicle position
-    # rz = (D.Z0(:)-gz(1))/dz; % fractional z-index
+    # rz = (D.Z0(:)-gz(1))/param.dz; % fractional z-index
     # iz = [floor(rz)+1,floor(rz)+2]; % interpolant indices ** this shouldn't be larger than Nz, but technically can!?!
     # wz = [1-(rz-floor(rz)), rz-floor(rz)]; % interpolant weights
     # % to allow for down-/up-cast...
@@ -551,7 +582,7 @@ def Inverse(
 
     # %% %% REGULARIZATION
     # % regularization of ocean velocity profile
-    # % dd = spdiags(repmat([-1 1]/dz, 2*Nz-1,1),[0 1], 2*Nz-1,2*Nz); % d/dz
+    # % dd = spdiags(repmat([-1 1]/param.dz, 2*Nz-1,1),[0 1], 2*Nz-1,2*Nz); % d/param.dz
     # % % instead of Nz:Nz+1 continuity at the bottom of the profile (Nz+1 is surface!), enforce Nz,2*Nz continuity:
     # % dd(Nz,:) = 0;
     # % dd(Nz,Nz) = -0.5; dd(Nz,2*Nz) = +0.5;
@@ -560,9 +591,9 @@ def Inverse(
 
     # if OCN_SMOOTH~=0
     #   % Smoothness of ocean velocity
-    #   dd = spdiags(repmat([-1 2 -1]/dz, 2*Nz-2,1),[0 1 2], 2*Nz-2,2*Nz);
+    #   dd = spdiags(repmat([-1 2 -1]/param.dz, 2*Nz-2,1),[0 1 2], 2*Nz-2,2*Nz);
     #   dd(Nz,:) = 0;
-    #   dd(Nz,Nz-1) = -1/dz; dd(Nz,Nz) = 2/dz; dd(Nz,2*Nz) = -1/dz;
+    #   dd(Nz,Nz-1) = -1/param.dz; dd(Nz,Nz) = 2/param.dz; dd(Nz,2*Nz) = -1/param.dz;
     #   Do = [ sparse(2*Nz-2,Nt), dd ]*OCN_SMOOTH;
     # else
     #   Do = [];
@@ -583,7 +614,7 @@ def Inverse(
     #   dd=dd(ii,:);
     #   % dd = diag(ss);
     #   % constrait (weight) is effectively less as time increases.
-    #   Do2 = [sparse(length(ii),Nt) dd/dz -dd/dz]*W_OCN_DNUP;
+    #   Do2 = [sparse(length(ii),Nt) dd/param.dz -dd/param.dz]*W_OCN_DNUP;
     # else
     #   Do2 = [];
     # end
@@ -734,4 +765,4 @@ def Inverse(
     # variables_for_plots.Nt = Nt;
     # variables_for_plots.Nz = Nz;
 
-    return (D, profile, None)
+    return (D, profile, None, inverse_tmp)

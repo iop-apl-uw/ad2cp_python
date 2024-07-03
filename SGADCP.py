@@ -91,9 +91,7 @@ def main() -> int:
         return 1
 
     # param.gz = (0:param.dz:1000)';
-    # Done on ADCPConfig
-    # TODO - not sure the transposition is the right thing, but its in the matlab code
-    # param.gz = np.arange(0, 1000 + param.dz, param.dz)[:, np.newaxis]
+    # Done in ADCPConfig
 
     # Mission-long corrections - not used in the 2024 version of the real-time code
     # if exist('dpitch','var')
@@ -169,7 +167,7 @@ def main() -> int:
 
         # Perfrom inverse
         try:
-            D, profile, variables_for_plot = ADCP.Inverse(adcp_realtime, gps, glider, weights, param)
+            D, profile, variables_for_plot, inverse_tmp = ADCP.Inverse(adcp_realtime, gps, glider, weights, param)
         except Exception:
             DEBUG_PDB_F()
             log_error("Problem performing inverse calculation", "exc")
@@ -186,6 +184,9 @@ def main() -> int:
             gps.save_to_hdf5("gps", hdf)
             D.save_to_hdf5("D", hdf)
             profile.save_to_hdf5("profile", hdf)
+            grp = hdf.create_group("inverse_tmp")
+            for k, v in inverse_tmp.items():
+                grp.create_dataset(k, data=v)
 
     return 0
 

@@ -117,7 +117,7 @@ class ADCPRealtimeData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
     # Depth for each cell for each ensemble
     Z: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
 
-    # Add needed vars are in this table
+    # Load varaibles from netcdf files
     def adcp_namemapping(self):
         return {
             "ad2cp_velX": ("U", lambda x: fetch_var(x).T),
