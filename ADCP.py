@@ -438,13 +438,8 @@ def Inverse(
     jprof = np.cumsum(np.ones((Nbin, Nt)), 1)
     jprof = jprof.T[ia.T]
 
-    # Good to here
-
-    # TODO - try to construct a dense matrix first - then convert (?)
-
-    # From https://stackoverflow.com/questions/40890960/numpy-scipy-equivalent-of-matlabs-sparse-function
-    Av = scipy.sparse.csr_array((np.arange(Na), (jprof, np.ones(Na))), shape=(Na, Nt))
-    pdb.set_trace()
+    # *matlab* - jprof - 1 to convert from matlab to python indexing
+    Av = ADCPUtils.sparse(np.arange(Na), jprof - 1, np.ones(Na), Na, Nt)
     inverse_tmp["jprof"] = jprof
     inverse_tmp["Av"] = Av.todense()
 
@@ -465,15 +460,26 @@ def Inverse(
     # AiM = sparse(repmat( (1:Na)',1,2 ), iz, wz,Na,2*Nz);
 
     # interpolation from the vertical grid to the measurement positions
-    ##NOT YET    rz = (z - gz[0]) / param.dz  # fractional z-index
-    ##NOT YET    iz = np.array((np.floor(rz) + 1, np.floor(rz) + 2))  # interpolant indices
-    ##NOT YET    wz = np.array((1 - (rz - np.floor(rz)), rz - np.floor(rz)))  # interpolant weights
-    ##NOT YET    # to allow for down-/up-cast...
-    ##NOT YET    iz[upcast, :] = iz[upcast, :] + Nz
-    ##NOT YET    # Two ocean profiles
-    ##NOT YET    # AiM = sparse(repmat( (1:Na)',1,2 ), iz, wz,Na,2*Nz);
-    ##NOT YET    AiM = scipy.sparse.csr_array((np.tile(D.np.arange(1, Na), (1, 2)), (iz, wz)), shape=(Na, 2 * Nz))
-    ##NOT YET    inverse_tmp["AiM"] = AiM.todense()
+    rz = (z - gz[0]) / param.dz  # fractional z-index
+    iz = np.array((np.floor(rz) + 1, np.floor(rz) + 2)).T  # interpolant indices
+    # to allow for down-/up-cast...
+    iz[upcast, :] = iz[upcast, :] + Nz
+    wz = np.array((1 - (rz - np.floor(rz)), rz - np.floor(rz))).T  # interpolant weights
+
+    inverse_tmp["rz"] = rz
+    inverse_tmp["iz"] = iz
+    inverse_tmp["wz"] = wz
+
+    # Good to here
+
+    # Two ocean profiles
+    # AiM = ADCPUtils.sparse(np.tile((1, 2), Na).reshape((Na, 2)), iz, wz, Na, 2 * Nz)
+    pdb.set_trace()
+    # TODO - these to index vectors need to be re-written such that the indexes actually match
+    # wz.reshape structure
+    AiM = ADCPUtils.sparse(np.tile((0, 1), Na), iz.reshape(2 * Na) - 1, wz.reshape(2 * Na), Na, 2 * Nz)
+    # AiM = ADCPUtils.sparse(np.arange(Na), iz, wz, Na, 2 * Nz)
+    inverse_tmp["AiM"] = AiM.todense()
     # %%%%%%%%%%
     # % AiO is a matrix assigning the vertical (ocean profile) grid at the vehicle position
     # % AiG is a matrix assigning the vertical (ocean profile) grid at the vehicle position,
