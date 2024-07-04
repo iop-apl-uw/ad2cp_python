@@ -134,6 +134,10 @@ def main() -> None:
         ("inverse_tmp", "upcast", "inverse_tmp", "upcast"),
         ("inverse_tmp", "jprof", "inverse_tmp", "jprof"),
         ("inverse_tmp", "Av", "inverse_tmp", "Av"),
+        ("inverse_tmp", "rz", "inverse_tmp", "rz"),
+        ("inverse_tmp", "iz", "inverse_tmp", "iz"),
+        ("inverse_tmp", "wz", "inverse_tmp", "wz"),
+        ("inverse_tmp", "AiM", "inverse_tmp", "AiM"),
     ):
         py_var = python_file[py_grp][py_name]
         # Note: By applying np.squeeze here, matlab column vectors are converted to row.
