@@ -235,3 +235,24 @@ def interp1d(first_epoch_time_s_v, data_v, second_epoch_time_s_v, kind="linear")
 # for n=1:length(in)
 #   [~,in(n)]=min(abs(x-y(n)));
 # end
+
+
+# From https://stackoverflow.com/questions/40890960/numpy-scipy-equivalent-of-matlabs-sparse-function
+def sparse(i, j, v, m, n):
+    """
+    Create and compressing a matrix that have many zeros
+    Parameters:
+        i: 1-D array representing the index 1 values
+            Size n1
+        j: 1-D array representing the index 2 values
+            Size n1
+        v: 1-D array representing the values
+            Size n1
+        m: integer representing x size of the matrix >= n1
+        n: integer representing y size of the matrix >= n1
+    Returns:
+        s: 2-D array
+            Matrix full of zeros excepting values v at indexes i, j
+    """
+    return scipy.sparse.csr_matrix((v, (i, j)), shape=(m, n))
+    # return scipy.sparse.csr_array((v, (i, j)), shape=(m, n))
