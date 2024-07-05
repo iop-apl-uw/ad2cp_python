@@ -237,6 +237,8 @@ def Inverse(
     # gz = param.gz
     # dz = param.dz
 
+    # DEBUG np.set_printoptions(precision=4, linewidth=200)
+
     profile = ADCPFiles.ADCPProfile()
 
     profile.z = param.gz
@@ -341,7 +343,6 @@ def Inverse(
 
     # model velocity
     # UV1 does not include DAC
-
     # make sure the model is available at all times
     D.UVttw_model = scipy.interpolate.interp1d(
         glider.ctd_time,
@@ -461,7 +462,7 @@ def Inverse(
 
     # interpolation from the vertical grid to the measurement positions
     rz = (z - gz[0]) / param.dz  # fractional z-index
-    iz = np.array((np.floor(rz) + 1, np.floor(rz) + 2)).T  # interpolant indices
+    iz = np.array((np.floor(rz) + 1, np.floor(rz) + 2)).T  # interpolant indices - one (matlab) based
     # to allow for down-/up-cast...
     iz[upcast, :] = iz[upcast, :] + Nz
     wz = np.array((1 - (rz - np.floor(rz)), rz - np.floor(rz))).T  # interpolant weights
@@ -470,25 +471,60 @@ def Inverse(
     inverse_tmp["iz"] = iz
     inverse_tmp["wz"] = wz
 
+    # Two ocean profiles
+    # *matlab* - reshape needed because python sparse only allows 1d for initialization
+    # *matlab* - iz is indexes that are one based
+    AiM = ADCPUtils.sparse(
+        np.tile(np.atleast_2d(np.arange(Na)).T, 2).reshape(2 * Na),
+        iz.reshape(2 * Na) - 1,
+        wz.reshape(2 * Na),
+        Na,
+        2 * Nz,
+    )
+    inverse_tmp["AiM"] = AiM.todense()
+
     # Good to here
 
-    # Two ocean profiles
-    # AiM = ADCPUtils.sparse(np.tile((1, 2), Na).reshape((Na, 2)), iz, wz, Na, 2 * Nz)
-    pdb.set_trace()
-    # TODO - these to index vectors need to be re-written such that the indexes actually match
-    # wz.reshape structure
-    AiM = ADCPUtils.sparse(np.tile((0, 1), Na), iz.reshape(2 * Na) - 1, wz.reshape(2 * Na), Na, 2 * Nz)
-    # AiM = ADCPUtils.sparse(np.arange(Na), iz, wz, Na, 2 * Nz)
-    inverse_tmp["AiM"] = AiM.todense()
-    # %%%%%%%%%%
-    # % AiO is a matrix assigning the vertical (ocean profile) grid at the vehicle position
-    # % AiG is a matrix assigning the vertical (ocean profile) grid at the vehicle position,
-    # % expressed at every measurement position
+    # AiO is a matrix assigning the vertical (ocean profile) grid at the vehicle position
+    # AiG is a matrix assigning the vertical (ocean profile) grid at the vehicle position,
+    #     expressed at every measurement position
 
-    # % interpolation from the vertical grid to the vehicle position
+    # interpolation from the vertical grid to the vehicle position
     # rz = (D.Z0(:)-gz(1))/param.dz; % fractional z-index
-    # iz = [floor(rz)+1,floor(rz)+2]; % interpolant indices ** this shouldn't be larger than Nz, but technically can!?!
+    # iz = [floor(rz)+1,floor(rz)+2]; % interpolant indices ** this shouldn't be larger than Nz,
+    # but technically can!?!
+    # iz(D.upcast,:) = iz(D.upcast,:)+Nz;
     # wz = [1-(rz-floor(rz)), rz-floor(rz)]; % interpolant weights
+
+    # interpolation from the vertical grid to the vehicle position
+    rrz = (D.Z0 - gz[0]) / param.dz  # fractional z-index
+    # interpolant indices ** this shouldn't be larger than Nz,
+    # but technically can!?!
+    iiz = np.array((np.floor(rrz) + 1, np.floor(rrz) + 2)).T
+    # to allow for down-/up-cast...
+    iiz[D.upcast, :] = iiz[D.upcast, :] + Nz
+    wwz = np.array((1 - (rrz - np.floor(rrz)), rrz - np.floor(rrz))).T  # interpolant weights
+
+    inverse_tmp["rrz"] = rrz
+    inverse_tmp["iiz"] = iiz
+    inverse_tmp["wwz"] = wwz
+
+    # Two ocean profiles, each with Nz depths
+    # Ai0 = sparse(repmat( (1:Nt)',1,2 ), iz, wz,Nt, 2*Nz);
+    # AiG = Av * Ai0
+    Ai0 = ADCPUtils.sparse(
+        np.tile(np.atleast_2d(np.arange(Nt)).T, 2).reshape(2 * Nt),
+        iiz.reshape(2 * Nt) - 1,
+        wwz.reshape(2 * Nt),
+        Nt,
+        2 * Nz,
+    )
+    AiG = Av * Ai0
+    inverse_tmp["Ai0"] = Ai0.todense()
+    inverse_tmp["AiG"] = AiG.todense()
+
+    # Good to here
+
     # % to allow for down-/up-cast...
     # iz(D.upcast,:) = iz(D.upcast,:)+Nz;
     # % Two ocean profiles, each with Nz depths
