@@ -548,7 +548,7 @@ def Inverse(
     # end
 
     if weights.W_SURFACE:
-        ii_surface = np.nonzero(D.Z0 <= param.sfc_blank)[0]
+        ii_surface = np.nonzero(param.sfc_blank >= D.Z0)[0]
         G_sfc = scipy.sparse.lil_array((ii_surface.shape[0], Nt + 2 * Nz))
         for kk in range(ii_surface.shape[0]):
             G_sfc[kk, ii_surface[kk]] = 1
@@ -612,62 +612,71 @@ def Inverse(
     #     end
     # end
 
-    gps_constraints = ADCPFile.GPSConstraints()
-    
-    for k in range(gps.log_gps_time.shape[0] - 1):
-        Dt = np.diff(gps.log_gps_time[k:k+1])
-        UVbt = np.diff(gps.XY[k:k+1])/Dt # mean velocity during this segment (vehicle + ocean)
-        ii = np.nonzero(np.logical_and(gps.log_gps_time[k] >= D.time,D.time <= gps.log_gps_time[k+1]))[0]
-        if ii.shape[0]<5:
-            continue
-        
-        gps_constraints.TL[k] = D.time[ii[[np.r_[0, -1]]]]
-        gps_constraints.UVbt[k] = UVbt
+    # TODO - change so this is array, not dictionary based so comparisions work
+    gps_constraints = ADCPFiles.GPSConstraints()
 
-        if Dt>3600 or max(D.Z0[ii])==max(D.Z0):
+    for k in range(gps.log_gps_time.shape[0] - 1):
+        Dt = np.diff(gps.log_gps_time[np.r_[k, k + 1]])
+        UVbt = np.diff(gps.XY[np.r_[k, k + 1]]) / Dt  # mean velocity during this segment (vehicle + ocean)
+        ii = np.nonzero(np.logical_and(D.time >= gps.log_gps_time[k], D.time <= gps.log_gps_time[k + 1]))[0]
+        if ii.shape[0] < 5:
+            continue
+
+        if Dt > 3600 or max(D.Z0[ii]) == max(D.Z0):
             # dive DAC
 
             gps_constraints.dac[k] = 1
-            #gps_constraints.UVbt(k) = UVbt;
-            #gps_constraints.TL(k,1:2) = D.Mtime(ii([1 end]));
-        
+            gps_constraints.TL[k] = D.time[ii[[np.r_[0, -1]]]]
+            gps_constraints.UVbt[k] = UVbt
+
             dti = np.diff(D.time[ii])
             # make it so that the individual weights *average* (or sum?) to 1
             # (needs to be consistent below!)
             #     dt = dt/mean(dt)*WBT ; %AVG! This is a stronger constatint (I think...)
-            dti = dti/np.sum(dti)  #SUM!
+            dti = dti / np.sum(dti)  # SUM!
 
             # time-average using trapezoid rule
-            w = D.time*0
-            w[ii[0:-2]] = 0.5*dti
-            w[ii[1:-1]] = w[ii[1:-1]] + 0.5*dti # "w" is non zero only during the time of these measurements...
+            w = D.time * 0
+            w[ii[:-1]] = 0.5 * dti
+            w[ii[1:]] = w[ii[1:]] + 0.5 * dti  # "w" is non zero only during the time of these measurements...
 
-            # TODO Add extra row - stack
             # TODO - what does the leading + do?
-            #G_dac = [+w w*Ai0]*W_DAC;
-            #d_dac = UVbt*W_DAC;
-            G_dac = scipy.sparse.hstack([+w w*Ai0])*W_DAC
-            g_dac = UVbt*W_DAC
+            # G_dac = [+w w*Ai0]*W_DAC;
+            # d_dac = UVbt*W_DAC;
+            G_dac = scipy.sparse.csr_array(np.atleast_2d(np.hstack([+w, w * Ai0]) * weights.W_DAC))
+            # TODO - convert to sparse
+            d_dac = UVbt * weights.W_DAC
+            inverse_tmp["G_dac"] = G_dac.todense()
+            inverse_tmp["d_dac"] = d_dac
 
-        elif Dt<3600 && W_SURFACE~=0:
+        elif Dt < 3600 and weights.W_SURFACE:
             # Surface drift (-> Constrain OCEAN VELOCITY to be like drift, glider speed to be zero)
 
             gps_constraints.dac[k] = 0
-            #gps_constraints.UVbt(k) = UVbt;
-            #gps_constraints.TL(k,1:2) = D.Mtime(ii([1 end]));
-            
-            dti = np.diff(D.time[ii])
-            dti = dti/np.sum(dti)  #SUM!
-            # time-average using trapezoid rule
-            w = D.time*0;
-            w[ii[0:-2]] = 0.5*dti
-            w[ii[1:-1]] = w[ii[1:-1]] + 0.5*dti # "w" is non zero only during the time of these measurements...
+            gps_constraints.TL[k] = D.time[ii[[np.r_[0, -1]]]]
+            gps_constraints.UVbt[k] = UVbt
 
-            # Add extra row - stack
-            #G_sfc = [G_sfc ; [zeros(size(w)) w*Ai0]*W_SURFACE];
-            #d_sfc = [d_sfc ; UVbt*W_SURFACE ];
-            G_sfc = scipy.sparse.hstack([G_sfc, np.array((np.zeros(w.shape[0]), w*Ai0))*W_SURFACE])
-            d_sfc = scipy.sparse.hstack([d_sfc ; UVbt*W_SURFACE ])
+            dti = np.diff(D.time[ii])
+            dti = dti / np.sum(dti)  # SUM!
+            # time-average using trapezoid rule
+            w = D.time * 0
+            w[ii[:-1]] = 0.5 * dti
+            w[ii[1:]] = w[ii[1:]] + 0.5 * dti  # "w" is non zero only during the time of these measurements...
+
+            # G_sfc = [G_sfc ; [zeros(size(w)) w*Ai0]*W_SURFACE];
+            # d_sfc = [d_sfc ; UVbt*W_SURFACE ];
+            G_sfc = scipy.sparse.vstack(
+                [
+                    G_sfc,
+                    scipy.sparse.csr_array(
+                        np.atleast_2d(np.hstack((np.zeros(w.shape[0]), w * Ai0)) * weights.W_SURFACE)
+                    ),
+                ]
+            )
+            # TODO conver to sparse
+            d_sfc = np.hstack((d_sfc, UVbt * weights.W_SURFACE))
+            inverse_tmp["G_sfc"] = G_sfc.todense()
+            inverse_tmp["d_sfc"] = d_sfc
 
     # %% %%%%%%  % Flight model dac
     # if exist('W_MODEL_DAC','var')

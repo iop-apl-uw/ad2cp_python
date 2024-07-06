@@ -145,8 +145,12 @@ def main() -> None:
         ("inverse_tmp", "AiG", "inverse_tmp", "AiG"),
         ("inverse_tmp", "G_adcp", "inverse_tmp", "G_adcp"),
         ("inverse_tmp", "G_sfc", "inverse_tmp", "G_sfc"),
+        ("inverse_tmp", "d_sfc", "inverse_tmp", "d_sfc"),
+        ("inverse_tmp", "G_dac", "inverse_tmp", "G_dac"),
+        ("inverse_tmp", "d_dac", "inverse_tmp", "d_dac"),
     ):
-        py_var = python_file[py_grp][py_name]
+        # py_var = python_file[py_grp][py_name]
+        py_var = np.squeeze(python_file[py_grp][py_name])
         # Note: By applying np.squeeze here, matlab column vectors are converted to row.
         # This has several effects:
         # 1) Masks the differnt orientations between the python and matlab.  A possible downside.
@@ -181,17 +185,25 @@ def main() -> None:
                     tmp[ii] = mat_var[ii]["real"] + 1j * mat_var[ii]["imag"]
                 mat_var = tmp
             else:
-                for ii in range(np.shape(mat_var)[0]):
-                    for jj in range(np.shape(mat_var)[1]):
-                        tmp[ii, jj] = mat_var[ii, jj]["real"] + 1j * mat_var[ii, jj]["imag"]
-                mat_var = tmp
+                if len(np.shape(mat_var)) == 2:
+                    for ii in range(np.shape(mat_var)[0]):
+                        for jj in range(np.shape(mat_var)[1]):
+                            tmp[ii, jj] = mat_var[ii, jj]["real"] + 1j * mat_var[ii, jj]["imag"]
+                    mat_var = tmp
+                elif len(np.shape(mat_var)) == 0:
+                    mat_var = mat_var["real"] + 1j * mat_var["imag"]
+                else:
+                    log_error("1d case not handled")
+        # TODO Make search optional to be either atol or rtol
         atol = 1.0
+        # while np.allclose(py_var, mat_var, equal_nan=True, rtol=atol):
         while np.allclose(py_var, mat_var, equal_nan=True, atol=atol):
             atol = atol / 10
             if atol < 1e-10:
                 break
         if atol >= 1e-10:
             # pdb.set_trace()
+            # close = np.isclose(py_var, mat_var, equal_nan=True, rtol=atol)
             close = np.isclose(py_var, mat_var, equal_nan=True, atol=atol)
             tot_pts = close.size
             not_close_pts = np.count_nonzero(np.logical_not(close))

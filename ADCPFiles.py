@@ -413,4 +413,4 @@ class GPSConstraints(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
 
     dac: dict = field(default_factory=(dict))
     TL: dict = field(default_factory=(dict))
-    Uvbt: dict = field(default_factory=(dict))
+    UVbt: dict = field(default_factory=(dict))
