@@ -483,8 +483,6 @@ def Inverse(
     )
     inverse_tmp["AiM"] = AiM.todense()
 
-    # Good to here
-
     # AiO is a matrix assigning the vertical (ocean profile) grid at the vehicle position
     # AiG is a matrix assigning the vertical (ocean profile) grid at the vehicle position,
     #     expressed at every measurement position
@@ -523,19 +521,12 @@ def Inverse(
     inverse_tmp["Ai0"] = Ai0.todense()
     inverse_tmp["AiG"] = AiG.todense()
 
-    # Good to here
-
-    # % to allow for down-/up-cast...
-    # iz(D.upcast,:) = iz(D.upcast,:)+Nz;
-    # % Two ocean profiles, each with Nz depths
-    # Ai0 = sparse(repmat( (1:Nt)',1,2 ), iz, wz,Nt, 2*Nz);
-
-    # AiG = Av*Ai0;
-
     # %%%%%%%%%%
 
     # % G_adcp = W_MEAS*[-Av, AiM];  % "G" matrix (Eq. B4; in Todd et al. 2011)
     # G_adcp = W_MEAS*[-Av, AiM-Av*Ai0];  %
+    G_adcp = weights.W_MEAS * scipy.sparse.hstack([-Av, AiM - Av * Ai0])
+    inverse_tmp["G_adcp"] = G_adcp.todense()
 
     # %% CONSTRAINTS
 
@@ -555,6 +546,22 @@ def Inverse(
     #   G_sfc =[];
     #   d_sfc =[];
     # end
+
+    if weights.W_SURFACE:
+        ii_surface = np.nonzero(D.Z0 <= param.sfc_blank)[0]
+        G_sfc = scipy.sparse.lil_array((ii_surface.shape[0], Nt + 2 * Nz))
+        for kk in range(ii_surface.shape[0]):
+            G_sfc[kk, ii_surface[kk]] = 1
+        G_sfc.tocsr()
+        # TODO - this may need to be sparse
+        d_sfc = np.zeros(ii_surface.shape[0])
+    else:
+        # TODO - this may need to be sparse
+        G_sfc = []
+        d_sfc = []
+    inverse_tmp["G_sfc"] = G_sfc.todense()
+
+    # Good to here
 
     # clear gps_constraints
     # for k=1:length(gps.Mtime)-1 % all GPS
@@ -604,6 +611,51 @@ def Inverse(
     #       d_sfc = [d_sfc ; UVbt*W_SURFACE ];
     #     end
     # end
+
+    for k in range(gps.log_gps_time.shape[0] - 1):
+        Dt = np.diff(gps.log_gps_time[k:k+1])
+        UVbt = np.diff(gps.XY[k:k+1]])/Dt # mean velocity during this segment (vehicle + ocean)
+        ii = np.nonzero(np.logical_and(gps.log_gps_time[k] >= D.time,D.time <= gps.log_gps_time[k+1]))[0]
+        if ii.shape[0]<5:
+            continue
+
+        if Dt>3600 || max(D.Z0[ii])==max(D.Z0):
+            # dive DAC
+
+            gps_constraints.dac(k) = 1;
+            gps_constraints.TL(k,1:2) = D.Mtime(ii([1 end]));
+            gps_constraints.UVbt(k) = UVbt;
+
+            dti = diff(D.Mtime(ii))*86400;
+            # make it so that the individual weights *average* (or sum?) to 1
+            # (needs to be consistent below!)
+            #     dt = dt/mean(dt)*WBT ; %AVG! This is a stronger constatint (I think...)
+            dti = dti/sum(dti) ; %SUM!
+
+            # time-average using trapezoid rule
+            w = D.Mtime*0;
+            w(ii(1:end-1)) = 0.5*dti;
+            w(ii(2:end)) = w(ii(2:end)) + 0.5*dti; % "w" is non zero only during the time of these measurements...
+
+            G_dac = [+w w*Ai0]*W_DAC;
+            d_dac = UVbt*W_DAC;
+
+        elif Dt<3600 && W_SURFACE~=0:
+            # Surface drift (-> Constrain OCEAN VELOCITY to be like drift, glider speed to be zero)
+
+            gps_constraints.dac(k) = 0;
+            gps_constraints.UVbt(k) = UVbt;
+            gps_constraints.TL(k,1:2) = D.Mtime(ii([1 end]));
+            
+            dti = diff(D.Mtime(ii))*86400;
+            dti = dti/sum(dti) ; %SUM!
+            # time-average using trapezoid rule
+            w = D.Mtime*0;
+            w(ii(1:end-1)) = 0.5*dti;
+            w(ii(2:end)) = w(ii(2:end)) + 0.5*dti; % "w" is non zero only during the time of these measurements...
+
+            G_sfc = [G_sfc ; [zeros(size(w)) w*Ai0]*W_SURFACE];
+            d_sfc = [d_sfc ; UVbt*W_SURFACE ];
 
     # %% %%%%%%  % Flight model dac
     # if exist('W_MODEL_DAC','var')
