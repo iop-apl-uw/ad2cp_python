@@ -405,3 +405,12 @@ class ADCPTemp(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
     UVttw_model: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     # vertical speed of the glider from active model - on the ADCP time grid
     Wttw_model: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
+
+
+@dataclass
+class GPSConstraints(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
+    """GPS constraints"""
+
+    dac: dict = field(default_factory=(dict))
+    TL: dict = field(default_factory=(dict))
+    Uvbt: dict = field(default_factory=(dict))
