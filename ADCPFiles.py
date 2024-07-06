@@ -187,6 +187,8 @@ class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
     time: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     eng_head: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     magnetic_variation: float = 0
+    depth_avg_curr_east: float = 0
+    depth_avg_curr_north: float = 0
 
     #
     # Derived/Calulated/Gathered from other dives
@@ -229,6 +231,8 @@ class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
             "time",
             "eng_head",
             "magnetic_variation",
+            "depth_avg_curr_east",
+            "depth_avg_curr_north",
         ]
 
     def init(self, ds: netCDF4.Dataset, ncf_name: pathlib.Path, param: ADCPConfig.Params, gps: GPSData) -> None:

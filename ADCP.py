@@ -530,11 +530,12 @@ def Inverse(
 
     # %% CONSTRAINTS
 
-    # %% SURFACE and GPS
-    # % Note that we may have multiple GPS fixes - add a constraint per each
-    # % pair. This may automatically constrain the surface velocity!
+    # SURFACE and GPS
+    # Note that we may have multiple GPS fixes - add a constraint per each
+    # pair. This may automatically constrain the surface velocity!
 
-    # % Constrain the glider speed to be zero before and after the dive.
+    # Constrain the glider speed to be zero before and after the dive.
+
     # if W_SURFACE~=0
     #   ii_surface = find(D.Z0<=param.sfc_blank);
     #   G_sfc = sparse(length(ii_surface),Nt+2*Nz);
@@ -560,8 +561,6 @@ def Inverse(
         G_sfc = []
         d_sfc = []
     inverse_tmp["G_sfc"] = G_sfc.todense()
-
-    # Good to here
 
     # clear gps_constraints
     # for k=1:length(gps.Mtime)-1 % all GPS
@@ -645,9 +644,9 @@ def Inverse(
             # d_dac = UVbt*W_DAC;
             G_dac = scipy.sparse.csr_array(np.atleast_2d(np.hstack([+w, w * Ai0]) * weights.W_DAC))
             # TODO - convert to sparse
-            d_dac = UVbt * weights.W_DAC
+            d_dac = scipy.sparse.csr_array(np.atleast_2d(UVbt * weights.W_DAC))
             inverse_tmp["G_dac"] = G_dac.todense()
-            inverse_tmp["d_dac"] = d_dac
+            inverse_tmp["d_dac"] = d_dac.todense()
 
         elif Dt < 3600 and weights.W_SURFACE:
             # Surface drift (-> Constrain OCEAN VELOCITY to be like drift, glider speed to be zero)
@@ -694,6 +693,31 @@ def Inverse(
     #   G_dac = [G_dac ; [+w*0 w*Ai0]*W_MODEL_DAC]; % averaged ocean velocity is the flight model dac
     #   d_dac = [d_dac ; MODEL_DAC*W_MODEL_DAC];
     # end
+
+    if weights.W_MODEL_DAC:
+        # ii = find(D.Z0)>3;
+        ii = np.nonzero(D.Z0 > 3)[0]
+        # time-average using trapezoid rule
+        dti = np.diff(D.time[ii])
+        dti = dti / np.sum(dti)  # SUM!
+        w = D.time * 0
+        w[ii[:-1]] = 0.5 * dti
+        w[ii[1:]] = w[ii[1:]] + 0.5 * dti  # "w" is non zero only during the time of these mes...
+
+        MODEL_DAC = glider.depth_avg_curr_east + 1j * glider.depth_avg_curr_north
+
+        # G_dac = [G_dac ; [+w*0 w*Ai0]*W_MODEL_DAC];
+        # d_dac = [d_dac ; MODEL_DAC*W_MODEL_DAC];
+
+        # averaged ocean velocity is the flight model dac
+        G_dac = scipy.sparse.vstack(
+            [G_dac, scipy.sparse.csr_array(np.atleast_2d(np.hstack([+w * 0, w * Ai0]) * weights.W_MODEL_DAC))]
+        )
+        d_dac = scipy.sparse.vstack([d_dac, np.atleast_2d(MODEL_DAC * weights.W_MODEL_DAC)])
+        inverse_tmp["G_dac"] = G_dac.todense()
+        inverse_tmp["d_dac"] = d_dac.todense()
+
+    # Good to here
 
     # %% %% REGULARIZATION
     # % regularization of ocean velocity profile
