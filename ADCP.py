@@ -885,7 +885,7 @@ def Inverse(
 
     inverse_tmp["G_model"] = G_model.todense()
     inverse_tmp["d_model"] = d_model
-    # Good to here
+
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     # % Make deep ocean velocity small...
     # % That can be useful to make the velocity profiles look nice, to get rid of
@@ -907,6 +907,24 @@ def Inverse(
     #   d_deep=[];
     # end
 
+    if weights.W_deep and weights.W_deep_z0:
+        ii = np.nonzero(gz > weights.W_deep_z0)[0]  # depths above the place were we minimize deep velocities
+        tmp = np.hanning(ii.shape[0] * 2)
+        ww = np.hstack([tmp[np.arange(ii.shape[0])], np.ones(Nz - ii.shape[0])])
+        dd = sp.sparse.eye(Nz, Nz).tolil()
+        for k in range(ww.shape[0]):
+            dd[k, k] = ww[k]
+        dd = dd[ii, :].tocsr()
+        G_deep = sp.sparse.hstack([sp.sparse.csr_array((ii.shape[0], Nt)), dd, dd]) * weights.W_deep
+        d_deep = np.zeros(G_deep.shape[0])
+    else:
+        # TODO - need a nop here
+        G_deep = []
+        d_deep = []
+
+    inverse_tmp["G_deep"] = G_deep.todense()
+    inverse_tmp["d_deep"] = d_deep
+    # Good to here
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     # % % Make the ttw speed zero at the bottom (when the flight model says it's zero)

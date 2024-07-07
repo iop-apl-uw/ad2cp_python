@@ -112,7 +112,7 @@ class Weights(ExtendedDataClass.ExtendedDataClass):
     W_SURFACE: float = field(default=1)  # Weight for surface constraint (gps - surface drift)
     W_OCN_DNUP: float = field(default=2)  # Weight for down and up ocean profile to be the same.
     W_deep: float = field(default=0.1)  # Weight to make velocities below W_deep_z0 small
-    W_deep_z0: float = field(default=5)
+    W_deep_z0: float = field(default=500)
 
     def params_conversion(self) -> dict:
         return {
