@@ -155,6 +155,8 @@ def main() -> None:
         ("inverse_tmp", "dd_dnup", "inverse_tmp", "dd_dnup"),
         ("inverse_tmp", "Do2", "inverse_tmp", "Do2"),
         ("inverse_tmp", "Dv", "inverse_tmp", "Dv"),
+        ("inverse_tmp", "G_model", "inverse_tmp", "G_model"),
+        ("inverse_tmp", "d_model", "inverse_tmp", "d_model"),
     ):
         # py_var = python_file[py_grp][py_name]
         py_var = np.squeeze(python_file[py_grp][py_name])

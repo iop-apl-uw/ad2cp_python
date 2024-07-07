@@ -36,6 +36,7 @@ ADCP.py - Main caclulation functions
 # TODO - review all code blocks and pull out the tight intermixed matlab
 
 import pdb
+import warnings
 from typing import Any
 
 import numpy as np
@@ -752,10 +753,10 @@ def Inverse(
         dd = dd.tocsr()
         Do = sp.sparse.hstack([sp.sparse.csr_array((2 * Nz - 2, Nt)), dd]) * weights.OCN_SMOOTH
         inverse_tmp["dd"] = dd.todense()
-        inverse_tmp["Do"] = Do.todense()
     else:
         # TODO - this is certainly incorrect - figure out what the nop version of a sparse array is
         Do = []
+    inverse_tmp["Do"] = Do.todense()
 
     # % Up and down ocean profile should be similar... (weighted by time interval)
     # if exist('W_OCN_DNUP','var')
@@ -831,10 +832,10 @@ def Inverse(
         inverse_tmp["time1"] = time1
         inverse_tmp["time2"] = time2
         inverse_tmp["dd_dnup"] = dd_dnup.todense()
-        inverse_tmp["Do2"] = Do2.todense()
     else:
         # TODO - need to sparse nop equivilent
         Do2 = []
+    inverse_tmp["Do2"] = Do2.todense()
 
     # % Smoothness of vehicle velocity
     # Dv = [spdiags(repmat([-1 2 -1], Nt-2,1),[0 1 2], Nt-2,Nt), sparse(Nt-2,2*Nz) ]*VEH_SMOOTH  ; % d/dt
@@ -843,8 +844,6 @@ def Inverse(
     dd_dv = sp.sparse.diags_array(diags.T, offsets=[0, 1, 2], shape=(Nt - 2, Nt))
     Dv = sp.sparse.hstack([dd_dv, sp.sparse.csr_array((Nt - 2, 2 * Nz))]) * weights.VEH_SMOOTH  # d/dt
     inverse_tmp["Dv"] = Dv.todense()
-
-    # Good to here
 
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     # %% %%EXTRA CONSTRAINTS
@@ -870,6 +869,23 @@ def Inverse(
     #   d_model = [];
     # end
 
+    if weights.W_MODEL:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            ii_no_adcp = np.nonzero(np.isnan(np.nanmean(np.real(D.UV), axis=0)))[0]
+        G_model = sp.sparse.lil_array((ii_no_adcp.shape[0], Nt + 2 * Nz))
+        for kk in range(ii_no_adcp.shape[0]):
+            G_model[kk, ii_no_adcp[kk]] = 1
+        G_model = G_model.tocsr()
+        d_model = D.UVttw_model[ii_no_adcp] * weights.W_MODEL
+    else:
+        # TODO - need nop
+        G_model = []
+        d_model = []
+
+    inverse_tmp["G_model"] = G_model.todense()
+    inverse_tmp["d_model"] = d_model
+    # Good to here
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     # % Make deep ocean velocity small...
     # % That can be useful to make the velocity profiles look nice, to get rid of
