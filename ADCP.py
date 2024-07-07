@@ -35,7 +35,7 @@ import pdb
 from typing import Any
 
 import numpy as np
-import scipy
+import scipy as sp
 
 import ADCPConfig
 import ADCPFiles
@@ -66,7 +66,7 @@ def CleanADCP(
     # adcp.Z0(isnan(adcp.Z0))=0;
     # adcp.Z = adcp.Z0 - adcp.Range.*adcp.TiltFactor;
     if param.use_glider_pressure:
-        f = scipy.interpolate.interp1d(
+        f = sp.interpolate.interp1d(
             glider.ctd_time,
             glider.ctd_depth,
             bounds_error=False,
@@ -89,7 +89,7 @@ def CleanADCP(
     # end
 
     # Fix sound speed - using the gliders estimations
-    f = scipy.interpolate.interp1d(
+    f = sp.interpolate.interp1d(
         glider.ctd_time,
         glider.sound_velocity,
         # bounds_error=False,
@@ -133,8 +133,6 @@ def CleanADCP(
     #   end
     # end
 
-    # Good to here
-
     # % surface mask
     # % mask = adcp.Z<(adcp.Z0*0.1+adcp.CellSize) | adcp.Z<sfc_blank;
     # mask = (adcp.Z<=param.sfc_blank);
@@ -149,8 +147,6 @@ def CleanADCP(
     # adcp.U(:,mask) = NaN;
     # adcp.V(:,mask) = NaN;
     # adcp.W(:,mask) = NaN;
-
-    # Good to here
 
     # Maximum tilt
     # CONSIDER - Make a param?  Ask Luc
@@ -175,7 +171,7 @@ def CleanADCP(
 
     # traced to here
     WMAX_error = 0.05
-    f = scipy.interpolate.interp1d(
+    f = sp.interpolate.interp1d(
         glider.ctd_time,
         glider.Wmod,
         bounds_error=False,
@@ -185,8 +181,6 @@ def CleanADCP(
     w_mask = np.abs(adcp.W + aW0) > WMAX_error
     for var_n in ["U", "V", "W"]:
         adcp[var_n][w_mask] = np.nan
-
-    # Good to here
 
     # % maximum relative velocity?
     # UMAX = 0.5;
@@ -268,7 +262,7 @@ def Inverse(
     # Note - this is the first place we get differences in code - it comes down to the matlab handling
     # of interp1d for out-of-bounds values (tails of D.time are outside glider.ctd_time).  Pushing ahead
     # to see of its an issue.
-    D.Z0 = scipy.interpolate.interp1d(
+    D.Z0 = sp.interpolate.interp1d(
         glider.ctd_time,
         glider.ctd_depth,
         bounds_error=False,
@@ -320,7 +314,7 @@ def Inverse(
     # Earlier differences in D.Z0 interp  are eliminated by this overwriting of problem locations
     D.Z0[idx] = adcp.Z0
     ii = np.nonzero(np.isfinite(D.Z0))[0]
-    D.Z0 = scipy.interpolate.interp1d(
+    D.Z0 = sp.interpolate.interp1d(
         D.time[ii],
         D.Z0[ii],
         bounds_error=False,
@@ -344,7 +338,7 @@ def Inverse(
     # model velocity
     # UV1 does not include DAC
     # make sure the model is available at all times
-    D.UVttw_model = scipy.interpolate.interp1d(
+    D.UVttw_model = sp.interpolate.interp1d(
         glider.ctd_time,
         glider.UV1,
         bounds_error=False,
@@ -354,7 +348,7 @@ def Inverse(
     D.UVttw_model[np.isnan(D.UVttw_model)] = 0
 
     # make sure the model is available at all times
-    D.Wttw_model = scipy.interpolate.interp1d(
+    D.Wttw_model = sp.interpolate.interp1d(
         glider.ctd_time,
         glider.Wmod,
         bounds_error=False,
@@ -525,7 +519,7 @@ def Inverse(
 
     # % G_adcp = W_MEAS*[-Av, AiM];  % "G" matrix (Eq. B4; in Todd et al. 2011)
     # G_adcp = W_MEAS*[-Av, AiM-Av*Ai0];  %
-    G_adcp = weights.W_MEAS * scipy.sparse.hstack([-Av, AiM - Av * Ai0])
+    G_adcp = weights.W_MEAS * sp.sparse.hstack([-Av, AiM - Av * Ai0])
     inverse_tmp["G_adcp"] = G_adcp.todense()
 
     # %% CONSTRAINTS
@@ -550,7 +544,7 @@ def Inverse(
 
     if weights.W_SURFACE:
         ii_surface = np.nonzero(param.sfc_blank >= D.Z0)[0]
-        G_sfc = scipy.sparse.lil_array((ii_surface.shape[0], Nt + 2 * Nz))
+        G_sfc = sp.sparse.lil_array((ii_surface.shape[0], Nt + 2 * Nz))
         for kk in range(ii_surface.shape[0]):
             G_sfc[kk, ii_surface[kk]] = 1
         G_sfc.tocsr()
@@ -642,9 +636,9 @@ def Inverse(
             # TODO - what does the leading + do?
             # G_dac = [+w w*Ai0]*W_DAC;
             # d_dac = UVbt*W_DAC;
-            G_dac = scipy.sparse.csr_array(np.atleast_2d(np.hstack([+w, w * Ai0]) * weights.W_DAC))
+            G_dac = sp.sparse.csr_array(np.atleast_2d(np.hstack([+w, w * Ai0]) * weights.W_DAC))
             # TODO - convert to sparse
-            d_dac = scipy.sparse.csr_array(np.atleast_2d(UVbt * weights.W_DAC))
+            d_dac = sp.sparse.csr_array(np.atleast_2d(UVbt * weights.W_DAC))
             inverse_tmp["G_dac"] = G_dac.todense()
             inverse_tmp["d_dac"] = d_dac.todense()
 
@@ -664,12 +658,10 @@ def Inverse(
 
             # G_sfc = [G_sfc ; [zeros(size(w)) w*Ai0]*W_SURFACE];
             # d_sfc = [d_sfc ; UVbt*W_SURFACE ];
-            G_sfc = scipy.sparse.vstack(
+            G_sfc = sp.sparse.vstack(
                 [
                     G_sfc,
-                    scipy.sparse.csr_array(
-                        np.atleast_2d(np.hstack((np.zeros(w.shape[0]), w * Ai0)) * weights.W_SURFACE)
-                    ),
+                    sp.sparse.csr_array(np.atleast_2d(np.hstack((np.zeros(w.shape[0]), w * Ai0)) * weights.W_SURFACE)),
                 ]
             )
             # TODO conver to sparse
@@ -710,14 +702,12 @@ def Inverse(
         # d_dac = [d_dac ; MODEL_DAC*W_MODEL_DAC];
 
         # averaged ocean velocity is the flight model dac
-        G_dac = scipy.sparse.vstack(
-            [G_dac, scipy.sparse.csr_array(np.atleast_2d(np.hstack([+w * 0, w * Ai0]) * weights.W_MODEL_DAC))]
+        G_dac = sp.sparse.vstack(
+            [G_dac, sp.sparse.csr_array(np.atleast_2d(np.hstack([+w * 0, w * Ai0]) * weights.W_MODEL_DAC))]
         )
-        d_dac = scipy.sparse.vstack([d_dac, np.atleast_2d(MODEL_DAC * weights.W_MODEL_DAC)])
+        d_dac = sp.sparse.vstack([d_dac, np.atleast_2d(MODEL_DAC * weights.W_MODEL_DAC)])
         inverse_tmp["G_dac"] = G_dac.todense()
         inverse_tmp["d_dac"] = d_dac.todense()
-
-    # Good to here
 
     # %% %% REGULARIZATION
     # % regularization of ocean velocity profile
@@ -737,6 +727,33 @@ def Inverse(
     # else
     #   Do = [];
     # end
+
+    if weights.OCN_SMOOTH:
+        #   Smoothness of ocean velocity
+        #   dd = spdiags(repmat([-1 2 -1]/param.dz, 2*Nz-2,1),[0 1 2], 2*Nz-2,2*Nz);
+        #   dd(Nz,:) = 0;
+        diags = np.tile(np.array([-1, 2, -1]) / param.dz, (2 * Nz - 2, 1))
+        # Note - don't use this (the matrix format) - it doesn't handle the ends of the matrix correctly
+        # dd = sp.sparse.spdiags(diags.T, [0, 1, 2], 2 * Nz - 2, 2 * Nz).tolil()
+        dd = sp.sparse.diags_array(diags.T, offsets=[0, 1, 2], shape=(2 * Nz - 2, 2 * Nz)).tolil()
+        dd[Nz - 1, :] = 0
+        # TODO - Check with Luc on this - what's going on here?
+        #   dd(Nz,Nz-1) = -1/param.dz;
+        #   dd(Nz,Nz) = 2/param.dz;
+        #   dd(Nz,2*Nz) = -1/param.dz;
+        dd[Nz - 1, Nz - 2] = -1 / param.dz
+        dd[Nz - 1, Nz - 1] = 2 / param.dz
+        dd[Nz - 1, (2 * Nz) - 1] = -1 / param.dz
+        #   Do = [ sparse(2*Nz-2,Nt), dd ]*OCN_SMOOTH;
+        dd = dd.tocsr()
+        Do = sp.sparse.hstack([sp.sparse.csr_array((2 * Nz - 2, Nt)), dd]) * weights.OCN_SMOOTH
+    else:
+        # TODO - this is certainly incorrect - figure out what the nop version of a sparse array is
+        Do = []
+    inverse_tmp["dd"] = dd.todense()
+    inverse_tmp["Do"] = Do.todense()
+
+    # Good to here
 
     # % Up and down ocean profile should be similar... (weighted by time interval)
     # if exist('W_OCN_DNUP','var')

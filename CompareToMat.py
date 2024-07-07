@@ -148,6 +148,8 @@ def main() -> None:
         ("inverse_tmp", "d_sfc", "inverse_tmp", "d_sfc"),
         ("inverse_tmp", "G_dac", "inverse_tmp", "G_dac"),
         ("inverse_tmp", "d_dac", "inverse_tmp", "d_dac"),
+        ("inverse_tmp", "dd", "inverse_tmp", "dd"),
+        ("inverse_tmp", "Do", "inverse_tmp", "Do"),
     ):
         # py_var = python_file[py_grp][py_name]
         py_var = np.squeeze(python_file[py_grp][py_name])
