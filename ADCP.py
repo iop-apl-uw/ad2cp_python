@@ -31,6 +31,10 @@
 ADCP.py - Main caclulation functions
 """
 
+# TODO - Review and clean up all TODOs possible - convert anything to ATTN_LUC that Luc
+# needs to look at
+# TODO - review all code blocks and pull out the tight intermixed matlab
+
 import pdb
 from typing import Any
 
@@ -637,7 +641,6 @@ def Inverse(
             # G_dac = [+w w*Ai0]*W_DAC;
             # d_dac = UVbt*W_DAC;
             G_dac = sp.sparse.csr_array(np.atleast_2d(np.hstack([+w, w * Ai0]) * weights.W_DAC))
-            # TODO - convert to sparse
             d_dac = sp.sparse.csr_array(np.atleast_2d(UVbt * weights.W_DAC))
             inverse_tmp["G_dac"] = G_dac.todense()
             inverse_tmp["d_dac"] = d_dac.todense()
@@ -687,6 +690,7 @@ def Inverse(
     # end
 
     if weights.W_MODEL_DAC:
+        # TODO - check with Luc - looks like matlab code is off
         # ii = find(D.Z0)>3;
         ii = np.nonzero(D.Z0 > 3)[0]
         # time-average using trapezoid rule
@@ -747,13 +751,11 @@ def Inverse(
         #   Do = [ sparse(2*Nz-2,Nt), dd ]*OCN_SMOOTH;
         dd = dd.tocsr()
         Do = sp.sparse.hstack([sp.sparse.csr_array((2 * Nz - 2, Nt)), dd]) * weights.OCN_SMOOTH
+        inverse_tmp["dd"] = dd.todense()
+        inverse_tmp["Do"] = Do.todense()
     else:
         # TODO - this is certainly incorrect - figure out what the nop version of a sparse array is
         Do = []
-    inverse_tmp["dd"] = dd.todense()
-    inverse_tmp["Do"] = Do.todense()
-
-    # Good to here
 
     # % Up and down ocean profile should be similar... (weighted by time interval)
     # if exist('W_OCN_DNUP','var')
@@ -774,6 +776,67 @@ def Inverse(
     # else
     #   Do2 = [];
     # end
+
+    # if exist('W_OCN_DNUP','var')
+    if weights.W_OCN_DNUP:
+        #   dd_dnup = speye(Nz,Nz);
+        dd_dnup = sp.sparse.eye(Nz, Nz).tolil()
+        #   [~,imax]=max(glider.ctd_depth);
+        imax = np.argmax(glider.ctd_depth)
+        #   time1 = interp_nm(glider.ctd_depth(1:imax), glider.Mtime(1:imax), gz);
+        #   time2 = interp_nm(glider.ctd_depth(imax:end), glider.Mtime(imax:end), gz);
+        # TODO - try straight interp for now - probably need to build interp_nm for general case
+        # Note - *matlab* - matlab code includes deepest observation in both the down and up case, so
+        # we match here
+        time1 = sp.interpolate.interp1d(
+            glider.ctd_depth[: imax + 1],
+            glider.ctd_time[: imax + 1],
+            bounds_error=False,
+            # fill_value="extrapolate",
+            fill_value=np.nan,
+        )(gz)
+        time2 = sp.interpolate.interp1d(
+            glider.ctd_depth[imax:],
+            glider.ctd_time[imax:],
+            bounds_error=False,
+            # fill_value="extrapolate",
+            fill_value=np.nan,
+        )(gz)
+        #   ss = 1-(time2-time1); % 1-diff in days
+        #   ss(ss<0)=0; % limit to zero.
+        #   for k=1:length(ss)
+        #     dd_dnup(k,k)=ss(k);
+        #   end
+        ss = 1 - (time2 / 86400.0 - time1 / 86400.0)  # 1-diff in days
+        ss[ss < 0] = 0  # limit to zero
+        for k in range(len(ss)):
+            dd_dnup[k, k] = ss[k]
+        #   ii = find(ss>0 & isfinite(ss));
+        #   dd_dnup=dd_dnup(ii,:);
+        ii = np.nonzero(np.logical_and(ss > 0, np.isfinite(ss)))[0]
+        # TODO - this should work:
+        # dd_dnup = dd_dnup[ii, :]
+        # But we get "IndexError: index results in >2 dimensions" - which seems to be
+        # an issue with fancy indexing in sparse along multiple dimensions.  Update scipy and see if things
+        # are improved.  Meantime....
+        dd_dnup = sp.sparse.csr_array(np.squeeze(dd_dnup.todense()[ii, :]))
+        dd_dnup.eliminate_zeros()
+        #   % dd_dnup = diag(ss);
+        #   % constrait (weight) is effectively less as time increases.
+        #   Do2 = [sparse(length(ii),Nt) dd_dnup/param.dz -dd_dnup/param.dz]*W_OCN_DNUP;
+        Do2 = (
+            sp.sparse.hstack([sp.sparse.csr_array((ii.shape[0], Nt)), dd_dnup / param.dz, -dd_dnup / param.dz])
+            * weights.W_OCN_DNUP
+        )
+        inverse_tmp["time1"] = time1
+        inverse_tmp["time2"] = time2
+        inverse_tmp["dd_dnup"] = dd_dnup.todense()
+        inverse_tmp["Do2"] = Do2.todense()
+    else:
+        # TODO - need to sparse nop equivilent
+        Do2 = []
+
+    # Good to here
 
     # % Smoothness of vehicle velocity
     # Dv = [spdiags(repmat([-1 2 -1], Nt-2,1),[0 1 2], Nt-2,Nt), sparse(Nt-2,2*Nz) ]*VEH_SMOOTH  ; % d/dt

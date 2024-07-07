@@ -150,6 +150,10 @@ def main() -> None:
         ("inverse_tmp", "d_dac", "inverse_tmp", "d_dac"),
         ("inverse_tmp", "dd", "inverse_tmp", "dd"),
         ("inverse_tmp", "Do", "inverse_tmp", "Do"),
+        ("inverse_tmp", "time1", "inverse_tmp", "time1"),
+        ("inverse_tmp", "time2", "inverse_tmp", "time2"),
+        ("inverse_tmp", "dd_dnup", "inverse_tmp", "dd_dnup"),
+        ("inverse_tmp", "Do2", "inverse_tmp", "Do2"),
     ):
         # py_var = python_file[py_grp][py_name]
         py_var = np.squeeze(python_file[py_grp][py_name])
@@ -166,7 +170,7 @@ def main() -> None:
         py_shape = np.shape(py_var)
         mat_shape = np.shape(mat_var)
         # Convert any Mtime vars to unix epoch
-        if mat_name in ("Mtime", "TT"):
+        if mat_name in ("Mtime", "TT", "time1", "time2"):
             mat_var = (mat_var - 719529) * 86400
         name_str = f"Comparing Python:{py_grp}:{py_name}, Matlab:{mat_grp}:{mat_name}"
         if py_shape != mat_shape:
