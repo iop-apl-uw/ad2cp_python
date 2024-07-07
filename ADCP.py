@@ -609,7 +609,7 @@ def Inverse(
     #     end
     # end
 
-    # TODO - change so this is array, not dictionary based so comparisions work
+    # TODO - change so this is array, not dictionary based,  so comparisions work
     gps_constraints = ADCPFiles.GPSConstraints()
 
     for k in range(gps.log_gps_time.shape[0] - 1):
@@ -836,10 +836,15 @@ def Inverse(
         # TODO - need to sparse nop equivilent
         Do2 = []
 
-    # Good to here
-
     # % Smoothness of vehicle velocity
     # Dv = [spdiags(repmat([-1 2 -1], Nt-2,1),[0 1 2], Nt-2,Nt), sparse(Nt-2,2*Nz) ]*VEH_SMOOTH  ; % d/dt
+
+    diags = np.tile(np.array([-1, 2, -1]), (Nt - 2, 1))
+    dd_dv = sp.sparse.diags_array(diags.T, offsets=[0, 1, 2], shape=(Nt - 2, Nt))
+    Dv = sp.sparse.hstack([dd_dv, sp.sparse.csr_array((Nt - 2, 2 * Nz))]) * weights.VEH_SMOOTH  # d/dt
+    inverse_tmp["Dv"] = Dv.todense()
+
+    # Good to here
 
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     # %% %%EXTRA CONSTRAINTS
