@@ -167,6 +167,8 @@ def main() -> None:
         (False, "D", "UVveh_solution", "D", "UVveh_solution"),
         (False, "D", "UVocn_adcp", "D", "UVocn_adcp"),
         (False, "D", "UVerr", "D", "UVerr"),
+        (False, "D", "Wttw_solution", "D", "Wttw_solution"),
+        (False, "D", "Wocn_solution", "D", "Wocn_solution"),
     ):
         # py_var = python_file[py_grp][py_name]
         py_var = np.squeeze(python_file[py_grp][py_name])
@@ -262,9 +264,20 @@ def main() -> None:
             close_str = f"NOT_CLOSE max:{max_val:<2.3e} mean:{mean_val:<2.3e} tot:{not_close[tols[0]].size:<7d}"
             accum = np.zeros(not_close[tols[-1]].shape, dtype=bool)
             for tol in tols:
-                nc_count = np.count_nonzero(np.logical_and(np.logical_not(accum), not_close[tol]))
+                # pdb.set_trace()
+                bad_pts_b = np.logical_and(np.logical_not(accum), not_close[tol])
+                bad_pts = np.argwhere(bad_pts_b)
+                # log_debug("    index:py_var:mat_var")
+                # if len(py_var.shape) == 1:
+                #     for ii in bad_pts:
+                #         log_debug(f"    [{ii}]:{py_var[ii]}:{mat_var[ii]}")
+                # else:
+                #     for ii, jj in bad_pts:
+                #         log_debug(f"    [{ii},{jj}]:{py_var[ii,jj]}:{mat_var[ii,jj]}")
+                nc_count = np.count_nonzero(bad_pts_b)
                 accum = np.logical_or(accum, not_close[tol])
                 close_str += f" {tol:>1.0e}:{nc_count:<5}"
+
             # log_warning(f"{name_str} {close_str}")
             print(f"{name_str} {close_str}")
             # Not yet working - need to handle complex
