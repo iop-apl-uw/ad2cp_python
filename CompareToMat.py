@@ -162,6 +162,11 @@ def main() -> None:
         (False, "inverse_tmp", "d_deep", "inverse_tmp", "d_deep"),
         (True, "inverse_tmp", "UVttw", "inverse_tmp", "UVttw"),
         (True, "inverse_tmp", "UVocn", "inverse_tmp", "UVocn"),
+        (False, "D", "UVocn_solution", "D", "UVocn_solution"),
+        (False, "D", "UVttw_solution", "D", "UVttw_solution"),
+        (False, "D", "UVveh_solution", "D", "UVveh_solution"),
+        (False, "D", "UVocn_adcp", "D", "UVocn_adcp"),
+        (False, "D", "UVerr", "D", "UVerr"),
     ):
         # py_var = python_file[py_grp][py_name]
         py_var = np.squeeze(python_file[py_grp][py_name])
@@ -210,7 +215,7 @@ def main() -> None:
                     mat_var = mat_var["real"] + 1j * mat_var["imag"]
                 else:
                     log_error("1d case not handled")
-        # TODO Make search optional to be either atol or rtol
+
         # atol = 1.0
         # while np.allclose(py_var, mat_var, equal_nan=True, atol=atol):
         #     atol = atol / 10
@@ -243,20 +248,23 @@ def main() -> None:
         rtol = 1.0
         atol = 1e-08
         not_close = {}
+        # nc_t = collections.namedtuple("nc_t", ("close_b", "close_i"))
         while rtol >= 1e-05:
-            not_close_b = np.logical_not(np.isclose(py_var, mat_var, equal_nan=True, rtol=rtol, atol=atol))
-            not_close_i = np.argwhere(not_close_b)
-            # not_close_pts = np.count_nonzero(not_close_b)
-            not_close[rtol] = (not_close_b, not_close_i)
+            not_close[rtol] = np.logical_not(np.isclose(py_var, mat_var, equal_nan=True, rtol=rtol, atol=atol))
             rtol /= 10
         # pdb.set_trace()
         tols = [x for x in not_close]
-        if not_close[tols[-1]][0].size:
-            # close_str = f"NOT_CLOSE atol:{atol:g} {not_close_pts}/{tot_pts}"
-            close_str = f"NOT_CLOSE tot:{not_close[tols[0]][0].size:<7d}"
+        if np.count_nonzero(not_close[tols[-1]]):
             # pdb.set_trace()
+            # close_str = f"NOT_CLOSE atol:{atol:g} {not_close_pts}/{tot_pts}"
+            max_val = np.nanmax(np.abs(py_var))
+            mean_val = np.nanmean(np.abs(py_var))
+            close_str = f"NOT_CLOSE max:{max_val:<2.3e} mean:{mean_val:<2.3e} tot:{not_close[tols[0]].size:<7d}"
+            accum = np.zeros(not_close[tols[-1]].shape, dtype=bool)
             for tol in tols:
-                close_str += f" {tol:>6g}:{np.count_nonzero(not_close[tol][1]):<4}"
+                nc_count = np.count_nonzero(np.logical_and(np.logical_not(accum), not_close[tol]))
+                accum = np.logical_or(accum, not_close[tol])
+                close_str += f" {tol:>1.0e}:{nc_count:<5}"
             # log_warning(f"{name_str} {close_str}")
             print(f"{name_str} {close_str}")
             # Not yet working - need to handle complex
