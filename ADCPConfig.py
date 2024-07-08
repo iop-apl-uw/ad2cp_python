@@ -113,6 +113,7 @@ class Weights(ExtendedDataClass.ExtendedDataClass):
     W_OCN_DNUP: float = field(default=2)  # Weight for down and up ocean profile to be the same.
     W_deep: float = field(default=0.1)  # Weight to make velocities below W_deep_z0 small
     W_deep_z0: float = field(default=500)
+    W_MODEL_bottom: bool = field(default=False)  # Bool to set ttw speed zero at the bottom
 
     def params_conversion(self) -> dict:
         return {

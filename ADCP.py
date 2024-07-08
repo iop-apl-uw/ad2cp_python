@@ -908,6 +908,7 @@ def Inverse(
     # end
 
     if weights.W_deep and weights.W_deep_z0:
+        # TODO - untested
         ii = np.nonzero(gz > weights.W_deep_z0)[0]  # depths above the place were we minimize deep velocities
         tmp = np.hanning(ii.shape[0] * 2)
         ww = np.hstack([tmp[np.arange(ii.shape[0])], np.ones(Nz - ii.shape[0])])
@@ -940,6 +941,20 @@ def Inverse(
     #   d_bottom = [];
     # end
 
+    if weights.W_MODEL_bottom:
+        ii = np.nonzero(np.logical_and(D.UVttw_model == 0, D.Z0 > 0.5 * np.max(D.Z0)))[0]
+        G_bottom = np.zeros(ii.shape[0] * G_adcp.shape[1]).reshape((ii.shape[0], G_adcp.shape[1]))
+        for k in range(ii.shape[0]):
+            G_bottom[k, ii[k]] = weights.W_MODEL_bottom
+        d_bottom = np.zeros(ii.shape[0])
+    else:
+        # TODO - need a nop
+        G_bottom = []
+        d_bottom = []
+
+    inverse_tmp["G_bottom"] = G_bottom
+    inverse_tmp["d_bottom"] = d_bottom
+
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     # %% so we have a LSQ problem
@@ -947,10 +962,48 @@ def Inverse(
 
     # M = [G_adcp;G_dac;G_sfc;Do;Do2;Dv;G_model;G_deep;G_bottom]\[d_adcp;d_dac;d_sfc;zeros(size(Do,1)+size(Do2,1)+size(Dv,1),1);d_model; d_deep; d_bottom];
 
+    # Iterate through the A matrix, eliminating any empty list entries
+    A_vars = [G_adcp, G_dac, G_sfc, Do, Do2, Dv, G_model, G_deep, G_bottom]
+    A_list = []
+    for ii in range(len(A_vars)):
+        if isinstance(A_vars[ii], list):
+            continue
+        else:
+            A_list.append(A_vars[ii])
+
+    # Iterate through the B matrix, eliminating any empty list entries and converting
+    # everything to np.ndarrays
+    B_vars = [
+        d_adcp,
+        d_dac,
+        d_sfc,
+        np.zeros(Do.shape[0] + Do2.shape[0] + Dv.shape[0]),
+        d_model,
+        d_deep,
+        d_bottom,
+    ]
+    B_list = []
+    for ii in range(len(B_vars)):
+        if isinstance(B_vars[ii], list):
+            continue
+        elif sp.sparse.issparse(B_vars[ii]):
+            B_list.append(np.squeeze(B_vars[ii].todense()))
+        else:
+            B_list.append(B_vars[ii])
+
+    A = sp.sparse.vstack(A_list).tocsr()
+    B = np.hstack(B_list)
+    lsqr_ret = sp.sparse.linalg.lsqr(A, B)
+    M = lsqr_ret[0]
+
     # UVttw = transpose(M(1:Nt)); % solved-for TTW component
+    UVttw = M[:Nt]  # solved-for TTW component
+    inverse_tmp["UVttw"] = UVttw
 
     # UVocn = M(Nt+1:end);
     # UVocn = reshape(UVocn,[],2);
+    UVocn = M[Nt:].reshape(-1, 2, order="F")
+    inverse_tmp["UVocn"] = UVocn
 
     # % INVERSE SOLUTION
 
@@ -958,8 +1011,7 @@ def Inverse(
     # D.UVocn_solution = transpose(Ai0*UVocn(:));
 
     # % Glider speed through the water
-    # D.UVttw_solution = UVttw;
-
+    # D.UVttw_solution = UVttw
     # % Total vehicle speed: U_ttw (speed through the water) + U_drift (ocean speed at the glider).
     # D.UVveh_solution =  UVttw+transpose(Ai0*UVocn(:));
 
