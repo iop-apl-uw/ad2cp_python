@@ -409,6 +409,16 @@ class ADCPTemp(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
     UVttw_model: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     # vertical speed of the glider from active model - on the ADCP time grid
     Wttw_model: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
+    # U_drift = Ocean velocity at the glider
+    UVocn_solution: npt.NDArray[np.complex128] = field(default_factory=(lambda: np.empty(0)))
+    #  Glider speed through the water
+    UVttw_solution: npt.NDArray[np.complex128] = field(default_factory=(lambda: np.empty(0)))
+    # % Total vehicle speed: U_ttw (speed through the water) + U_drift (ocean speed at the glider).
+    UVveh_solution: npt.NDArray[np.complex128] = field(default_factory=(lambda: np.empty(0)))
+    UVocn_adcp: npt.NDArray[np.complex128] = field(default_factory=(lambda: np.empty(0)))
+    UVerr: npt.NDArray[np.complex128] = field(default_factory=(lambda: np.empty(0)))
+    Wttw_solution: npt.NDArray[np.complex128] = field(default_factory=(lambda: np.empty(0)))
+    Wocn_solution: npt.NDArray[np.complex128] = field(default_factory=(lambda: np.empty(0)))
 
 
 @dataclass

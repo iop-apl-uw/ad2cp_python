@@ -264,6 +264,7 @@ def Inverse(
     # D.Z0 = interp1(glider.Mtime, glider.ctd_depth, D.Mtime);
     D.time = np.arange(param.time_limits[0], param.time_limits[-1], dt)
 
+    # TODO Review with Luc
     # Note - this is the first place we get differences in code - it comes down to the matlab handling
     # of interp1d for out-of-bounds values (tails of D.time are outside glider.ctd_time).  Pushing ahead
     # to see of its an issue.
@@ -316,6 +317,7 @@ def Inverse(
     # [~,ibot] = max(D.Z0);
     # D.upcast = (1:length(D.Mtime))>ibot;
 
+    # TODO - Review with Luc
     # Earlier differences in D.Z0 interp  are eliminated by this overwriting of problem locations
     D.Z0[idx] = adcp.Z0
     ii = np.nonzero(np.isfinite(D.Z0))[0]
@@ -389,6 +391,8 @@ def Inverse(
     ia = np.logical_not(np.isnan(dc))
     # RHS, long vector of weighted measured velocities
     # *matlab* - transpose to preserve matlab order
+    # TODO - Check with Luc here - d_adcp goes to Mx1 that is dependent on the
+    # FORTRAN order of unrolling
     d_adcp = weights.W_MEAS * dc.T[ia.T]
     Na = d_adcp.size
     inverse_tmp["d_adcp"] = d_adcp
@@ -553,10 +557,8 @@ def Inverse(
         for kk in range(ii_surface.shape[0]):
             G_sfc[kk, ii_surface[kk]] = 1
         G_sfc.tocsr()
-        # TODO - this may need to be sparse
         d_sfc = np.zeros(ii_surface.shape[0])
     else:
-        # TODO - this may need to be sparse
         G_sfc = []
         d_sfc = []
     inverse_tmp["G_sfc"] = G_sfc.todense()
@@ -668,7 +670,6 @@ def Inverse(
                     sp.sparse.csr_array(np.atleast_2d(np.hstack((np.zeros(w.shape[0]), w * Ai0)) * weights.W_SURFACE)),
                 ]
             )
-            # TODO conver to sparse
             d_sfc = np.hstack((d_sfc, UVbt * weights.W_SURFACE))
             inverse_tmp["G_sfc"] = G_sfc.todense()
             inverse_tmp["d_sfc"] = d_sfc
@@ -754,7 +755,6 @@ def Inverse(
         Do = sp.sparse.hstack([sp.sparse.csr_array((2 * Nz - 2, Nt)), dd]) * weights.OCN_SMOOTH
         inverse_tmp["dd"] = dd.todense()
     else:
-        # TODO - this is certainly incorrect - figure out what the nop version of a sparse array is
         Do = []
     inverse_tmp["Do"] = Do.todense()
 
@@ -833,7 +833,6 @@ def Inverse(
         inverse_tmp["time2"] = time2
         inverse_tmp["dd_dnup"] = dd_dnup.todense()
     else:
-        # TODO - need to sparse nop equivilent
         Do2 = []
     inverse_tmp["Do2"] = Do2.todense()
 
@@ -879,7 +878,6 @@ def Inverse(
         G_model = G_model.tocsr()
         d_model = D.UVttw_model[ii_no_adcp] * weights.W_MODEL
     else:
-        # TODO - need nop
         G_model = []
         d_model = []
 
@@ -919,7 +917,6 @@ def Inverse(
         G_deep = sp.sparse.hstack([sp.sparse.csr_array((ii.shape[0], Nt)), dd, dd]) * weights.W_deep
         d_deep = np.zeros(G_deep.shape[0])
     else:
-        # TODO - need a nop here
         G_deep = []
         d_deep = []
 
@@ -948,7 +945,6 @@ def Inverse(
             G_bottom[k, ii[k]] = weights.W_MODEL_bottom
         d_bottom = np.zeros(ii.shape[0])
     else:
-        # TODO - need a nop
         G_bottom = []
         d_bottom = []
 
@@ -972,7 +968,7 @@ def Inverse(
             A_list.append(A_vars[ii])
 
     # Iterate through the B matrix, eliminating any empty list entries and converting
-    # everything to np.ndarrays
+    # everything to np.ndarrays (needed to the call to lsqr()
     B_vars = [
         d_adcp,
         d_dac,
@@ -993,7 +989,7 @@ def Inverse(
 
     A = sp.sparse.vstack(A_list).tocsr()
     B = np.hstack(B_list)
-    lsqr_ret = sp.sparse.linalg.lsqr(A, B)
+    lsqr_ret = sp.sparse.linalg.lsqr(A, B, show=False)
     M = lsqr_ret[0]
 
     # UVttw = transpose(M(1:Nt)); % solved-for TTW component
@@ -1002,41 +998,85 @@ def Inverse(
 
     # UVocn = M(Nt+1:end);
     # UVocn = reshape(UVocn,[],2);
+    # TODO - check with Luc - this reshaping makes UVocn a 200,2 (in this test case) matrix which....
     UVocn = M[Nt:].reshape(-1, 2, order="F")
     inverse_tmp["UVocn"] = UVocn
+    # TODO - added temp to get the rest of the code to go
+    UVocn = M[Nt:]
 
     # % INVERSE SOLUTION
 
     # % U_drift = Ocean velocity at the glider
     # D.UVocn_solution = transpose(Ai0*UVocn(:));
+    # TODO - check with Luc ...casues this multiplication to fail.  It works in matlab, but
+    # it seems odd to split the thing in two.
+    D.UVocn_solution = Ai0 * UVocn
 
     # % Glider speed through the water
     # D.UVttw_solution = UVttw
+    D.UVttw_solution = UVttw
+
     # % Total vehicle speed: U_ttw (speed through the water) + U_drift (ocean speed at the glider).
     # D.UVveh_solution =  UVttw+transpose(Ai0*UVocn(:));
+    D.UVveh_solution = UVttw + (Ai0 * UVocn)
 
     # % ADCP measurement (D.UV) = u_ocean(t,z) - u_drift( u_ocean @ glider) - u_ttw(@ glider)
     # % Ocean velocity at the measurement location:
     # D.UVocn_adcp= D.UV+D.UVttw_solution + D.UVocn_solution; % Measured ocean velocity measurements
+    D.UVocn_adcp = D.UV + D.UVttw_solution + D.UVocn_solution  # Measured ocean velocity measurements
 
     # D.UVerr = D.UVocn_adcp-D.UVocn_solution;
+    D.UVerr = D.UVocn_adcp - D.UVocn_solution
 
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     # %%  Vertical velocity inverse
 
     # Gv_adcp = W_MEAS*[-Av, AiM-Av*Ai0];  % same as the horizontal velocity.
+    Gv_adcp = sp.sparse.hstack([-Av, AiM - Av * Ai0]) * weights.W_MEAS
 
     # M = [Gv_adcp;G_dac;G_sfc;2*Do;2*Do2;Dv]\[dw_adcp;0*d_dac;0*d_sfc;zeros(size(Do,1)+size(Do2,1)+size(Dv,1),1)];
+    A_vars = [Gv_adcp, G_dac, G_sfc, 2 * Do, 2 * Do2, Dv]
+    A_list = []
+    for ii in range(len(A_vars)):
+        if isinstance(A_vars[ii], list):
+            continue
+        else:
+            A_list.append(A_vars[ii])
+
+    # Iterate through the B matrix, eliminating any empty list entries and converting
+    # everything to np.ndarrays (needed to the call to lsqr()
+    B_vars = [dw_adcp, 0 * d_dac, 0 * d_sfc, np.zeros(Do.shape[0] + Do2.shape[0] + Dv.shape[0])]
+    B_list = []
+    for ii in range(len(B_vars)):
+        if isinstance(B_vars[ii], list):
+            continue
+        elif sp.sparse.issparse(B_vars[ii]):
+            B_list.append(np.squeeze(B_vars[ii].todense()))
+        else:
+            B_list.append(B_vars[ii])
+
+    A = sp.sparse.vstack(A_list).tocsr()
+    B = np.hstack(B_list)
+    lsqr_ret = sp.sparse.linalg.lsqr(A, B, show=False)
+    M = lsqr_ret[0]
 
     # % Glider speed through the water
     # D.Wttw_solution = transpose(M(1:Nt)); % solved-for TTW component
+    # Imaginary compoents are all 0 - matches matlab
+    D.Wttw_solution = M[:Nt].real
 
     # % Ocean velocity
+
     # Wocn = M(Nt+1:end);
     # Wocn = reshape(Wocn,[],2);
+    # TODO - Check with Luc - why the reshape?
+    # WVocn = M[Nt:].reshape(-1, 2, order="F")
+    # Imaginary compoents are all 0 - matches matlab
+    Wocn = M[Nt:].real
 
     # % U_drift = Ocean velocity at the glider
     # D.Wocn_solution = transpose(Ai0*Wocn(:));
+    D.Wocn_solution = Ai0 * Wocn
 
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     # %% Gridded version (on the ocean vertical grid).
@@ -1075,4 +1115,5 @@ def Inverse(
     # variables_for_plots.Nt = Nt;
     # variables_for_plots.Nz = Nz;
 
+    # TODO - Check with Luc - what is the purpose of returning the D object?
     return (D, profile, None, inverse_tmp)
