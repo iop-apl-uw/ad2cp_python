@@ -31,8 +31,6 @@
 ADCP.py - Main caclulation functions
 """
 
-# TODO - Review and clean up all TODOs possible - convert anything to ATTN_LUC that Luc
-# needs to look at
 # TODO - review all code blocks and pull out the tight intermixed matlab
 
 import pdb
@@ -317,7 +315,6 @@ def Inverse(
     # [~,ibot] = max(D.Z0);
     # D.upcast = (1:length(D.Mtime))>ibot;
 
-    # TODO - Review with Luc
     # Earlier differences in D.Z0 interp  are eliminated by this overwriting of problem locations
     D.Z0[idx] = adcp.Z0
     ii = np.nonzero(np.isfinite(D.Z0))[0]
@@ -787,7 +784,7 @@ def Inverse(
         #   time1 = interp_nm(glider.ctd_depth(1:imax), glider.Mtime(1:imax), gz);
         #   time2 = interp_nm(glider.ctd_depth(imax:end), glider.Mtime(imax:end), gz);
         # TODO - try straight interp for now - probably need to build interp_nm for general case
-        # Note - *matlab* - matlab code includes deepest observation in both the down and up case, so
+        # TODO Check with Luc *matlab* - matlab code includes deepest observation in both the down and up case, so - change back in both matlab and python
         # we match here
         time1 = sp.interpolate.interp1d(
             glider.ctd_depth[: imax + 1],
@@ -996,20 +993,14 @@ def Inverse(
     UVttw = M[:Nt]  # solved-for TTW component
     inverse_tmp["UVttw"] = UVttw
 
-    # UVocn = M(Nt+1:end);
-    # UVocn = reshape(UVocn,[],2);
-    # TODO - check with Luc - this reshaping makes UVocn a 200,2 (in this test case) matrix which....
-    UVocn = M[Nt:].reshape(-1, 2, order="F")
-    inverse_tmp["UVocn"] = UVocn
-    # TODO - added temp to get the rest of the code to go
+    # UVocn = transpose(M(Nt+1:end));
     UVocn = M[Nt:]
+    inverse_tmp["UVocn"] = UVocn
 
     # % INVERSE SOLUTION
 
     # % U_drift = Ocean velocity at the glider
     # D.UVocn_solution = transpose(Ai0*UVocn(:));
-    # TODO - check with Luc ...casues this multiplication to fail.  It works in matlab, but
-    # it seems odd to split the thing in two.
     D.UVocn_solution = Ai0 * UVocn
 
     # % Glider speed through the water
@@ -1045,7 +1036,14 @@ def Inverse(
 
     # Iterate through the B matrix, eliminating any empty list entries and converting
     # everything to np.ndarrays (needed to the call to lsqr()
-    B_vars = [dw_adcp, 0 * d_dac, 0 * d_sfc, np.zeros(Do.shape[0] + Do2.shape[0] + Dv.shape[0])]
+    # B_vars = [dw_adcp, 0 * d_dac, 0 * d_sfc, np.zeros(Do.shape[0] + Do2.shape[0] + Dv.shape[0])]
+    # TODO - check for real output f
+    B_vars = [
+        dw_adcp,
+        np.zeros(d_dac.shape[0]),
+        np.zeros(d_sfc.shape[0]),
+        np.zeros(Do.shape[0] + Do2.shape[0] + Dv.shape[0]),
+    ]
     B_list = []
     for ii in range(len(B_vars)):
         if isinstance(B_vars[ii], list):
@@ -1063,7 +1061,7 @@ def Inverse(
     # % Glider speed through the water
     # D.Wttw_solution = transpose(M(1:Nt)); % solved-for TTW component
     # Imaginary compoents are all 0 - matches matlab
-    D.Wttw_solution = M[:Nt].real
+    D.Wttw_solution = M[:Nt]
 
     # % Ocean velocity
 
@@ -1072,7 +1070,7 @@ def Inverse(
     # TODO - Check with Luc - why the reshape?
     # WVocn = M[Nt:].reshape(-1, 2, order="F")
     # Imaginary compoents are all 0 - matches matlab
-    Wocn = M[Nt:].real
+    Wocn = M[Nt:]
 
     # % U_drift = Ocean velocity at the glider
     # D.Wocn_solution = transpose(Ai0*Wocn(:));

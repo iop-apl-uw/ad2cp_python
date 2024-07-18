@@ -173,6 +173,19 @@ def main() -> int:
             log_error("Problem performing inverse calculation", "exc")
             continue
 
+        # Results of the inverse to return, plot and push into netcdf
+
+        # D.time
+        # D.z0
+        # D.UVocn_solution
+        # D.UVttw_solution
+        # D.Wttw_solution
+        # D.Wocn_solution
+
+        # profile.z
+        # profile.UVocn
+        # profile.Wocn
+
         # Plot output
 
         # Save back generated columns to netcdf store
