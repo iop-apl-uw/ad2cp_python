@@ -784,7 +784,7 @@ def Inverse(
         #   time1 = interp_nm(glider.ctd_depth(1:imax), glider.Mtime(1:imax), gz);
         #   time2 = interp_nm(glider.ctd_depth(imax:end), glider.Mtime(imax:end), gz);
         # TODO - try straight interp for now - probably need to build interp_nm for general case
-        if False:
+        if True:
             time1 = ADCPUtils.interp_nm(
                 glider.ctd_depth[: imax + 1], glider.ctd_time[: imax + 1], gz, fill_value=np.nan
             )
