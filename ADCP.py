@@ -784,7 +784,7 @@ def Inverse(
         #   time1 = interp_nm(glider.ctd_depth(1:imax), glider.Mtime(1:imax), gz);
         #   time2 = interp_nm(glider.ctd_depth(imax:end), glider.Mtime(imax:end), gz);
         # TODO - try straight interp for now - probably need to build interp_nm for general case
-        if True:
+        if False:
             time1 = ADCPUtils.interp_nm(
                 glider.ctd_depth[: imax + 1], glider.ctd_time[: imax + 1], gz, fill_value=np.nan
             )
@@ -998,14 +998,17 @@ def Inverse(
     inverse_tmp["UVttw"] = UVttw
 
     # UVocn = transpose(M(Nt+1:end));
-    UVocn = M[Nt:]
+    # UVocn = reshape(UVocn,[],2);
+    # TODO - Luc - Reshape needed for profile below
+    UVocn = M[Nt:].reshape(-1, 2, order="F")
+
     inverse_tmp["UVocn"] = UVocn
 
     # % INVERSE SOLUTION
 
     # % U_drift = Ocean velocity at the glider
     # D.UVocn_solution = transpose(Ai0*UVocn(:));
-    D.UVocn_solution = Ai0 * UVocn
+    D.UVocn_solution = Ai0 * np.squeeze(UVocn.reshape(1, -1, order="F"))
 
     # % Glider speed through the water
     # D.UVttw_solution = UVttw
@@ -1013,7 +1016,7 @@ def Inverse(
 
     # % Total vehicle speed: U_ttw (speed through the water) + U_drift (ocean speed at the glider).
     # D.UVveh_solution =  UVttw+transpose(Ai0*UVocn(:));
-    D.UVveh_solution = UVttw + (Ai0 * UVocn)
+    D.UVveh_solution = UVttw + (Ai0 * np.squeeze(UVocn.reshape(1, -1, order="F")))
 
     # % ADCP measurement (D.UV) = u_ocean(t,z) - u_drift( u_ocean @ glider) - u_ttw(@ glider)
     # % Ocean velocity at the measurement location:
@@ -1071,14 +1074,13 @@ def Inverse(
 
     # Wocn = M(Nt+1:end);
     # Wocn = reshape(Wocn,[],2);
-    # TODO - Check with Luc - why the reshape?
-    # WVocn = M[Nt:].reshape(-1, 2, order="F")
-    # Imaginary compoents are all 0 - matches matlab
-    Wocn = M[Nt:]
+    # TODO - Luc - Reshape needed for profile below
+    # Imaginary components are all 0 - matches matlab
+    Wocn = M[Nt:].reshape(-1, 2, order="F")
 
     # % U_drift = Ocean velocity at the glider
     # D.Wocn_solution = transpose(Ai0*Wocn(:));
-    D.Wocn_solution = Ai0 * Wocn
+    D.Wocn_solution = Ai0 * np.squeeze(Wocn.reshape(1, -1, order="F"))
 
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     # %% Gridded version (on the ocean vertical grid).
