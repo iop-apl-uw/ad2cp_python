@@ -228,6 +228,19 @@ def interp1d(first_epoch_time_s_v, data_v, second_epoch_time_s_v, kind="linear")
     return interp_data_v
 
 
+def interp_nm(x, y, xi):
+    """interpolate a non-monotonic x along a monotonic xi"""
+    index = np.nonzero(np.logical_and(np.isfinite(x), np.isfinite(y)))[0]
+    if np.shape(index)[0] <= 2:
+        return np.zeros(np.shape(xi)[0]) * np.nan
+    P = np.polyfit(x[index] - x[index[0]], y[index], 1)
+    flag_sign = np.sign(P[0])
+    if not flag_sign:
+        return np.ones(np.shape(xi)[0]) * P[1]
+    max_k = 1e4
+    # I = np.argsort(a[:, 0]); b = a[I,:]
+
+
 # function[in]=find_nearest(x,y)
 # % for each element of x, find the closest to y (???)
 
