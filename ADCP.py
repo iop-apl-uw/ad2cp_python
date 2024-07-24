@@ -784,22 +784,26 @@ def Inverse(
         #   time1 = interp_nm(glider.ctd_depth(1:imax), glider.Mtime(1:imax), gz);
         #   time2 = interp_nm(glider.ctd_depth(imax:end), glider.Mtime(imax:end), gz);
         # TODO - try straight interp for now - probably need to build interp_nm for general case
-        # TODO Check with Luc *matlab* - matlab code includes deepest observation in both the down and up case, so - change back in both matlab and python
-        # we match here
-        time1 = sp.interpolate.interp1d(
-            glider.ctd_depth[: imax + 1],
-            glider.ctd_time[: imax + 1],
-            bounds_error=False,
-            # fill_value="extrapolate",
-            fill_value=np.nan,
-        )(gz)
-        time2 = sp.interpolate.interp1d(
-            glider.ctd_depth[imax:],
-            glider.ctd_time[imax:],
-            bounds_error=False,
-            # fill_value="extrapolate",
-            fill_value=np.nan,
-        )(gz)
+        if True:
+            time1 = ADCPUtils.interp_nm(
+                glider.ctd_depth[: imax + 1], glider.ctd_time[: imax + 1], gz, fill_value=np.nan
+            )
+            time2 = ADCPUtils.interp_nm(glider.ctd_depth[imax:], glider.ctd_time[imax:], gz, fill_value=np.nan)
+        else:
+            time1 = sp.interpolate.interp1d(
+                glider.ctd_depth[: imax + 1],
+                glider.ctd_time[: imax + 1],
+                bounds_error=False,
+                # fill_value="extrapolate",
+                fill_value=np.nan,
+            )(gz)
+            time2 = sp.interpolate.interp1d(
+                glider.ctd_depth[imax:],
+                glider.ctd_time[imax:],
+                bounds_error=False,
+                # fill_value="extrapolate",
+                fill_value=np.nan,
+            )(gz)
         #   ss = 1-(time2-time1); % 1-diff in days
         #   ss(ss<0)=0; % limit to zero.
         #   for k=1:length(ss)

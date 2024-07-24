@@ -237,8 +237,43 @@ def interp_nm(x, y, xi):
     flag_sign = np.sign(P[0])
     if not flag_sign:
         return np.ones(np.shape(xi)[0]) * P[1]
+
+    # Code for multi-dimension - not handled here
+    # [m n]=size(x);
+    # if n>m
+    #     Y= sortrows([transpose(x(index))  transpose(y(index)) ] , 1*flag_sign);
+    # else
+    #     Y= sortrows([x(index)  y(index) ] , 1*flag_sign);
+    # end
+
+    indicies = np.argsort(x)[::flag_sign]
+    Y = np.vstack(x[index], y[index])[indicies, :]
+
+    dy = np.nanmedian(np.diff(Y[:, 0]))
+    if np.abs(dy) < 1e-5:
+        dy = np.nanmean(np.diff(Y[:, 0]))
+
+    kk = 0
     max_k = 1e4
-    # I = np.argsort(a[:, 0]); b = a[I,:]
+    while kk < max_k:
+        indicies = np.nonzero(np.diff(Y[:, 0]) * flag_sign <= 0)[0] + 1
+        Y[indicies, 0] = Y[indicies, 0] + dy * 0.0001
+        kk += 1
+        if len(np.nonzero(Y[indicies, 0])[0]) == 0:
+            break
+
+    if kk >= max_k:
+        log_error("Could not interpolate", "exc")
+        return None
+
+    # yi=interp1(Y(:,1), Y(:,2), xi);
+    f = scipy.interpolate.interp1d(
+        Y[:, 0],
+        Y[:1],
+        bounds_error=False,
+        # fill_value="extrapolate",
+    )
+    return f(xi)
 
 
 # function[in]=find_nearest(x,y)
