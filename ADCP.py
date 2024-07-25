@@ -239,9 +239,9 @@ def Inverse(
     profile = ADCPFiles.ADCPProfile()
 
     profile.z = param.gz
-    profile.UVocn = np.zeros((len(param.gz), 2)) * np.nan
-    profile.UVttw_solution = np.zeros((len(param.gz), 2)) * np.nan
-    profile.UVttw_model = np.zeros((len(param.gz), 2)) * np.nan
+    profile.UVocn = np.zeros((len(param.gz), 2), dtype=np.complex128) * np.nan
+    profile.UVttw_solution = np.zeros((len(param.gz), 2), dtype=np.complex128) * np.nan
+    profile.UVttw_model = np.zeros((len(param.gz), 2), dtype=np.complex128) * np.nan
     profile.time = np.zeros((len(param.gz), 2)) * np.nan
     profile.UVerr = np.zeros((len(param.gz), 2)) * np.nan
     profile.Wocn = np.zeros((len(param.gz), 2)) * np.nan
@@ -1044,7 +1044,6 @@ def Inverse(
     # Iterate through the B matrix, eliminating any empty list entries and converting
     # everything to np.ndarrays (needed to the call to lsqr()
     # B_vars = [dw_adcp, 0 * d_dac, 0 * d_sfc, np.zeros(Do.shape[0] + Do2.shape[0] + Dv.shape[0])]
-    # TODO - check for real output f
     B_vars = [
         dw_adcp,
         np.zeros(d_dac.shape[0]),
@@ -1086,27 +1085,31 @@ def Inverse(
     # %% Gridded version (on the ocean vertical grid).
 
     # [~,iiz, itmp] = intersect(gz, profile.z);
+    _, iiz, itmp = np.intersect1d(gz, profile.z, return_indices=True)
 
-    # profile.UVocn(itmp,:) = UVocn(iiz,:);
-    # idn = find(D.upcast==0);
-    # iup = find(D.upcast==1);
-    # profile.UVttw_solution(itmp,1)=bindata_AS(D.Z0(idn), D.UVttw_solution(idn),gz(iiz));
-    # profile.UVttw_solution(itmp,2)=bindata_AS(D.Z0(iup), D.UVttw_solution(iup),gz(iiz));
-    # profile.UVttw_model(itmp,1)=bindata_AS(D.Z0(idn), D.UVttw_model(idn),gz(iiz));
-    # profile.UVttw_model(itmp,2)=bindata_AS(D.Z0(iup), D.UVttw_model(iup),gz(iiz));
+    profile.UVocn[itmp, :] = UVocn[iiz, :]
+    idn = np.nonzero(D.upcast == 0)[0]
+    iup = np.nonzero(D.upcast == 1)[0]
 
-    # profile.time(itmp,1)=bindata_AS(D.Z0(idn), D.Mtime(idn),gz(iiz));
-    # profile.time(itmp,2)=bindata_AS(D.Z0(iup), D.Mtime(iup),gz(iiz));
+    profile.UVttw_solution[itmp, 0] = ADCPUtils.bindata(D.Z0[idn], D.UVttw_solution[idn], gz[iiz])[0]
+    profile.UVttw_solution[itmp, 1] = ADCPUtils.bindata(D.Z0[iup], D.UVttw_solution[iup], gz[iiz])[0]
+    profile.UVttw_model[itmp, 0] = ADCPUtils.bindata(D.Z0[idn], D.UVttw_model[idn], gz[iiz])[0]
+    profile.UVttw_model[itmp, 1] = ADCPUtils.bindata(D.Z0[iup], D.UVttw_model[iup], gz[iiz])[0]
 
-    # profile.UVerr(itmp,1)=bindata_AS(D.Z0(idn), std(D.UVerr(:,idn),'omitnan'),gz(iiz));
-    # profile.UVerr(itmp,2)=bindata_AS(D.Z0(iup), std(D.UVerr(:,iup),'omitnan'),gz(iiz));
+    profile.time[itmp, 0] = ADCPUtils.bindata(D.Z0[idn], D.time[idn], gz[iiz])[0]
+    profile.time[itmp, 1] = ADCPUtils.bindata(D.Z0[iup], D.time[iup], gz[iiz])[0]
 
-    # profile.Wttw_solution(itmp,1)=bindata_AS(D.Z0(idn), D.Wttw_solution(idn),gz(iiz));
-    # profile.Wttw_solution(itmp,2)=bindata_AS(D.Z0(iup), D.Wttw_solution(iup),gz(iiz));
-    # profile.Wttw_model(itmp,1)=bindata_AS(D.Z0(idn), D.Wttw_model(idn),gz(iiz));
-    # profile.Wttw_model(itmp,2)=bindata_AS(D.Z0(iup), D.Wttw_model(iup),gz(iiz));
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        profile.UVerr[itmp, 0] = ADCPUtils.bindata(D.Z0[idn], np.nanstd(D.UVerr[:, idn], 0), gz[iiz])[0]
+        profile.UVerr[itmp, 1] = ADCPUtils.bindata(D.Z0[iup], np.nanstd(D.UVerr[:, iup], 0), gz[iiz])[0]
 
-    # profile.Wocn(itmp,:) = Wocn(iiz,:);
+    profile.Wttw_solution[itmp, 0] = ADCPUtils.bindata(D.Z0[idn], D.Wttw_solution[idn], gz[iiz])[0]
+    profile.Wttw_solution[itmp, 1] = ADCPUtils.bindata(D.Z0[iup], D.Wttw_solution[iup], gz[iiz])[0]
+    profile.Wttw_model[itmp, 0] = ADCPUtils.bindata(D.Z0[idn], D.Wttw_model[idn], gz[iiz])[0]
+    profile.Wttw_model[itmp, 1] = ADCPUtils.bindata(D.Z0[iup], D.Wttw_model[iup], gz[iiz])[0]
+
+    profile.Wocn[itmp, :] = Wocn[iiz, :]
 
     # %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     # variables_for_plots.gps_constraints = gps_constraints;
@@ -1119,5 +1122,4 @@ def Inverse(
     # variables_for_plots.Nt = Nt;
     # variables_for_plots.Nz = Nz;
 
-    # TODO - Check with Luc - what is the purpose of returning the D object?
     return (D, profile, None, inverse_tmp)

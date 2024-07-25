@@ -228,14 +228,14 @@ def interp1d(first_epoch_time_s_v, data_v, second_epoch_time_s_v, kind="linear")
     return interp_data_v
 
 
-def interp_nm(x, y, xi):
+def interp_nm(x, y, xi, fill_value=np.nan):
     """interpolate a non-monotonic x along a monotonic xi"""
     index = np.nonzero(np.logical_and(np.isfinite(x), np.isfinite(y)))[0]
     if np.shape(index)[0] <= 2:
         return np.zeros(np.shape(xi)[0]) * np.nan
     P = np.polyfit(x[index] - x[index[0]], y[index], 1)
-    flag_sign = np.sign(P[0])
-    if not flag_sign:
+    flag_sign = int(np.sign(P[0]))
+    if flag_sign == 0:
         return np.ones(np.shape(xi)[0]) * P[1]
 
     # Code for multi-dimension - not handled here
@@ -247,7 +247,7 @@ def interp_nm(x, y, xi):
     # end
 
     indicies = np.argsort(x)[::flag_sign]
-    Y = np.vstack(x[index], y[index])[indicies, :]
+    Y = np.vstack((x[index], y[index])).T[indicies, :]
 
     dy = np.nanmedian(np.diff(Y[:, 0]))
     if np.abs(dy) < 1e-5:
@@ -269,9 +269,9 @@ def interp_nm(x, y, xi):
     # yi=interp1(Y(:,1), Y(:,2), xi);
     f = scipy.interpolate.interp1d(
         Y[:, 0],
-        Y[:1],
+        Y[:, 1],
         bounds_error=False,
-        # fill_value="extrapolate",
+        fill_value=fill_value,
     )
     return f(xi)
 
@@ -304,3 +304,77 @@ def sparse(i, j, v, m, n):
     """
     return scipy.sparse.csr_matrix((v, (i, j)), shape=(m, n))
     # return scipy.sparse.csr_array((v, (i, j)), shape=(m, n))
+
+
+def bindata(x, y, gx):
+    """Bins y(x) onto b(gx), gx defining centers of the bins. NaNs ignored.
+
+    Returns:
+        b: binned data (averaged)
+        n: number of points in each bin
+
+    Notes:
+        Current implimentation only handles the 1-D case
+    """
+    # x=x(:);y=y(:);
+    x = np.squeeze(x)
+    y = np.squeeze(y)
+
+    # idx=find(~isnan(y));
+    # if (isempty(idx)) b=nan*gx;n=nan*gx;s=nan*gx;return;end
+    idx = np.nonzero(np.logical_not(np.isnan(y)))[0]
+    if idx.size == 0:
+        return (np.nan * gx, np.nan * gx)
+
+    # x=x(idx);
+    # y=y(idx);
+    x = x[idx]
+    y = y[idx]
+
+    # xx = gx(:)';
+    # binwidth = diff(xx) ;
+    # xx = [xx(1)-binwidth(1)/2 xx(1:end-1)+binwidth/2 xx(end)+binwidth(end)/2];
+    xx = np.squeeze(gx)
+    binwidth = np.diff(xx)
+    xx = np.hstack((xx[0] - binwidth[0] / 2, xx[0:-1] + binwidth / 2, xx[-1] + binwidth[-1] / 2))
+
+    # % Shift bins so the interval is "( ]" instead of "[ )".
+    # bins = xx + max(eps,eps*abs(xx));
+    bins = xx + np.maximum(np.spacing(1) + np.zeros(xx.shape), np.spacing(1) * np.abs(xx))
+
+    # [nn,bin] = histc(x,bins,1);
+    # nn=nn(1:end-1);
+    # nn(nn==0)=NaN;
+    bin = np.digitize(x, bins)
+    nn = np.zeros(bins.shape)
+    for bb in bin:
+        nn[bb - 1] += 1
+    nn = nn[0:-1]
+    nn[nn == 0] = np.nan
+
+    # iidx=find(bin>0);
+    # sum=full(sparse(bin(iidx),iidx*0+1,y(iidx)));
+    # if length(gx)-length(sum)>0
+    #   sum=[sum;zeros(length(gx)-length(sum),1)*nan];% add zeroes to the end
+    # else
+    #   sum=sum(1:length(nn));
+    # end
+    # b=sum./nn;
+
+    iidx = np.nonzero(bin > 0)[0]
+    # ii = bin[iidx]
+    # jj = np.ones(iidx.shape[0])
+    # mm = np.max(bin[iidx])
+    # nn = 1
+    # sum = sparse(ii, jj, y[iidx], mm, nn).todense()
+    sum = np.zeros(np.max(bin[iidx]), dtype=y.dtype)
+    for ii in iidx:
+        sum[bin[ii] - 1] += y[ii]
+
+    if np.shape(gx)[0] - np.shape(sum)[0] > 0:
+        # add zeros to the end
+        sum = np.hstack((sum, np.zeros(np.shape(gx)[0] - np.shape(sum)[0], dtype=y.dtype)))
+    else:
+        sum = sum[: np.shape(nn)[0]]
+    b = sum / nn
+    return (b, nn)

@@ -169,6 +169,9 @@ def main() -> None:
         (False, "D", "UVerr", "D", "UVerr"),
         (False, "D", "Wttw_solution", "D", "Wttw_solution"),
         (False, "D", "Wocn_solution", "D", "Wocn_solution"),
+        (False, "profile", "UVocn", "profile", "UVocn"),
+        (False, "profile", "Wocn", "profile", "Wocn"),
+        (False, "profile", "UVttw_solution", "profile", "UVttw_solution"),
     ):
         # py_var = python_file[py_grp][py_name]
         py_var = np.squeeze(python_file[py_grp][py_name])

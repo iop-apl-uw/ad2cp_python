@@ -381,7 +381,7 @@ class ADCPProfile(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
     """ADCP profile results"""
 
     z: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
-    UVocn: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
+    UVocn: npt.NDArray[np.complex128] = field(default_factory=(lambda: np.empty(0)))
     UVttw_solution: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     UVttw_model: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     time: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
