@@ -269,7 +269,7 @@ def main() -> None:
             for tol in tols:
                 # pdb.set_trace()
                 bad_pts_b = np.logical_and(np.logical_not(accum), not_close[tol])
-                bad_pts = np.argwhere(bad_pts_b)
+                # bad_pts = np.argwhere(bad_pts_b)
                 # log_debug("    index:py_var:mat_var")
                 # if len(py_var.shape) == 1:
                 #     for ii in bad_pts:
