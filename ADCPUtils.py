@@ -309,6 +309,8 @@ def sparse(i, j, v, m, n):
 def bindata(x, y, gx):
     """Bins y(x) onto b(gx), gx defining centers of the bins. NaNs ignored.
 
+    Args:
+
     Returns:
         b: binned data (averaged)
         n: number of points in each bin

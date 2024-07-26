@@ -86,7 +86,7 @@ def main() -> int:
         return 1
 
     # Read the config file
-    param, weights = ADCPConfig.ProcessConfigFile(adcp_opts.config_file)
+    param, weights = ADCPConfig.ProcessConfigFile(adcp_opts.adcp_config_file)
     if not param:
         return 1
 
