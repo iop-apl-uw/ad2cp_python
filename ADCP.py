@@ -229,8 +229,8 @@ def Inverse(
     glider: ADCPFiles.SGData,
     weights: ADCPConfig.Weights,
     param: ADCPConfig.Params,
+    inverse_tmp: dict | None = None,
 ) -> Any:
-    inverse_tmp = {}
     # gz = param.gz
     # dz = param.dz
 
@@ -392,7 +392,8 @@ def Inverse(
     # FORTRAN order of unrolling
     d_adcp = weights.W_MEAS * dc.T[ia.T]
     Na = d_adcp.size
-    inverse_tmp["d_adcp"] = d_adcp
+    if inverse_tmp is not None:
+        inverse_tmp["d_adcp"] = d_adcp
 
     # dw_adcp = W_MEAS*D.W(ia);
 
@@ -400,7 +401,8 @@ def Inverse(
     # *matlab* - transpose to preserve matlab order
     dw_adcp = weights.W_MEAS * D.W.T[ia.T]
 
-    inverse_tmp["dw_adcp"] = dw_adcp
+    if inverse_tmp is not None:
+        inverse_tmp["dw_adcp"] = dw_adcp
     # z = D.Z(ia); % ...and depth
     # D.T=ones(size(dc,1),1)*D.Mtime; % Time of each observations
     # TT=D.T(ia);
@@ -416,9 +418,10 @@ def Inverse(
     # *matlab* - transpose to preserve matlab order
     Z0 = (np.atleast_2d(np.ones(np.shape(D.Z)[0])).T * D.Z0).T[ia.T]
 
-    inverse_tmp["z"] = z
-    inverse_tmp["TT"] = TT
-    inverse_tmp["Z0"] = Z0
+    if inverse_tmp is not None:
+        inverse_tmp["z"] = z
+        inverse_tmp["TT"] = TT
+        inverse_tmp["Z0"] = Z0
 
     # pdb.set_trace()
 
@@ -427,7 +430,8 @@ def Inverse(
     # Na = numel(d_adcp);
 
     upcast = np.tile(D.upcast, (np.shape(D.Z)[0], 1)).T[ia.T]
-    inverse_tmp["upcast"] = upcast
+    if inverse_tmp is not None:
+        inverse_tmp["upcast"] = upcast
 
     # %%%%%%%%%%
     # % Av is matrix selecting the vehicle ttw velocity at the time of each ADCP measurement
@@ -441,8 +445,9 @@ def Inverse(
 
     # *matlab* - jprof - 1 to convert from matlab to python indexing
     Av = ADCPUtils.sparse(np.arange(Na), jprof - 1, np.ones(Na), Na, Nt)
-    inverse_tmp["jprof"] = jprof
-    inverse_tmp["Av"] = Av.todense()
+    if inverse_tmp is not None:
+        inverse_tmp["jprof"] = jprof
+        inverse_tmp["Av"] = Av.todense()
 
     # %%%%%%%%%%
     # % AiM is a matrix assigning the vertical (ocean profile) grid to the measurement position
@@ -467,9 +472,10 @@ def Inverse(
     iz[upcast, :] = iz[upcast, :] + Nz
     wz = np.array((1 - (rz - np.floor(rz)), rz - np.floor(rz))).T  # interpolant weights
 
-    inverse_tmp["rz"] = rz
-    inverse_tmp["iz"] = iz
-    inverse_tmp["wz"] = wz
+    if inverse_tmp is not None:
+        inverse_tmp["rz"] = rz
+        inverse_tmp["iz"] = iz
+        inverse_tmp["wz"] = wz
 
     # Two ocean profiles
     # *matlab* - reshape needed because python sparse only allows 1d for initialization
@@ -481,7 +487,8 @@ def Inverse(
         Na,
         2 * Nz,
     )
-    inverse_tmp["AiM"] = AiM.todense()
+    if inverse_tmp is not None:
+        inverse_tmp["AiM"] = AiM.todense()
 
     # AiO is a matrix assigning the vertical (ocean profile) grid at the vehicle position
     # AiG is a matrix assigning the vertical (ocean profile) grid at the vehicle position,
@@ -503,9 +510,10 @@ def Inverse(
     iiz[D.upcast, :] = iiz[D.upcast, :] + Nz
     wwz = np.array((1 - (rrz - np.floor(rrz)), rrz - np.floor(rrz))).T  # interpolant weights
 
-    inverse_tmp["rrz"] = rrz
-    inverse_tmp["iiz"] = iiz
-    inverse_tmp["wwz"] = wwz
+    if inverse_tmp is not None:
+        inverse_tmp["rrz"] = rrz
+        inverse_tmp["iiz"] = iiz
+        inverse_tmp["wwz"] = wwz
 
     # Two ocean profiles, each with Nz depths
     # Ai0 = sparse(repmat( (1:Nt)',1,2 ), iz, wz,Nt, 2*Nz);
@@ -518,15 +526,17 @@ def Inverse(
         2 * Nz,
     )
     AiG = Av * Ai0
-    inverse_tmp["Ai0"] = Ai0.todense()
-    inverse_tmp["AiG"] = AiG.todense()
+    if inverse_tmp is not None:
+        inverse_tmp["Ai0"] = Ai0.todense()
+        inverse_tmp["AiG"] = AiG.todense()
 
     # %%%%%%%%%%
 
     # % G_adcp = W_MEAS*[-Av, AiM];  % "G" matrix (Eq. B4; in Todd et al. 2011)
     # G_adcp = W_MEAS*[-Av, AiM-Av*Ai0];  %
     G_adcp = weights.W_MEAS * sp.sparse.hstack([-Av, AiM - Av * Ai0])
-    inverse_tmp["G_adcp"] = G_adcp.todense()
+    if inverse_tmp is not None:
+        inverse_tmp["G_adcp"] = G_adcp.todense()
 
     # %% CONSTRAINTS
 
@@ -558,7 +568,8 @@ def Inverse(
     else:
         G_sfc = []
         d_sfc = []
-    inverse_tmp["G_sfc"] = G_sfc.todense()
+    if inverse_tmp is not None:
+        inverse_tmp["G_sfc"] = G_sfc.todense()
 
     # clear gps_constraints
     # for k=1:length(gps.Mtime)-1 % all GPS
@@ -642,8 +653,9 @@ def Inverse(
             # d_dac = UVbt*W_DAC;
             G_dac = sp.sparse.csr_array(np.atleast_2d(np.hstack([+w, w * Ai0]) * weights.W_DAC))
             d_dac = sp.sparse.csr_array(np.atleast_2d(UVbt * weights.W_DAC))
-            inverse_tmp["G_dac"] = G_dac.todense()
-            inverse_tmp["d_dac"] = d_dac.todense()
+            if inverse_tmp is not None:
+                inverse_tmp["G_dac"] = G_dac.todense()
+                inverse_tmp["d_dac"] = d_dac.todense()
 
         elif Dt < 3600 and weights.W_SURFACE:
             # Surface drift (-> Constrain OCEAN VELOCITY to be like drift, glider speed to be zero)
@@ -668,8 +680,9 @@ def Inverse(
                 ]
             )
             d_sfc = np.hstack((d_sfc, UVbt * weights.W_SURFACE))
-            inverse_tmp["G_sfc"] = G_sfc.todense()
-            inverse_tmp["d_sfc"] = d_sfc
+            if inverse_tmp is not None:
+                inverse_tmp["G_sfc"] = G_sfc.todense()
+                inverse_tmp["d_sfc"] = d_sfc
 
     # %% %%%%%%  % Flight model dac
     # if exist('W_MODEL_DAC','var')
@@ -709,8 +722,9 @@ def Inverse(
             [G_dac, sp.sparse.csr_array(np.atleast_2d(np.hstack([+w * 0, w * Ai0]) * weights.W_MODEL_DAC))]
         )
         d_dac = sp.sparse.vstack([d_dac, np.atleast_2d(MODEL_DAC * weights.W_MODEL_DAC)])
-        inverse_tmp["G_dac"] = G_dac.todense()
-        inverse_tmp["d_dac"] = d_dac.todense()
+        if inverse_tmp is not None:
+            inverse_tmp["G_dac"] = G_dac.todense()
+            inverse_tmp["d_dac"] = d_dac.todense()
 
     # %% %% REGULARIZATION
     # % regularization of ocean velocity profile
@@ -750,10 +764,12 @@ def Inverse(
         #   Do = [ sparse(2*Nz-2,Nt), dd ]*OCN_SMOOTH;
         dd = dd.tocsr()
         Do = sp.sparse.hstack([sp.sparse.csr_array((2 * Nz - 2, Nt)), dd]) * weights.OCN_SMOOTH
-        inverse_tmp["dd"] = dd.todense()
+        if inverse_tmp is not None:
+            inverse_tmp["dd"] = dd.todense()
     else:
         Do = []
-    inverse_tmp["Do"] = Do.todense()
+    if inverse_tmp is not None:
+        inverse_tmp["Do"] = Do.todense()
 
     # % Up and down ocean profile should be similar... (weighted by time interval)
     # if exist('W_OCN_DNUP','var')
@@ -830,12 +846,14 @@ def Inverse(
             sp.sparse.hstack([sp.sparse.csr_array((ii.shape[0], Nt)), dd_dnup / param.dz, -dd_dnup / param.dz])
             * weights.W_OCN_DNUP
         )
-        inverse_tmp["time1"] = time1
-        inverse_tmp["time2"] = time2
-        inverse_tmp["dd_dnup"] = dd_dnup.todense()
+        if inverse_tmp is not None:
+            inverse_tmp["time1"] = time1
+            inverse_tmp["time2"] = time2
+            inverse_tmp["dd_dnup"] = dd_dnup.todense()
     else:
         Do2 = []
-    inverse_tmp["Do2"] = Do2.todense()
+    if inverse_tmp is not None:
+        inverse_tmp["Do2"] = Do2.todense()
 
     # % Smoothness of vehicle velocity
     # Dv = [spdiags(repmat([-1 2 -1], Nt-2,1),[0 1 2], Nt-2,Nt), sparse(Nt-2,2*Nz) ]*VEH_SMOOTH  ; % d/dt
@@ -843,7 +861,8 @@ def Inverse(
     diags = np.tile(np.array([-1, 2, -1]), (Nt - 2, 1))
     dd_dv = sp.sparse.diags_array(diags.T, offsets=[0, 1, 2], shape=(Nt - 2, Nt))
     Dv = sp.sparse.hstack([dd_dv, sp.sparse.csr_array((Nt - 2, 2 * Nz))]) * weights.VEH_SMOOTH  # d/dt
-    inverse_tmp["Dv"] = Dv.todense()
+    if inverse_tmp is not None:
+        inverse_tmp["Dv"] = Dv.todense()
 
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     # %% %%EXTRA CONSTRAINTS
@@ -882,8 +901,9 @@ def Inverse(
         G_model = []
         d_model = []
 
-    inverse_tmp["G_model"] = G_model.todense()
-    inverse_tmp["d_model"] = d_model
+    if inverse_tmp is not None:
+        inverse_tmp["G_model"] = G_model.todense()
+        inverse_tmp["d_model"] = d_model
 
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     # % Make deep ocean velocity small...
@@ -921,8 +941,9 @@ def Inverse(
         G_deep = []
         d_deep = []
 
-    inverse_tmp["G_deep"] = G_deep.todense()
-    inverse_tmp["d_deep"] = d_deep
+    if inverse_tmp is not None:
+        inverse_tmp["G_deep"] = G_deep.todense()
+        inverse_tmp["d_deep"] = d_deep
     # Good to here
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -949,8 +970,9 @@ def Inverse(
         G_bottom = []
         d_bottom = []
 
-    inverse_tmp["G_bottom"] = G_bottom
-    inverse_tmp["d_bottom"] = d_bottom
+    if inverse_tmp is not None:
+        inverse_tmp["G_bottom"] = G_bottom
+        inverse_tmp["d_bottom"] = d_bottom
 
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -995,14 +1017,16 @@ def Inverse(
 
     # UVttw = transpose(M(1:Nt)); % solved-for TTW component
     UVttw = M[:Nt]  # solved-for TTW component
-    inverse_tmp["UVttw"] = UVttw
+    if inverse_tmp is not None:
+        inverse_tmp["UVttw"] = UVttw
 
     # UVocn = transpose(M(Nt+1:end));
     # UVocn = reshape(UVocn,[],2);
     # TODO - Luc - Reshape needed for profile below
     UVocn = M[Nt:].reshape(-1, 2, order="F")
 
-    inverse_tmp["UVocn"] = UVocn
+    if inverse_tmp is not None:
+        inverse_tmp["UVocn"] = UVocn
 
     # % INVERSE SOLUTION
 

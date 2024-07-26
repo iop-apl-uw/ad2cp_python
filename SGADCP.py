@@ -167,13 +167,13 @@ def main() -> int:
 
         # Perfrom inverse
         try:
-            D, profile, variables_for_plot, inverse_tmp = ADCP.Inverse(adcp_realtime, gps, glider, weights, param)
+            D, profile, variables_for_plot, inverse_tmp = ADCP.Inverse(adcp_realtime, gps, glider, weights, param, {})
         except Exception:
             DEBUG_PDB_F()
             log_error("Problem performing inverse calculation", "exc")
             continue
 
-        # Results of the inverse to return, plot and push into netcdf
+        # From basestation extension, push the following into the netcdf:
 
         # D.time
         # D.z0
@@ -181,16 +181,17 @@ def main() -> int:
         # D.UVttw_solution
         # D.Wttw_solution
         # D.Wocn_solution
-
         # profile.z
         # profile.UVocn
         # profile.Wocn
 
+        # For standalone, build out data saving into standalone (netcdf) file, following same path
+        # as matlab code
+
         # Plot output
 
-        # Save back generated columns to netcdf store
-
-        # Save out - for comparision with other processing
+        # Debug save out - for comparision with other processing
+        # TODO - need a better name - match with input file
         with h5py.File("test.hdf5", "w") as hdf:
             adcp_realtime.save_to_hdf5("adcp_realtime", hdf)
             glider.save_to_hdf5("glider", hdf)
