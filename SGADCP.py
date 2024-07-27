@@ -173,18 +173,6 @@ def main() -> int:
             log_error("Problem performing inverse calculation", "exc")
             continue
 
-        # From basestation extension, push the following into the netcdf:
-
-        # D.time
-        # D.z0
-        # D.UVocn_solution
-        # D.UVttw_solution
-        # D.Wttw_solution
-        # D.Wocn_solution
-        # profile.z
-        # profile.UVocn
-        # profile.Wocn
-
         # For standalone, build out data saving into standalone (netcdf) file, following same path
         # as matlab code
 

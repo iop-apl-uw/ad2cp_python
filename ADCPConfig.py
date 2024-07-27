@@ -32,6 +32,7 @@ ADCPConfig.py - Routines to process SG ADCP config file
 """
 
 import pathlib
+import sys
 from dataclasses import dataclass, field
 from typing import Any, Dict, Tuple
 
@@ -40,7 +41,11 @@ import numpy.typing as npt
 import yaml
 
 import ExtendedDataClass
-from ADCPLog import log_error
+
+if "BaseLog" in sys.modules:
+    from BaseLog import log_error
+else:
+    from ADCPLog import log_error
 
 
 def init_helper(

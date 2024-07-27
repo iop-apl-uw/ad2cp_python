@@ -44,6 +44,9 @@ from typing import DefaultDict
 
 _stack_options = ["caller", "caller", "caller", "caller", "exc"]  # default
 
+if "BaseLog" in sys.modules:
+    raise SystemError("Internal error - ADCPLog should not be included")
+
 
 class ADCPLogger:
     """

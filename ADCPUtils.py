@@ -39,7 +39,10 @@ import numpy as np
 import numpy.typing as npt
 import scipy
 
-from ADCPLog import log_error
+if "BaseLog" in sys.modules:
+    from BaseLog import log_error
+else:
+    from ADCPLog import log_error
 
 
 def check_versions() -> int:

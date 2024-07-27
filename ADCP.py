@@ -33,7 +33,7 @@ ADCP.py - Main caclulation functions
 
 # TODO - review all code blocks and pull out the tight intermixed matlab
 
-import pdb
+# import pdb
 import warnings
 from typing import Any
 
@@ -961,7 +961,7 @@ def Inverse(
     # end
 
     if weights.W_MODEL_bottom:
-        ii = np.nonzero(np.logical_and(D.UVttw_model == 0, D.Z0 > 0.5 * np.max(D.Z0)))[0]
+        ii = np.nonzero(np.logical_and(D.UVttw_model == 0, D.Z0 > 0.5 * np.max(D.Z0)))[0]  # noqa: SIM300
         G_bottom = np.zeros(ii.shape[0] * G_adcp.shape[1]).reshape((ii.shape[0], G_adcp.shape[1]))
         for k in range(ii.shape[0]):
             G_bottom[k, ii[k]] = weights.W_MODEL_bottom
@@ -979,7 +979,8 @@ def Inverse(
     # %% so we have a LSQ problem
     # % [H;D;Dv]*M-[d;0;0] = 0
 
-    # M = [G_adcp;G_dac;G_sfc;Do;Do2;Dv;G_model;G_deep;G_bottom]\[d_adcp;d_dac;d_sfc;zeros(size(Do,1)+size(Do2,1)+size(Dv,1),1);d_model; d_deep; d_bottom];
+    # M = [G_adcp;G_dac;G_sfc;Do;Do2;Dv;G_model;G_deep;G_bottom]\
+    # [d_adcp;d_dac;d_sfc;zeros(size(Do,1)+size(Do2,1)+size(Dv,1),1);d_model; d_deep; d_bottom];
 
     # Iterate through the A matrix, eliminating any empty list entries
     A_vars = [G_adcp, G_dac, G_sfc, Do, Do2, Dv, G_model, G_deep, G_bottom]

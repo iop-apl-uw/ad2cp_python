@@ -40,10 +40,10 @@ import traceback
 
 import h5py
 import numpy as np
-import plotly.express as px
 
+# import plotly.express as px
 import ADCPOpts
-from ADCPLog import ADCPLogger, log_critical, log_debug, log_error, log_info, log_warning
+from ADCPLog import ADCPLogger, log_critical, log_error, log_warning
 
 DEBUG_PDB = True
 
@@ -110,7 +110,7 @@ def main() -> None:
     # log_info(np.allclose(python_file["adcp_realtime"]["Z"],  mat_file["adcp_realtime"]["ZZ"]))
     mat_group_name = "adcp"
     # mat_group_name = "adcp_realtime"
-    for f_plot, py_grp, py_name, mat_grp, mat_name in (
+    for f_plot, py_grp, py_name, mat_grp, mat_name in (  # noqa: B007
         (False, "adcp_realtime", "Z", mat_group_name, "Z"),
         (False, "adcp_realtime", "Z0", mat_group_name, "Z0"),
         (False, "adcp_realtime", "Svel", mat_group_name, "Svel"),

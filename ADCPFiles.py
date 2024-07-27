@@ -32,7 +32,7 @@ ADCPFiles.py - Routines to process Seaglider ADCP files
 """
 
 import pathlib
-import pdb
+import sys
 from dataclasses import dataclass, field
 from typing import Any, Tuple
 
@@ -43,7 +43,11 @@ import numpy.typing as npt
 import ADCPConfig
 import ADCPUtils
 import ExtendedDataClass
-from ADCPLog import log_error
+
+if "BaseLog" in sys.modules:
+    from BaseLog import log_error
+else:
+    from ADCPLog import log_error
 
 
 def fetch_var(x: netCDF4._netCDF4.Variable) -> Any:
