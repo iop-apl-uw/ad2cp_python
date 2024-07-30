@@ -163,3 +163,24 @@ def ProcessConfigFile(config_file_name: pathlib.PosixPath) -> Tuple[Params, Weig
     weights.init(cfg_dict, config_file_name)
 
     return (opt_p, weights)
+
+
+class AttributeDict(dict):
+    """Allow dot access for dictionaries"""
+
+    __getattr__ = dict.__getitem__
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__
+
+
+def LoadVarMeta(var_meta_file):
+    var_meta = {}
+    try:
+        with open(var_meta_file, "r") as fi:
+            var_meta_tmp = yaml.safe_load(fi)
+
+        for k in var_meta_tmp:
+            var_meta[k] = AttributeDict(var_meta_tmp[k])
+    except Exception:
+        log_error(f"Could not process {var_meta_file}", "exc")
+    return var_meta

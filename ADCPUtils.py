@@ -32,6 +32,8 @@ ADCPUtils.py - Utility functions
 """
 
 import pathlib
+import pdb
+import re
 import sys
 
 import netCDF4
@@ -40,9 +42,20 @@ import numpy.typing as npt
 import scipy
 
 if "BaseLog" in sys.modules:
-    from BaseLog import log_error
+    from BaseLog import log_critical, log_error, log_info
 else:
-    from ADCPLog import log_error
+    from ADCPLog import log_critical, log_error, log_info
+
+required_python_version = (3, 10, 9)
+required_numpy_version = "1.26.0"
+required_scipy_version = "1.14.0"
+
+
+def normalize_version(v):
+    """Normalizes version stamps"""
+    if not isinstance(v, str):
+        v = str(v)  # very old versions of base_station_version for example were stored as floats
+    return [int(x) for x in re.sub(r"(\.0+)*$", "", v).split(".")]
 
 
 def check_versions() -> int:
@@ -58,6 +71,15 @@ def check_versions() -> int:
         log_error("Python version 3.10 at minimum is required")
         return 1
 
+    # Check numpy version
+    if normalize_version(np.__version__) < normalize_version(required_numpy_version):
+        log_critical(f"Numpy {required_numpy_version} or greater required - current version {np.__version__}")
+        return 1
+
+    # Check scipy version
+    if normalize_version(scipy.__version__) < normalize_version(required_scipy_version):
+        log_critical(f"Scipy {required_scipy_version} or greater required - current version {scipy.__version__}")
+        return 1
     return 0
 
 
@@ -383,3 +405,83 @@ def bindata(x, y, gx):
         sum = sum[: np.shape(nn)[0]]
     b = sum / nn
     return (b, nn)
+
+
+def StripVars(dsi, dso, var_meta):
+    """Copies dsi to dso, excliding any varables in the var_meta dict
+
+    Note: at this time, the dimensions are not addressed
+
+    """
+    for name, dimension in dsi.dimensions.items():
+        dso.createDimension(name, dimension.size)
+
+    for name, var in dsi.variables.items():
+        if name not in var_meta:
+            fv = var.getncattr("_FillValue") if "_FillValue" in var.ncattrs() else None
+            nc_var = dso.createVariable(
+                name,
+                var.datatype,
+                var.dimensions,
+                fill_value=fv,
+                compression="zlib",
+                complevel=9,
+            )
+            nc_var[:] = var[:]
+            for a in var.ncattrs():
+                if a != "_FillValue":
+                    nc_var.setncattr(a, var.getncattr(a))
+
+    for a in dsi.ncattrs():
+        dso.setncattr(a, dsi.getncattr(a))
+
+
+def CreateNCVar(dso, template, var_name, data):
+    """Creates a nc variable and sets meta data
+    Input:
+        dso - output dataset
+        template - dictionary of metadata
+        var_name - name of variable as appears in teamplate
+        data - input data
+
+    Returns:
+        dataarray for variable and matching qc variable
+
+    """
+    is_str = False
+    if isinstance(data, str):
+        # Should be unused
+        inp_data = np.array(data, dtype=np.dtype(("S", len(data))))
+        is_str = True
+    elif np.ndim(data) == 0:
+        # Scalar data
+        inp_data = np.dtype(template["variables"][var_name]["type"]).type(data)
+    else:
+        inp_data = data.astype(template["variables"][var_name]["type"])
+
+    if "num_digits" in template["variables"][var_name]:
+        inp_data = inp_data.round(template["variables"][var_name]["num_digits"])
+
+    # Check for scalar variables
+    if np.ndim(inp_data) == 0:
+        if inp_data == np.nan:
+            inp_data = template["variables"][var_name]["attributes"]["_FillValue"]
+    else:
+        inp_data[np.isnan(inp_data)] = template["variables"][var_name]["attributes"]["_FillValue"]
+
+    assert len(template["variables"][var_name]["nc_dimensions"]) == 1
+    if template["variables"][var_name]["nc_dimensions"][0] not in dso.dimensions:
+        dso.createDimension(template["variables"][var_name]["nc_dimensions"][0], np.shape(data)[0])
+
+    nc_var = dso.createVariable(
+        var_name,
+        template["variables"][var_name]["type"],
+        template["variables"][var_name]["nc_dimensions"][0],
+        fill_value=template["variables"][var_name]["attributes"]["_FillValue"],
+        compression="zlib",
+        complevel=9,
+    )
+    nc_var[:] = inp_data
+    for a_name, attrib in template["variables"][var_name]["attributes"].items():
+        if a_name != "_FillValue":
+            nc_var.setncattr(a_name, attrib)

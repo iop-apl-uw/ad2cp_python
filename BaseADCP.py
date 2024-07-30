@@ -37,18 +37,21 @@ import traceback
 
 import numpy as np
 
-import ADCP
-import ADCPConfig
-import ADCPFiles
-
+# This needs to be imported before the ADCP files to make sure the Logging infrastructure for the basestation
+# is picked up instead of that from the ADCP
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
-
 # ruff: noqa: E402
 import BaseOpts
 import BaseOptsType
 import MakeDiveProfiles
 import Utils
 from BaseLog import BaseLogger, log_error, log_info
+
+import ADCP
+import ADCPConfig
+import ADCPFiles
+import ADCPRealtime
+import ADCPUtils
 
 DEBUG_PDB = True
 
@@ -82,6 +85,21 @@ def load_additional_arguments():
                 BaseOpts.FullPath,
                 {
                     "help": "ADCP configiuration YAML file",
+                    "section": "adcp",
+                    "option_group": "adcp",
+                    "action": BaseOpts.FullPathAction,
+                },
+            ),
+            "adcp_var_meta_file": BaseOptsType.options_t(
+                pathlib.Path(__file__).parent.joinpath("var_meta.yml"),
+                (
+                    "Base",
+                    "BaseADCP",
+                ),
+                ("--adcp_var_meta_file",),
+                BaseOpts.FullPath,
+                {
+                    "help": "ADCP variable metadata configiuration YAML file",
                     "section": "adcp",
                     "option_group": "adcp",
                     "action": BaseOpts.FullPathAction,
@@ -125,6 +143,9 @@ def main(
 
     BaseLogger(base_opts)  # initializes BaseLog
 
+    if ADCPUtils.check_versions():
+        return 1
+
     if not base_opts.mission_dir and hasattr(base_opts, "netcdf_filename") and base_opts.netcdf_filename:
         dive_nc_file_names = [base_opts.netcdf_filename]
     elif base_opts.mission_dir:
@@ -142,6 +163,10 @@ def main(
     param, weights = ADCPConfig.ProcessConfigFile(base_opts.adcp_config_file)
     if not param:
         return 1
+
+    # TODO - remove when BaesOpts FullPath is converted to pathlib
+    base_opts.adcp_var_meta_file = pathlib.Path(base_opts.adcp_var_meta_file)
+    var_meta = ADCPConfig.LoadVarMeta(base_opts.adcp_var_meta_file)
 
     for dive_nc_file_name in dive_nc_file_names:
         dive_nc_file_name = pathlib.Path(dive_nc_file_name)
@@ -189,18 +214,40 @@ def main(
             log_error("Problem performing inverse calculation", "exc")
             continue
 
+        # Create temporary output netcdf file
+        tmp_filename = dive_nc_file_name.with_suffix(".tmpnc")
+        dso = Utils.open_netcdf_file(tmp_filename, "w")
+
+        try:
+            ADCPUtils.StripVars(ds, dso, var_meta)
+        except Exception:
+            DEBUG_PDB_F()
+            log_error(f"Problem stripping old variables from {dive_nc_file_name}", "exc")
+            continue
+
+        pdb.set_trace()
+        # CreateNCVar(dso, template, var_name, data):
+
+        # Plot on COG/CTW plot, and use to generate updated lat/lon for vehicle
+        # D.UVveh_solution
+
+        # Plot
+        # profile.UVocn vs profile.z
+
         # From basestation extension, push the following into the netcdf:
 
         # D.time
         # D.z0
+        # D.UVveh_solution
         # D.UVocn_solution
         # D.UVttw_solution
         # D.Wttw_solution
         # D.Wocn_solution
+
         # profile.z
         # profile.UVocn
         # profile.Wocn
-        #
+
         # Plus Ux, Uy, and Uz (for FMS and plotting)
 
         # Run processing using existing netcdf file
@@ -209,15 +256,9 @@ def main(
 
         # Over write exisitng
 
-        # ncf = Utils.open_netcdf_file(dive_nc_file_name, "a")
-
-        # Simple test for ability to update a netcdf file
-        # curr_time_str = time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
-        # ncf.__setattr__("BaseADCP", curr_time_str)
-        # ncf.variables["sg_cal_pitchbias"].assignValue(time.time())
-
-        # ncf.sync()
-        # ncf.close()
+        ds.close()
+        dso.sync()
+        dso.close()
 
     return 0
 
