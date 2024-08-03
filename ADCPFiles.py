@@ -396,8 +396,8 @@ class ADCPProfile(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
 
 
 @dataclass
-class ADCPTemp(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
-    """ADCP Temp results?"""
+class ADCPInverseResults(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
+    """Results of the ADCP inverse processing at the glider location"""
 
     time: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     Z0: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))

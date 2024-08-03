@@ -32,6 +32,7 @@
 import os
 import pathlib
 import pdb
+import shutil
 import sys
 import traceback
 
@@ -225,8 +226,31 @@ def main(
             log_error(f"Problem stripping old variables from {dive_nc_file_name}", "exc")
             continue
 
-        pdb.set_trace()
-        # CreateNCVar(dso, template, var_name, data):
+        # Generate new lat/lon values
+
+        # This table drives the output in the netcdf file.  Keys here, are the keys in the
+        # var_meta dict loaded in from yml
+        ad2cp_variable_mapping = {
+            # Time for each solution
+            "inverse_time": D.time,
+            # Depth of glider
+            "inverse_depth": D.Z0,
+            # Inverse solution of horizontal ocean velocity at the location of the glider.
+            "inverse_ocean_velocity_north": D.UVocn_solution.imag,
+            "inverse_ocean_velocity_east": D.UVocn_solution.real,
+            # Inverse solution of the total glider velocity (throught the water + ocean drift)
+            "inverse_glider_total_velocity_north": D.UVveh_solution.imag,
+            "inverse_glider_total_velocity_east": D.UVveh_solution.real,
+            # Inverse solution of horizontal glider velocity through the water
+            "inverse_glider_velocity_north": D.UVttw_solution.imag,
+            "inverse_glider_velocity_east": D.UVttw_solution.real,
+            # Inverse solution of vertical glider velocity at the location of the glider
+            "inverse_ocean_velocity_vertical": D.Wttw_solution,
+            # Inverse solution of vertical ocean velocity at the location of the glider
+            "inverse_glider_velocity_vertical": D.Wocn_solution,
+        }
+
+        ADCPUtils.CreateNCVars(dso, ad2cp_variable_mapping, var_meta)
 
         # Plot on COG/CTW plot, and use to generate updated lat/lon for vehicle
         # D.UVveh_solution
@@ -234,21 +258,14 @@ def main(
         # Plot
         # profile.UVocn vs profile.z
 
-        # From basestation extension, push the following into the netcdf:
-
-        # D.time
-        # D.z0
-        # D.UVveh_solution
-        # D.UVocn_solution
-        # D.UVttw_solution
-        # D.Wttw_solution
-        # D.Wocn_solution
+        # Timeseries gridded onto the regular vertical grid
 
         # profile.z
         # profile.UVocn
         # profile.Wocn
 
-        # Plus Ux, Uy, and Uz (for FMS and plotting)
+        # ADCP velocities in glider frame coordinates
+        # Ux, Uy, and Uz (for FMS and plotting)
 
         # Run processing using existing netcdf file
 
@@ -259,6 +276,7 @@ def main(
         ds.close()
         dso.sync()
         dso.close()
+        shutil.move(tmp_filename, dive_nc_file_name)
 
     return 0
 

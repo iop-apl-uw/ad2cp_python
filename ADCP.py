@@ -256,7 +256,7 @@ def Inverse(
     #  largest of 15 seconds or ADCP intervals
     dt = max(15, np.median(tmp[tmp > 2]))
 
-    D = ADCPFiles.ADCPTemp()
+    D = ADCPFiles.ADCPInverseResults()
 
     # D.time = param.time_limits[0]:dt/86400:param.time_limits(end);
     # D.Z0 = interp1(glider.Mtime, glider.ctd_depth, D.Mtime);
