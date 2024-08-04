@@ -479,14 +479,18 @@ def CreateNCVar(dso, template, key_name, data):
     else:
         inp_data[np.isnan(inp_data)] = template[key_name]["nc_attribs"]["_FillValue"]
 
-    assert len(template[key_name]["nc_dimensions"]) == 1
-    if template[key_name]["nc_dimensions"][0] not in dso.dimensions:
-        dso.createDimension(template[key_name]["nc_dimensions"][0], np.shape(data)[0])
+    # assert len(template[key_name]["nc_dimensions"]) == 1
+    # if template[key_name]["nc_dimensions"][0] not in dso.dimensions:
+    #    dso.createDimension(template[key_name]["nc_dimensions"][0], np.shape(data)[0])
+
+    for ii, dim in enumerate(template[key_name]["nc_dimensions"]):
+        if dim not in dso.dimensions:
+            dso.createDimension(dim, np.shape(data)[ii])
 
     nc_var = dso.createVariable(
         template[key_name]["nc_varname"],
         template[key_name]["nc_type"],
-        template[key_name]["nc_dimensions"][0],
+        template[key_name]["nc_dimensions"],
         fill_value=template[key_name]["nc_attribs"]["_FillValue"],
         compression="zlib",
         complevel=9,
