@@ -228,9 +228,13 @@ def main(
 
         # Generate new lat/lon values
 
+        # U == EW == real
+        # V == NS == imag
+
         # This table drives the output in the netcdf file.  Keys here, are the keys in the
         # var_meta dict loaded in from yml
         ad2cp_variable_mapping = {
+            # Glider time variables
             # Time for each solution
             "inverse_time": D.time,
             # Depth of glider
@@ -239,15 +243,19 @@ def main(
             "inverse_ocean_velocity_north": D.UVocn_solution.imag,
             "inverse_ocean_velocity_east": D.UVocn_solution.real,
             # Inverse solution of the total glider velocity (throught the water + ocean drift)
-            "inverse_glider_total_velocity_north": D.UVveh_solution.imag,
-            "inverse_glider_total_velocity_east": D.UVveh_solution.real,
+            # "inverse_glider_total_velocity_north": D.UVveh_solution.imag,
+            # "inverse_glider_total_velocity_east": D.UVveh_solution.real,
             # Inverse solution of horizontal glider velocity through the water
             "inverse_glider_velocity_north": D.UVttw_solution.imag,
             "inverse_glider_velocity_east": D.UVttw_solution.real,
             # Inverse solution of vertical glider velocity at the location of the glider
-            "inverse_ocean_velocity_vertical": D.Wttw_solution,
+            "inverse_ocean_velocity_vertical": D.Wocn_solution,
             # Inverse solution of vertical ocean velocity at the location of the glider
-            "inverse_glider_velocity_vertical": D.Wocn_solution,
+            "inverse_glider_velocity_vertical": D.Wttw_solution,
+            # ADCP profile variables
+            "inverse_profile_depth": profile.z,
+            "inverse_profile_velocity_north": profile.UVocn.imag,
+            "inverse_profile_velocity_east": profile.UVocn.real,
         }
 
         ADCPUtils.CreateNCVars(dso, ad2cp_variable_mapping, var_meta)

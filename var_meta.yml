@@ -1,6 +1,6 @@
 inverse_time:
-  nc_varname: ad2cp_inverse_time
-  nc_dimensions: ['ad2cp_inverse_point']
+  nc_varname: ad2cp_inv_glider_time
+  nc_dimensions: ['ad2cp_inv_glider_point']
   nc_attribs:
     _FillValue: -999
     description: Date in seconds for each solution point
@@ -11,8 +11,8 @@ inverse_time:
   nc_type: d
   decimal_pts: 0
 inverse_depth:
-  nc_varname: ad2cp_inverse_depth
-  nc_dimensions: ['ad2cp_inverse_point']
+  nc_varname: ad2cp_inv_glider_depth
+  nc_dimensions: ['ad2cp_inv_glider_point']
   nc_attribs:
     _FillValue: -999
     description: Depth of the glider
@@ -22,9 +22,9 @@ inverse_depth:
     coverage_content_type: coordinate
   nc_type: f
   decimal_pts: 2
-inverse_ocean_east:
-  nc_varname: ad2cp_inverse_ocean_east
-  nc_dimensions: ['ad2cp_inverse_point']
+inverse_ocean_velocity_east:
+  nc_varname: ad2cp_inv_glider_uocn
+  nc_dimensions: ['ad2cp_inv_glider_point']
   nc_attribs:
     _FillValue: -999
     description: Eastward ocean velocity at glider
@@ -34,12 +34,120 @@ inverse_ocean_east:
     coverage_content_type: physicalMeasurement
   nc_type: f
   decimal_pts: 3
-inverse_ocean_north:
-  nc_varname: ad2cp_inverse_ocean_north
-  nc_dimensions: ['ad2cp_inverse_point']
+inverse_ocean_velocity_north:
+  nc_varname: ad2cp_inv_glider_vocn
+  nc_dimensions: ['ad2cp_inv_glider_point']
   nc_attribs:
     _FillValue: -999
     description: Northward ocean velocity at glider
+    comments: Output of ad2cp inverse processing of realtime data
+    standard_name: ocean speed
+    units: meters/second
+    coverage_content_type: physicalMeasurement
+  nc_type: f
+  decimal_pts: 3
+inverse_ocean_velocity_vertical:
+  nc_varname: ad2cp_inv_glider_wocn
+  nc_dimensions: ['ad2cp_inv_glider_point']
+  nc_attribs:
+    _FillValue: -999
+    description: Vertical ocean velocity at glider
+    comments: Output of ad2cp inverse processing of realtime data
+    standard_name: ocean speed
+    units: meters/second
+    coverage_content_type: physicalMeasurement
+  nc_type: f
+  decimal_pts: 3
+# inverse_glider_total_velocity_east:
+#   nc_varname: ad2cp_inv_glider_total_east
+#   nc_dimensions: ['ad2cp_inv_glider_point']
+#   nc_attribs:
+#     _FillValue: -999
+#     description: Eastward glider velocity over ground (through the water + ocean drift)
+#     comments: Output of ad2cp inverse processing of realtime data
+#     #standard_name: ocean speed
+#     units: meters/second
+#     coverage_content_type: physicalMeasurement
+#   nc_type: f
+#   decimal_pts: 3
+# inverse_glider_total_velocity_north:
+#   nc_varname: ad2cp_inv_glider_total_north
+#   nc_dimensions: ['ad2cp_inv_glider_point']
+#   nc_attribs:
+#     _FillValue: -999
+#     description: Northward glider velocity over ground (through the water + ocean drift)
+#     comments: Output of ad2cp inverse processing of realtime data
+#     #standard_name: ocean speed
+#     units: meters/second
+#     coverage_content_type: physicalMeasurement
+#   nc_type: f
+#   decimal_pts: 3
+inverse_glider_velocity_east:
+  nc_varname: ad2cp_inv_glider_uttw
+  nc_dimensions: ['ad2cp_inv_glider_point']
+  nc_attribs:
+    _FillValue: -999
+    description: Eastward glider velocity through the water
+    comments: Output of ad2cp inverse processing of realtime data
+    #standard_name: ocean speed
+    units: meters/second
+    coverage_content_type: physicalMeasurement
+  nc_type: f
+  decimal_pts: 3
+inverse_glider_velocity_north:
+  nc_varname: ad2cp_inv_glider_vttw
+  nc_dimensions: ['ad2cp_inv_glider_point']
+  nc_attribs:
+    _FillValue: -999
+    description: Northward glider velocity through the water
+    comments: Output of ad2cp inverse processing of realtime data
+    #standard_name: ocean speed
+    units: meters/second
+    coverage_content_type: physicalMeasurement
+  nc_type: f
+  decimal_pts: 3
+inverse_glider_velocity_vertical:
+  nc_varname: ad2cp_inv_glider_wttw
+  nc_dimensions: ['ad2cp_inv_glider_point']
+  nc_attribs:
+    _FillValue: -999
+    description: Vertical glider velocity through the water
+    comments: Output of ad2cp inverse processing of realtime data
+    #standard_name: ocean speed
+    units: meters/second
+    coverage_content_type: physicalMeasurement
+  nc_type: f
+  decimal_pts: 3
+inverse_profile_depth:
+  nc_varname: ad2cp_inv_profile_depth
+  nc_dimensions: ['ad2cp_inv_profile_point']
+  nc_attribs:
+    _FillValue: -999
+    description: Depth of the profile grid
+    comments: Output of ad2cp inverse processing of realtime data
+    standard_name: depth
+    units: meters
+    coverage_content_type: coordinate
+  nc_type: f
+  decimal_pts: 2
+inverse_profile_velocity_east:
+  nc_varname: ad2cp_inv_profile_uocn
+  nc_dimensions: ['ad2cp_inv_profile_point', 'ad2cp_inv_profile']
+  nc_attribs:
+    _FillValue: -999
+    description: Eastward ocean velocity at the profile depth
+    comments: Output of ad2cp inverse processing of realtime data
+    standard_name: ocean speed
+    units: meters/second
+    coverage_content_type: physicalMeasurement
+  nc_type: f
+  decimal_pts: 3
+inverse_profile_velocity_north:
+  nc_varname: ad2cp_inv_profile_vocn
+  nc_dimensions: ['ad2cp_inv_profile_point', 'ad2cp_inv_profile']
+  nc_attribs:
+    _FillValue: -999
+    description: Northward ocean velocity at the profile depth
     comments: Output of ad2cp inverse processing of realtime data
     standard_name: ocean speed
     units: meters/second
