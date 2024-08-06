@@ -37,6 +37,7 @@ import sys
 import traceback
 
 import numpy as np
+from pyproj import Geod
 
 # This needs to be imported before the ADCP files to make sure the Logging infrastructure for the basestation
 # is picked up instead of that from the ADCP
@@ -215,6 +216,50 @@ def main(
             log_error("Problem performing inverse calculation", "exc")
             continue
 
+        # Generate new lat/lon values
+
+        # 1) Using the HDM horizontal displacements and the starting
+        # GPS position, calculate the ending position
+        # 2) Compare the ending position to the second GPS position - calculate the error
+        # 3) If there is error, recalculate lat/lons including the error term
+
+        try:
+            gps_lons = ds.variables["log_gps_lon"][:]
+            gps_lats = ds.variables["log_gps_lat"][:]
+            gps_times = ds.variables["log_gps_time"][:]
+
+            i_dive = np.logical_and(gps_times[1] <= D.time, D.time <= gps_times[2])
+            total_speed = D.UVocn_solution[i_dive] + D.UVttw_solution[i_dive]
+            duration = np.hstack((D.time[i_dive][0] - gps_times[1], np.diff(D.time[i_dive])))
+
+            azimuths = np.angle(total_speed)
+            distances = np.abs(total_speed) * duration
+
+            geod = Geod(ellps="WGS84")
+            lons = [gps_lons[1]]
+            lats = [gps_lats[1]]
+            times = [gps_times[1]]
+            # Needs to be one point at a time in a loop
+            for ii in range(len(azimuths)):
+                lon, lat, _ = geod.fwd(lons[-1], lats[-1], azimuths[ii], distances[ii])
+                lons.append(lon)
+                lats.append(lat)
+                times.append(D.time[i_dive][ii])
+            lons.append(gps_lons[2])
+            lats.append(gps_lats[2])
+            times.append(gps_times[2])
+
+            # Perform quick back check - from the test data, clearly the calculation
+            # of the lat/lon is incorrect
+            for ii in range(len(lons) - 1):
+                _, _, dist = geod.inv(lons[ii], lats[ii], lons[ii + 1], lats[ii + 1])
+                log_info(f"{ii}:{dist}")
+
+        except Exception:
+            DEBUG_PDB_F()
+            log_error(f"Problem computing updated lat/lons from {dive_nc_file_name}", "exc")
+            continue
+
         # Create temporary output netcdf file
         tmp_filename = dive_nc_file_name.with_suffix(".tmpnc")
         dso = Utils.open_netcdf_file(tmp_filename, "w")
@@ -225,8 +270,6 @@ def main(
             DEBUG_PDB_F()
             log_error(f"Problem stripping old variables from {dive_nc_file_name}", "exc")
             continue
-
-        # Generate new lat/lon values
 
         # U == EW == real
         # V == NS == imag
