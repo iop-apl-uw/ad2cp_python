@@ -154,3 +154,53 @@ inverse_profile_velocity_north:
     coverage_content_type: physicalMeasurement
   nc_type: f
   decimal_pts: 3
+ad2cp_frame_Ux:
+  nc_varname: ad2cp_Ux
+  nc_dimensions: ['ad2cp_cell_data_point', 'ad2cp_glider_data_point']
+  nc_attribs:
+    _FillValue: -999
+    description: Velocity along X-axis in glider frame coordinates
+    #comments: Output of ad2cp inverse processing of realtime data
+    #standard_name: ocean speed
+    units: meters/second
+    coverage_content_type: physicalMeasurement
+  nc_type: f
+  decimal_pts: 3
+ad2cp_frame_Uy:
+  nc_varname: ad2cp_Uy
+  nc_dimensions: ['ad2cp_cell_data_point', 'ad2cp_glider_data_point']
+  nc_attribs:
+    _FillValue: -999
+    description: Velocity along Y-axis in glider frame coordinates
+    #comments: Output of ad2cp inverse processing of realtime data
+    #standard_name: ocean speed
+    units: meters/second
+    coverage_content_type: physicalMeasurement
+  nc_type: f
+  decimal_pts: 3
+ad2cp_frame_Uz:
+  nc_varname: ad2cp_Uz
+  nc_dimensions: ['ad2cp_cell_data', 'ad2cp_glider_data_point']
+  nc_attribs:
+    _FillValue: -999
+    description: Velocity along Z-axis in glider frame coordinates
+    #comments: Output of ad2cp inverse processing of realtime data
+    #standard_name: ocean speed
+    units: meters/second
+    coverage_content_type: physicalMeasurement
+  nc_type: f
+  decimal_pts: 3
+ad2cp_frame_time:
+  nc_varname: ad2cp_frame_time
+  nc_dimensions: ['ad2cp_cell_data', 'ad2cp_glider_data_point']
+  nc_attribs:
+    _FillValue: -999
+    description: Date in seconds for each observation
+    #comments: Output of ad2cp inverse processing of realtime data
+    #standard_name: ocean speed
+    units: seconds since 1970-1-1 00:00:00
+    standard_name: time
+    units: meters/second
+    coverage_content_type: physicalMeasurement
+  nc_type: d
+  decimal_pts: 0

@@ -166,7 +166,7 @@ def main(
     if not param:
         return 1
 
-    # TODO - remove when BaesOpts FullPath is converted to pathlib
+    # TODO - remove when BaseOpts FullPath is converted to pathlib
     base_opts.adcp_var_meta_file = pathlib.Path(base_opts.adcp_var_meta_file)
     var_meta = ADCPConfig.LoadVarMeta(base_opts.adcp_var_meta_file)
 
@@ -223,42 +223,42 @@ def main(
         # 2) Compare the ending position to the second GPS position - calculate the error
         # 3) If there is error, recalculate lat/lons including the error term
 
-        try:
-            gps_lons = ds.variables["log_gps_lon"][:]
-            gps_lats = ds.variables["log_gps_lat"][:]
-            gps_times = ds.variables["log_gps_time"][:]
+        # try:
+        #     gps_lons = ds.variables["log_gps_lon"][:]
+        #     gps_lats = ds.variables["log_gps_lat"][:]
+        #     gps_times = ds.variables["log_gps_time"][:]
 
-            i_dive = np.logical_and(gps_times[1] <= D.time, D.time <= gps_times[2])
-            total_speed = D.UVocn_solution[i_dive] + D.UVttw_solution[i_dive]
-            duration = np.hstack((D.time[i_dive][0] - gps_times[1], np.diff(D.time[i_dive])))
+        #     i_dive = np.logical_and(gps_times[1] <= D.time, D.time <= gps_times[2])
+        #     total_speed = D.UVocn_solution[i_dive] + D.UVttw_solution[i_dive]
+        #     duration = np.hstack((D.time[i_dive][0] - gps_times[1], np.diff(D.time[i_dive])))
 
-            azimuths = np.angle(total_speed)
-            distances = np.abs(total_speed) * duration
+        #     azimuths = np.angle(total_speed)
+        #     distances = np.abs(total_speed) * duration
 
-            geod = Geod(ellps="WGS84")
-            lons = [gps_lons[1]]
-            lats = [gps_lats[1]]
-            times = [gps_times[1]]
-            # Needs to be one point at a time in a loop
-            for ii in range(len(azimuths)):
-                lon, lat, _ = geod.fwd(lons[-1], lats[-1], azimuths[ii], distances[ii])
-                lons.append(lon)
-                lats.append(lat)
-                times.append(D.time[i_dive][ii])
-            lons.append(gps_lons[2])
-            lats.append(gps_lats[2])
-            times.append(gps_times[2])
+        #     geod = Geod(ellps="WGS84")
+        #     lons = [gps_lons[1]]
+        #     lats = [gps_lats[1]]
+        #     times = [gps_times[1]]
+        #     # Needs to be one point at a time in a loop
+        #     for ii in range(len(azimuths)):
+        #         lon, lat, _ = geod.fwd(lons[-1], lats[-1], azimuths[ii], distances[ii])
+        #         lons.append(lon)
+        #         lats.append(lat)
+        #         times.append(D.time[i_dive][ii])
+        #     lons.append(gps_lons[2])
+        #     lats.append(gps_lats[2])
+        #     times.append(gps_times[2])
 
-            # Perform quick back check - from the test data, clearly the calculation
-            # of the lat/lon is incorrect
-            for ii in range(len(lons) - 1):
-                _, _, dist = geod.inv(lons[ii], lats[ii], lons[ii + 1], lats[ii + 1])
-                log_info(f"{ii}:{dist}")
+        #     # Perform quick back check - from the test data, clearly the calculation
+        #     # of the lat/lon is incorrect
+        #     for ii in range(len(lons) - 1):
+        #         _, _, dist = geod.inv(lons[ii], lats[ii], lons[ii + 1], lats[ii + 1])
+        #         log_info(f"{ii}:{dist}")
 
-        except Exception:
-            DEBUG_PDB_F()
-            log_error(f"Problem computing updated lat/lons from {dive_nc_file_name}", "exc")
-            continue
+        # except Exception:
+        #     DEBUG_PDB_F()
+        #     log_error(f"Problem computing updated lat/lons from {dive_nc_file_name}", "exc")
+        #     continue
 
         # Create temporary output netcdf file
         tmp_filename = dive_nc_file_name.with_suffix(".tmpnc")
@@ -270,6 +270,8 @@ def main(
             DEBUG_PDB_F()
             log_error(f"Problem stripping old variables from {dive_nc_file_name}", "exc")
             continue
+
+        # pdb.set_trace()
 
         # U == EW == real
         # V == NS == imag
@@ -299,30 +301,20 @@ def main(
             "inverse_profile_depth": profile.z,
             "inverse_profile_velocity_north": profile.UVocn.imag,
             "inverse_profile_velocity_east": profile.UVocn.real,
+            # ADCP velocities in glider frame coordinates
+            # TODO - these need diemsions separate from the those in the rest of the netcdf file
+            # or better logic in stripdims to handle dimensions shared with these variables and others
+            # "ad2cp_frame_Ux": adcp_realtime.Ux,
+            # "ad2cp_frame_Uy": adcp_realtime.Uy,
+            # "ad2cp_frame_Uz": adcp_realtime.Uz,
+            # "ad2cp_frame_time": adcp_realtime.time,
         }
 
         ADCPUtils.CreateNCVars(dso, ad2cp_variable_mapping, var_meta)
 
-        # Plot on COG/CTW plot, and use to generate updated lat/lon for vehicle
-        # D.UVveh_solution
-
-        # Plot
+        # Plots:
+        # Add trace on COG/CTW plot
         # profile.UVocn vs profile.z
-
-        # Timeseries gridded onto the regular vertical grid
-
-        # profile.z
-        # profile.UVocn
-        # profile.Wocn
-
-        # ADCP velocities in glider frame coordinates
-        # Ux, Uy, and Uz (for FMS and plotting)
-
-        # Run processing using existing netcdf file
-
-        # Duplicate file into tmp name, eliminating adcp vectors and replacing with new
-
-        # Over write exisitng
 
         ds.close()
         dso.sync()
