@@ -289,8 +289,8 @@ class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
         if next_dive_ncf.exists():
             ds = ADCPUtils.open_netcdf_file(next_dive_ncf)
             if ds:
-                gps.LL = np.array((gps.LL, ds["log_gps_lon"][:2] + 1j * ds["log_gps_lon"][:2]))
-                gps.log_gps_time = np.array((gps.log_gps_time, ds["log_gps_time"][:2]))
+                gps.LL = np.hstack((gps.LL, ds["log_gps_lon"][1] + 1j * ds["log_gps_lat"][1]))
+                gps.log_gps_time = np.hstack((gps.log_gps_time, ds["log_gps_time"][1]))
 
         # LLgsm = glider.longitude_gsm+1i*glider.latitude_gsm;
         # LL = glider.longitude+1i*glider.latitude; % best estimate? includes dac.
