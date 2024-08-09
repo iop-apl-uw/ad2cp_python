@@ -70,7 +70,7 @@ def plot_ocean_velocity(
         vocn_var = dive_nc_file.variables["ad2cp_inv_profile_vocn"]
         vocn = vocn_var[:]
         vocn[vocn == vocn_var._FillValue] = np.nan
-        
+
         depth = dive_nc_file.variables["ad2cp_inv_profile_depth"][:]
     except KeyError as e:
         log_warning(f"Could not find variable {str(e)} - skipping plot_ts")
@@ -79,76 +79,82 @@ def plot_ocean_velocity(
         log_info("Could not load nc varibles for plot_ts - skipping", "exc")
         return (ret_plots, ret_figs)
 
-    fig = plotly.subplots.make_subplots(rows = 1, cols = 2, subplot_titles=("Eastward Ocean Velocity", "Northward Ocean Velocity"))
-    
+    fig = plotly.subplots.make_subplots(
+        rows=1, cols=2, subplot_titles=("Eastward Ocean Velocity", "Northward Ocean Velocity")
+    )
+
     fig.add_trace(
         {
-            "x": uocn[:,0],
+            "x": uocn[:, 0],
             "y": depth,
             "type": "scatter",
             "name": "Eastward Ocean Velocity Dive",
-            "mode": "markers",
+            # "mode": "markers",
+            "mode": "lines",
             "marker": {
-                "symbol": "triangle-down",
+                # "symbol": "triangle-down",
                 "color": "DarkBlue",
                 #'line':{'width':1, 'color':'LightSlateGrey'}
             },
             "hovertemplate": "%{x:.3f} m/s<br>%{y:.2f} meters<br><extra></extra>",
         },
-        row = 1,
-        col = 1,
+        row=1,
+        col=1,
     )
     fig.add_trace(
         {
-            "x": uocn[:,1],
+            "x": uocn[:, 1],
             "y": depth,
             "type": "scatter",
             "name": "Eastward Ocean Velocity Climb",
-            "mode": "markers",
+            # "mode": "markers",
+            "mode": "lines",
             "marker": {
-                "symbol": "triangle-up",
+                # "symbol": "triangle-up",
                 "color": "DarkGreen",
                 #'line':{'width':1, 'color':'LightSlateGrey'}
             },
             "hovertemplate": "%{x:.3f} m/s<br>%{y:.2f} meters<br><extra></extra>",
         },
-        row = 1,
-        col = 1,
+        row=1,
+        col=1,
     )
 
     fig.add_trace(
         {
-            "x": vocn[:,0],
+            "x": vocn[:, 0],
             "y": depth,
             "type": "scatter",
             "name": "Northward Ocean Velocity Dive",
-            "mode": "markers",
+            # "mode": "markers",
+            "mode": "lines",
             "marker": {
-                "symbol": "triangle-down",
+                # "symbol": "triangle-down",
                 "color": "DarkMagenta",
                 #'line':{'width':1, 'color':'LightSlateGrey'}
             },
             "hovertemplate": "%{x:.3f} m/s<br>%{y:.2f} meters<br><extra></extra>",
         },
-        row = 1,
-        col = 2,
+        row=1,
+        col=2,
     )
     fig.add_trace(
         {
-            "x": vocn[:,1],
+            "x": vocn[:, 1],
             "y": depth,
             "type": "scatter",
             "name": "Northward Ocean Velocity Climb",
-            "mode": "markers",
+            # "mode": "markers",
+            "mode": "lines",
             "marker": {
-                "symbol": "triangle-up",
+                # "symbol": "triangle-up",
                 "color": "DarkRed",
                 #'line':{'width':1, 'color':'LightSlateGrey'}
             },
             "hovertemplate": "%{x:.3f} m/s<br>%{y:.2f} meters<br><extra></extra>",
         },
-        row = 1,
-        col = 2,
+        row=1,
+        col=2,
     )
 
     mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
@@ -162,7 +168,7 @@ def plot_ocean_velocity(
             },
             "yaxis": {
                 "title": "Depth (m)",
-                'autorange' : 'reversed',
+                "autorange": "reversed",
             },
             "xaxis2": {
                 "title": "Velocity (m/s)",
@@ -170,7 +176,7 @@ def plot_ocean_velocity(
             },
             "yaxis2": {
                 "title": "Depth (m)",
-                'autorange' : 'reversed',
+                "autorange": "reversed",
             },
             "title": {
                 "text": title_text,
