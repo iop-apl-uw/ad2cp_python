@@ -421,6 +421,13 @@ def StripVars(dsi, dso, var_meta):
             for d in var.dimensions:
                 strip_dims.append(d)
 
+    # Check for any dims that a shared with non-strip items
+    for name, var in dsi.variables.items():
+        if name not in strip_names:
+            for d in var.dimensions:
+                if d in strip_dims:
+                    strip_dims.remove(d)
+
     for name, dimension in dsi.dimensions.items():
         if name not in strip_dims:
             dso.createDimension(name, dimension.size)
