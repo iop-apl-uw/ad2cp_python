@@ -67,6 +67,69 @@ def DEBUG_PDB_F() -> None:
         pdb.post_mortem(traceb)
 
 
+def GenerateNewLatLons(ds, D):
+    # 1) Using the HDM horizontal displacements and the starting
+    # GPS position, calculate the ending position
+    # 2) Compare the ending position to the second GPS position - calculate the error
+    # 3) If there is error, recalculate lat/lons including the error term
+
+    gps_lons = ds.variables["log_gps_lon"][:]
+    gps_lats = ds.variables["log_gps_lat"][:]
+    gps_times = ds.variables["log_gps_time"][:]
+
+    i_dive = np.logical_and(gps_times[1] <= D.time, D.time <= gps_times[2])
+    total_speed = D.UVocn_solution[i_dive] + D.UVttw_solution[i_dive]
+    duration = np.hstack((D.time[i_dive][0] - gps_times[1], np.diff(D.time[i_dive])))
+
+    # pdb.set_trace()
+    azimuths = np.degrees(np.pi / 2.0 - np.angle(total_speed))
+    distances = np.abs(total_speed) * duration
+
+    geod = Geod(ellps="WGS84")
+    lons = [gps_lons[1]]
+    lats = [gps_lats[1]]
+    times = [gps_times[1]]
+    # Needs to be one point at a time in a loop
+    for ii in range(len(azimuths)):
+        lon, lat, _ = geod.fwd(lons[-1], lats[-1], azimuths[ii], distances[ii])
+        lons.append(lon)
+        lats.append(lat)
+        times.append(D.time[i_dive][ii])
+    lons.append(gps_lons[2])
+    lats.append(gps_lats[2])
+    times.append(gps_times[2])
+
+    # Perform quick back check - from the test data,
+    # log_info("Check for lat/lon calculation")
+    # for ii in range(len(lons) - 1):
+    #    _, _, dist = geod.inv(lons[ii], lats[ii], lons[ii + 1], lats[ii + 1])
+    #    log_info(f"{ii}:{dist}")
+    az, _, dist = geod.inv(lons[0], lats[0], lons[-2], lats[-2])
+    last_az, _, last_dist = geod.inv(lons[0], lats[0], lons[-1], lats[-1])
+    log_info(f"{az:.2f}:{dist:.2f} {last_az:.2f}:{last_dist:.2f}")
+
+    # Using 2d local approximation
+    m_per_deg = 111120.0
+    lon_fac = np.cos(np.radians((gps_lats[1] + gps_lats[2]) / 2))
+
+    alt_lons = [gps_lons[1]]
+    alt_lats = [gps_lats[1]]
+    alt_times = [gps_times[1]]
+    for ii in range(len(total_speed)):
+        lon, lat, _ = geod.fwd(alt_lons[-1], alt_lats[-1], azimuths[ii], distances[ii])
+        alt_lons.append(alt_lons[-1] + total_speed[ii].real * duration[ii] / m_per_deg * lon_fac)
+        alt_lats.append(alt_lats[-1] + total_speed[ii].imag * duration[ii] / m_per_deg)
+        alt_times.append(D.time[i_dive][ii])
+    alt_lons.append(gps_lons[2])
+    alt_lats.append(gps_lats[2])
+    alt_times.append(gps_times[2])
+    # for ii in range(len(lons) - 1):
+    #     _, _, dist = geod.inv(alt_lons[ii], alt_lats[ii], alt_lons[ii + 1], alt_lats[ii + 1])
+    #     log_info(f"{ii}:{dist}")
+
+    return (lons, lats, times)
+
+
 def load_additional_arguments():
     """Defines and extends arguments related to this extension.
     Called by BaseOpts when the extension is set to be loaded
@@ -118,6 +181,21 @@ def load_additional_arguments():
                 bool,
                 {
                     "help": "Include the realtime data adcp frame co-ordinates",
+                    "section": "adcp",
+                    "option_group": "adcp",
+                    "action": argparse.BooleanOptionalAction,
+                },
+            ),
+            "adcp_include_updated_latlon": BaseOptsType.options_t(
+                False,
+                (
+                    "Base",
+                    "BaseADCP",
+                ),
+                ("--adcp_include_updated_latlon",),
+                bool,
+                {
+                    "help": "Include estimated lat/lons based on adcp estimates",
                     "section": "adcp",
                     "option_group": "adcp",
                     "action": argparse.BooleanOptionalAction,
@@ -232,50 +310,6 @@ def main(
             log_error("Problem performing inverse calculation", "exc")
             continue
 
-        # Generate new lat/lon values
-
-        # 1) Using the HDM horizontal displacements and the starting
-        # GPS position, calculate the ending position
-        # 2) Compare the ending position to the second GPS position - calculate the error
-        # 3) If there is error, recalculate lat/lons including the error term
-
-        # try:
-        #     gps_lons = ds.variables["log_gps_lon"][:]
-        #     gps_lats = ds.variables["log_gps_lat"][:]
-        #     gps_times = ds.variables["log_gps_time"][:]
-
-        #     i_dive = np.logical_and(gps_times[1] <= D.time, D.time <= gps_times[2])
-        #     total_speed = D.UVocn_solution[i_dive] + D.UVttw_solution[i_dive]
-        #     duration = np.hstack((D.time[i_dive][0] - gps_times[1], np.diff(D.time[i_dive])))
-
-        #     azimuths = np.angle(total_speed)
-        #     distances = np.abs(total_speed) * duration
-
-        #     geod = Geod(ellps="WGS84")
-        #     lons = [gps_lons[1]]
-        #     lats = [gps_lats[1]]
-        #     times = [gps_times[1]]
-        #     # Needs to be one point at a time in a loop
-        #     for ii in range(len(azimuths)):
-        #         lon, lat, _ = geod.fwd(lons[-1], lats[-1], azimuths[ii], distances[ii])
-        #         lons.append(lon)
-        #         lats.append(lat)
-        #         times.append(D.time[i_dive][ii])
-        #     lons.append(gps_lons[2])
-        #     lats.append(gps_lats[2])
-        #     times.append(gps_times[2])
-
-        #     # Perform quick back check - from the test data, clearly the calculation
-        #     # of the lat/lon is incorrect
-        #     for ii in range(len(lons) - 1):
-        #         _, _, dist = geod.inv(lons[ii], lats[ii], lons[ii + 1], lats[ii + 1])
-        #         log_info(f"{ii}:{dist}")
-
-        # except Exception:
-        #     DEBUG_PDB_F()
-        #     log_error(f"Problem computing updated lat/lons from {dive_nc_file_name}", "exc")
-        #     continue
-
         # U == EW == real
         # V == NS == imag
 
@@ -314,6 +348,24 @@ def main(
                 "ad2cp_frame_Uz": adcp_realtime.Uz,
                 "ad2cp_frame_time": adcp_realtime.time,
             }
+
+        # Generate new lat/lon values
+        if base_opts.adcp_include_updated_latlon:
+            new_lons = new_lats = new_times = None
+            try:
+                new_lons, new_lats, new_times = GenerateNewLatLons(ds, D)
+            except Exception:
+                DEBUG_PDB_F()
+                log_error(f"Problem computing updated lat/lons from {dive_nc_file_name}", "exc")
+            else:
+                log_warning("Adding in updated lat/lon NYI")
+
+                # ad2cp_variable_mapping |= {
+                #     "ad2cp_frame_Ux": adcp_realtime.Ux,
+                #     "ad2cp_frame_Uy": adcp_realtime.Uy,
+                #     "ad2cp_frame_Uz": adcp_realtime.Uz,
+                #     "ad2cp_frame_time": adcp_realtime.time,
+                # }
 
         strip_meta = {}
         for key_n in ad2cp_variable_mapping:
