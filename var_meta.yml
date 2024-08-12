@@ -204,3 +204,47 @@ ad2cp_frame_time:
     coverage_content_type: physicalMeasurement
   nc_type: d
   decimal_pts: 0
+ad2cp_lonlat_time:
+  nc_varname: ad2cp_lonlat_time
+  nc_dimensions: ['ad2cp_lonlat_point']
+  nc_attribs:
+    _FillValue: -999
+    description: Date in seconds for each observation
+    #comments: Output of ad2cp inverse processing of realtime data
+    #standard_name: ocean speed
+    units: seconds since 1970-1-1 00:00:00
+    standard_name: time
+    units: meters/second
+    coverage_content_type: physicalMeasurement
+  nc_type: d
+  decimal_pts: 0
+ad2cp_longitude:
+  nc_varname: ad2cp_longitude
+  nc_dimensions: ['ad2cp_lonlat_point']
+  nc_attribs:
+    _FillValue: false
+    description: longitude of every sample point, from the ADCP inverse solution when underwater
+    units: degrees_east
+    standard_name: longitude
+    long_name: estimate longitude
+    coverage_content_type: coordinate
+    axis: X
+    valid_min: -180.0
+    valid_max: 180.0
+  nc_type: f
+  decimal_pts: 4
+ad2cp_latitude:
+  nc_varname: ad2cp_latitude
+  nc_dimensions: ['ad2cp_lonlat_point']
+  nc_attribs:
+    _FillValue: false
+    description: latitude of every sample point, from the ADCP inverse solution when underwater
+    standard_name: latitude
+    long_name: estimated latitude
+    units: degrees_north
+    coverage_content_type: coordinate
+    axis: Y
+    valid_min: -90.0
+    valid_max: 90.0
+  nc_type: f
+  decimal_pts: 4

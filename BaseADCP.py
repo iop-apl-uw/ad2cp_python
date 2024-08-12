@@ -68,16 +68,18 @@ def DEBUG_PDB_F() -> None:
 
 
 def GenerateNewLatLons(ds, D):
-    # 1) Using the HDM horizontal displacements and the starting
-    # GPS position, calculate the ending position
-    # 2) Compare the ending position to the second GPS position - calculate the error
-    # 3) If there is error, recalculate lat/lons including the error term
-
     gps_lons = ds.variables["log_gps_lon"][:]
     gps_lats = ds.variables["log_gps_lat"][:]
     gps_times = ds.variables["log_gps_time"][:]
 
-    i_dive = np.logical_and(gps_times[1] <= D.time, D.time <= gps_times[2])
+    # TODO - Need to get the lat/lon for the positions before GPS2
+    # Do that by doing a separate inegration starting at GPS1 for the surface drifts and
+    # combining the two vectors
+    #
+    # Then, change the plotting code to run off the lat/lons
+
+    # i_dive = np.logical_and(gps_times[1] <= D.time, D.time <= gps_times[2])
+    i_dive = np.logical_and(D.time >= gps_times[1])
     total_speed = D.UVocn_solution[i_dive] + D.UVttw_solution[i_dive]
     duration = np.hstack((D.time[i_dive][0] - gps_times[1], np.diff(D.time[i_dive])))
 
@@ -109,25 +111,26 @@ def GenerateNewLatLons(ds, D):
     log_info(f"{az:.2f}:{dist:.2f} {last_az:.2f}:{last_dist:.2f}")
 
     # Using 2d local approximation
-    m_per_deg = 111120.0
-    lon_fac = np.cos(np.radians((gps_lats[1] + gps_lats[2]) / 2))
+    # m_per_deg = 111120.0
+    # lon_fac = np.cos(np.radians((gps_lats[1] + gps_lats[2]) / 2))
 
-    alt_lons = [gps_lons[1]]
-    alt_lats = [gps_lats[1]]
-    alt_times = [gps_times[1]]
-    for ii in range(len(total_speed)):
-        lon, lat, _ = geod.fwd(alt_lons[-1], alt_lats[-1], azimuths[ii], distances[ii])
-        alt_lons.append(alt_lons[-1] + total_speed[ii].real * duration[ii] / m_per_deg * lon_fac)
-        alt_lats.append(alt_lats[-1] + total_speed[ii].imag * duration[ii] / m_per_deg)
-        alt_times.append(D.time[i_dive][ii])
-    alt_lons.append(gps_lons[2])
-    alt_lats.append(gps_lats[2])
-    alt_times.append(gps_times[2])
+    # alt_lons = [gps_lons[1]]
+    # alt_lats = [gps_lats[1]]
+    # alt_times = [gps_times[1]]
+    # for ii in range(len(total_speed)):
+    #     lon, lat, _ = geod.fwd(alt_lons[-1], alt_lats[-1], azimuths[ii], distances[ii])
+    #     alt_lons.append(alt_lons[-1] + total_speed[ii].real * duration[ii] / m_per_deg * lon_fac)
+    #     alt_lats.append(alt_lats[-1] + total_speed[ii].imag * duration[ii] / m_per_deg)
+    #     alt_times.append(D.time[i_dive][ii])
+    # alt_lons.append(gps_lons[2])
+    # alt_lats.append(gps_lats[2])
+    # alt_times.append(gps_times[2])
+
     # for ii in range(len(lons) - 1):
     #     _, _, dist = geod.inv(alt_lons[ii], alt_lats[ii], alt_lons[ii + 1], alt_lats[ii + 1])
     #     log_info(f"{ii}:{dist}")
 
-    return (lons, lats, times)
+    return (np.array(lons), np.array(lats), np.array(times))
 
 
 def load_additional_arguments():
@@ -187,7 +190,7 @@ def load_additional_arguments():
                 },
             ),
             "adcp_include_updated_latlon": BaseOptsType.options_t(
-                False,
+                True,
                 (
                     "Base",
                     "BaseADCP",
@@ -358,14 +361,13 @@ def main(
                 DEBUG_PDB_F()
                 log_error(f"Problem computing updated lat/lons from {dive_nc_file_name}", "exc")
             else:
-                log_warning("Adding in updated lat/lon NYI")
-
-                # ad2cp_variable_mapping |= {
-                #     "ad2cp_frame_Ux": adcp_realtime.Ux,
-                #     "ad2cp_frame_Uy": adcp_realtime.Uy,
-                #     "ad2cp_frame_Uz": adcp_realtime.Uz,
-                #     "ad2cp_frame_time": adcp_realtime.time,
-                # }
+                # Returns include the starting and ending GPS position, so drop
+                # those when writing out
+                ad2cp_variable_mapping |= {
+                    "ad2cp_longitude": new_lons[1:-1],
+                    "ad2cp_latitude": new_lats[1:-1],
+                    "ad2cp_lonlat_time": new_times[1:-1],
+                }
 
         strip_meta = {}
         for key_n in ad2cp_variable_mapping:
