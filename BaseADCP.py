@@ -29,6 +29,7 @@
 
 """Basestation extension for microstructure post-processing"""
 
+import argparse
 import os
 import pathlib
 import pdb
@@ -105,6 +106,21 @@ def load_additional_arguments():
                     "section": "adcp",
                     "option_group": "adcp",
                     "action": BaseOpts.FullPathAction,
+                },
+            ),
+            "adcp_include_frame_vel": BaseOptsType.options_t(
+                False,
+                (
+                    "Base",
+                    "BaseADCP",
+                ),
+                ("--adcp_include_frame_vel",),
+                bool,
+                {
+                    "help": "Include the realtime data adcp frame co-ordinates",
+                    "section": "adcp",
+                    "option_group": "adcp",
+                    "action": argparse.BooleanOptionalAction,
                 },
             ),
         },
@@ -260,19 +276,6 @@ def main(
         #     log_error(f"Problem computing updated lat/lons from {dive_nc_file_name}", "exc")
         #     continue
 
-        # Create temporary output netcdf file
-        tmp_filename = dive_nc_file_name.with_suffix(".tmpnc")
-        dso = Utils.open_netcdf_file(tmp_filename, "w")
-
-        try:
-            ADCPUtils.StripVars(ds, dso, var_meta)
-        except Exception:
-            DEBUG_PDB_F()
-            log_error(f"Problem stripping old variables from {dive_nc_file_name}", "exc")
-            continue
-
-        # pdb.set_trace()
-
         # U == EW == real
         # V == NS == imag
 
@@ -301,20 +304,33 @@ def main(
             "inverse_profile_depth": profile.z,
             "inverse_profile_velocity_north": profile.UVocn.imag,
             "inverse_profile_velocity_east": profile.UVocn.real,
-            # ADCP velocities in glider frame coordinates
-            # TODO - these need diemsions separate from the those in the rest of the netcdf file
-            # or better logic in stripdims to handle dimensions shared with these variables and others
-            # "ad2cp_frame_Ux": adcp_realtime.Ux,
-            # "ad2cp_frame_Uy": adcp_realtime.Uy,
-            # "ad2cp_frame_Uz": adcp_realtime.Uz,
-            # "ad2cp_frame_time": adcp_realtime.time,
         }
 
-        ADCPUtils.CreateNCVars(dso, ad2cp_variable_mapping, var_meta)
+        if base_opts.adcp_include_frame_vel:
+            # ADCP velocities in glider frame coordinates
+            ad2cp_variable_mapping |= {
+                "ad2cp_frame_Ux": adcp_realtime.Ux,
+                "ad2cp_frame_Uy": adcp_realtime.Uy,
+                "ad2cp_frame_Uz": adcp_realtime.Uz,
+                "ad2cp_frame_time": adcp_realtime.time,
+            }
 
-        # Plots:
-        # Add trace on COG/CTW plot
-        # profile.UVocn vs profile.z
+        strip_meta = {}
+        for key_n in ad2cp_variable_mapping:
+            strip_meta[key_n] = var_meta[key_n]
+
+        # Create temporary output netcdf file
+        tmp_filename = dive_nc_file_name.with_suffix(".tmpnc")
+        dso = Utils.open_netcdf_file(tmp_filename, "w")
+
+        try:
+            ADCPUtils.StripVars(ds, dso, strip_meta)
+        except Exception:
+            DEBUG_PDB_F()
+            log_error(f"Problem stripping old variables from {dive_nc_file_name}", "exc")
+            continue
+
+        ADCPUtils.CreateNCVars(dso, ad2cp_variable_mapping, var_meta)
 
         ds.close()
         dso.sync()
@@ -335,6 +351,6 @@ if __name__ == "__main__":
             extype, value, tb = sys.exc_info()
             traceback.print_exc()
             pdb.post_mortem(tb)
-        sys.stderr.write("Exception in main (%s)\n" % traceback.format_exc())
+        sys.stderr.write(f"Exception in main {traceback.format_exc()}\n")
 
     sys.exit(retval)
