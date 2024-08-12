@@ -525,7 +525,7 @@ def Inverse(
         Nt,
         2 * Nz,
     )
-    AiG = Av * Ai0
+    AiG = Av @ Ai0
     if inverse_tmp is not None:
         inverse_tmp["Ai0"] = Ai0.todense()
         inverse_tmp["AiG"] = AiG.todense()
@@ -534,7 +534,7 @@ def Inverse(
 
     # % G_adcp = W_MEAS*[-Av, AiM];  % "G" matrix (Eq. B4; in Todd et al. 2011)
     # G_adcp = W_MEAS*[-Av, AiM-Av*Ai0];  %
-    G_adcp = weights.W_MEAS * sp.sparse.hstack([-Av, AiM - Av * Ai0])
+    G_adcp = weights.W_MEAS * sp.sparse.hstack([-Av, AiM - Av @ Ai0])
     if inverse_tmp is not None:
         inverse_tmp["G_adcp"] = G_adcp.todense()
 
@@ -651,7 +651,7 @@ def Inverse(
             # TODO - what does the leading + do?
             # G_dac = [+w w*Ai0]*W_DAC;
             # d_dac = UVbt*W_DAC;
-            G_dac = sp.sparse.csr_array(np.atleast_2d(np.hstack([+w, w * Ai0]) * weights.W_DAC))
+            G_dac = sp.sparse.csr_array(np.atleast_2d(np.hstack([+w, w @ Ai0]) * weights.W_DAC))
             d_dac = sp.sparse.csr_array(np.atleast_2d(UVbt * weights.W_DAC))
             if inverse_tmp is not None:
                 inverse_tmp["G_dac"] = G_dac.todense()
@@ -676,7 +676,7 @@ def Inverse(
             G_sfc = sp.sparse.vstack(
                 [
                     G_sfc,
-                    sp.sparse.csr_array(np.atleast_2d(np.hstack((np.zeros(w.shape[0]), w * Ai0)) * weights.W_SURFACE)),
+                    sp.sparse.csr_array(np.atleast_2d(np.hstack((np.zeros(w.shape[0]), w @ Ai0)) * weights.W_SURFACE)),
                 ]
             )
             d_sfc = np.hstack((d_sfc, UVbt * weights.W_SURFACE))
@@ -719,7 +719,7 @@ def Inverse(
 
         # averaged ocean velocity is the flight model dac
         G_dac = sp.sparse.vstack(
-            [G_dac, sp.sparse.csr_array(np.atleast_2d(np.hstack([+w * 0, w * Ai0]) * weights.W_MODEL_DAC))]
+            [G_dac, sp.sparse.csr_array(np.atleast_2d(np.hstack([+w * 0, w @ Ai0]) * weights.W_MODEL_DAC))]
         )
         d_dac = sp.sparse.vstack([d_dac, np.atleast_2d(MODEL_DAC * weights.W_MODEL_DAC)])
         if inverse_tmp is not None:
@@ -1033,7 +1033,7 @@ def Inverse(
 
     # % U_drift = Ocean velocity at the glider
     # D.UVocn_solution = transpose(Ai0*UVocn(:));
-    D.UVocn_solution = Ai0 * np.squeeze(UVocn.reshape(1, -1, order="F"))
+    D.UVocn_solution = Ai0 @ np.squeeze(UVocn.reshape(1, -1, order="F"))
 
     # % Glider speed through the water
     # D.UVttw_solution = UVttw
@@ -1041,7 +1041,7 @@ def Inverse(
 
     # % Total vehicle speed: U_ttw (speed through the water) + U_drift (ocean speed at the glider).
     # D.UVveh_solution =  UVttw+transpose(Ai0*UVocn(:));
-    D.UVveh_solution = UVttw + (Ai0 * np.squeeze(UVocn.reshape(1, -1, order="F")))
+    D.UVveh_solution = UVttw + (Ai0 @ np.squeeze(UVocn.reshape(1, -1, order="F")))
 
     # % ADCP measurement (D.UV) = u_ocean(t,z) - u_drift( u_ocean @ glider) - u_ttw(@ glider)
     # % Ocean velocity at the measurement location:
@@ -1055,7 +1055,7 @@ def Inverse(
     # %%  Vertical velocity inverse
 
     # Gv_adcp = W_MEAS*[-Av, AiM-Av*Ai0];  % same as the horizontal velocity.
-    Gv_adcp = sp.sparse.hstack([-Av, AiM - Av * Ai0]) * weights.W_MEAS
+    Gv_adcp = sp.sparse.hstack([-Av, AiM - Av @ Ai0]) * weights.W_MEAS
 
     # M = [Gv_adcp;G_dac;G_sfc;2*Do;2*Do2;Dv]\[dw_adcp;0*d_dac;0*d_sfc;zeros(size(Do,1)+size(Do2,1)+size(Dv,1),1)];
     A_vars = [Gv_adcp, G_dac, G_sfc, 2 * Do, 2 * Do2, Dv]
@@ -1104,7 +1104,7 @@ def Inverse(
 
     # % U_drift = Ocean velocity at the glider
     # D.Wocn_solution = transpose(Ai0*Wocn(:));
-    D.Wocn_solution = Ai0 * np.squeeze(Wocn.reshape(1, -1, order="F"))
+    D.Wocn_solution = Ai0 @ np.squeeze(Wocn.reshape(1, -1, order="F"))
 
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     # %% Gridded version (on the ocean vertical grid).

@@ -328,8 +328,7 @@ def sparse(i, j, v, m, n):
         s: 2-D array
             Matrix full of zeros excepting values v at indexes i, j
     """
-    return scipy.sparse.csr_matrix((v, (i, j)), shape=(m, n))
-    # return scipy.sparse.csr_array((v, (i, j)), shape=(m, n))
+    return scipy.sparse.csr_array((v, (i, j)), shape=(m, n))
 
 
 def bindata(x, y, gx):

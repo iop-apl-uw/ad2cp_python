@@ -298,6 +298,7 @@ if __name__ == "__main__":
     # Force to be in UTC
     os.environ["TZ"] = "UTC"
     time.tzset()
+    ret_val = 1
     try:
         ret_val = main()
     except Exception:

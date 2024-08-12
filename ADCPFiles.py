@@ -38,6 +38,7 @@ from typing import Any, Tuple
 
 import netCDF4
 import numpy as np
+import scipy as sp
 import numpy.typing as npt
 
 import ADCPConfig
@@ -72,7 +73,10 @@ class SaveToHDF5:
         """Persist the dataclass fields to a group in a HDF5 file"""
         grp = hdf.create_group(group_name)
         for var_n in self.__dataclass_fields__:
-            grp.create_dataset(var_n, data=getattr(self, var_n))
+            d = getattr(self, var_n)
+            if sp.sparse.issparse(d):
+                d = d.todense()
+            grp.create_dataset(var_n, data=d)
 
 
 @dataclass
