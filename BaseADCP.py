@@ -246,12 +246,14 @@ def main(
         return 1
 
     if not base_opts.mission_dir and hasattr(base_opts, "netcdf_filename") and base_opts.netcdf_filename:
+        # Called from CLI with a single argument
         dive_nc_file_names = [base_opts.netcdf_filename]
     elif base_opts.mission_dir:
         if nc_files_created is not None:
-            # Called from MakeDiveProfiles
+            # Called from MakeDiveProfiles as extension
             dive_nc_file_names = nc_files_created
         elif not dive_nc_file_names:
+            # Called from CLI to process whole mission directory
             # Collect up the possible files
             dive_nc_file_names = MakeDiveProfiles.collect_nc_perdive_files(base_opts)
     else:
@@ -272,8 +274,10 @@ def main(
 
         log_info(f"Processing {dive_nc_file_name}")
 
-        ds = Utils.open_netcdf_file(dive_nc_file_name)
-        if ds is None:
+        try:
+            ds = Utils.open_netcdf_file(dive_nc_file_name)
+        except Exception:
+            log_error(f"Failed to open {dive_nc_file_name} - skipping update", "exc")
             continue
 
         if not param.sg:
@@ -375,7 +379,11 @@ def main(
 
         # Create temporary output netcdf file
         tmp_filename = dive_nc_file_name.with_suffix(".tmpnc")
-        dso = Utils.open_netcdf_file(tmp_filename, "w")
+        try:
+            dso = Utils.open_netcdf_file(tmp_filename, "w")
+        except Exception:
+            log_error(f"Failed to open tempfile {tmp_filename} - skipping update to {dive_nc_file_name}", "exc")
+            continue
 
         try:
             ADCPUtils.StripVars(ds, dso, strip_meta)
