@@ -71,6 +71,10 @@ def plot_ocean_velocity(
         vocn = vocn_var[:]
         vocn[vocn == vocn_var._FillValue] = np.nan
 
+        deepest_i = (
+            max(np.nonzero(np.logical_or(np.logical_not(np.isnan(vocn)), np.logical_not(np.isnan(vocn))))[0]) + 1
+        )
+
         depth = dive_nc_file.variables["ad2cp_inv_profile_depth"][:]
     except KeyError as e:
         log_warning(f"Could not find variable {str(e)} - skipping plot_ts")
@@ -85,8 +89,8 @@ def plot_ocean_velocity(
 
     fig.add_trace(
         {
-            "x": uocn[:, 0],
-            "y": depth,
+            "x": uocn[:deepest_i, 0],
+            "y": depth[:deepest_i],
             "type": "scatter",
             "name": "Eastward Ocean Velocity Dive",
             # "mode": "markers",
@@ -103,8 +107,8 @@ def plot_ocean_velocity(
     )
     fig.add_trace(
         {
-            "x": uocn[:, 1],
-            "y": depth,
+            "x": uocn[:deepest_i, 1],
+            "y": depth[:deepest_i],
             "type": "scatter",
             "name": "Eastward Ocean Velocity Climb",
             # "mode": "markers",
@@ -122,8 +126,8 @@ def plot_ocean_velocity(
 
     fig.add_trace(
         {
-            "x": vocn[:, 0],
-            "y": depth,
+            "x": vocn[:deepest_i, 0],
+            "y": depth[:deepest_i],
             "type": "scatter",
             "name": "Northward Ocean Velocity Dive",
             # "mode": "markers",
@@ -140,8 +144,8 @@ def plot_ocean_velocity(
     )
     fig.add_trace(
         {
-            "x": vocn[:, 1],
-            "y": depth,
+            "x": vocn[:deepest_i, 1],
+            "y": depth[:deepest_i],
             "type": "scatter",
             "name": "Northward Ocean Velocity Climb",
             # "mode": "markers",
