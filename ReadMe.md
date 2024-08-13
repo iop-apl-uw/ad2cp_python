@@ -1,10 +1,9 @@
 # Seaglider Nortek ADCP Processing
 
-Shore side processing software for the ADCP system used 
+Shore side processing software for the Nortek Signature 1000 ADCP system ([Nortek Group](https://www.nortekgroup.com/)) used 
 on the [Seaglider](https://iop.apl.washington.edu/seaglider.php) buoyancy driven
 autonomous underwater vehicles, developed at the University of Washington,
-maintained by the [IOP group at APL-UW](https://iop.apl.washington.edu/index.php) and 
-[Nortek Group](https://www.nortekgroup.com/).
+maintained by the [IOP group at APL-UW](https://iop.apl.washington.edu/index.php)
 
 # Use of this code
 
@@ -15,10 +14,17 @@ ADCP dataset that is available on the Seaglider's scicon after recovery.
 
 # Current status
 
-Only processing of the real-time data is supported at this time.
+Only processing of the real-time data is supported at this time. The stand alone processing
+does not currently save any meaningful output products.
+
+# Note on code structure
+
+This code is directly derived from the matlab version authored by Luc Rainville.  The overall structure 
+and naming conventions are kept the same to help with readability and insight.  At some point in the near 
+future, we will have the matlab version available for use.
 
 # Overview
-*Insert sketch of processing here*
+*Insert link to "Seaglider ADCP Processing" here*
 
 # Output products
 
@@ -33,20 +39,24 @@ files - one for a timeseries and a separate one for a grided product. Any subset
 
 # Output columns 
 
-*Add documentation for each column*
+The following tables map the internal code variables into the Seaglider per-dive netCDF file variables.  Further details 
+for each are available in the "Seaglider ADCP Processing" (Rainville et al. 2024) and the metadata associated with each varaible - see [Meta data definitions](var_meta.yml).
 
-D.time
-D.z0
-D.UVocn_solution
-D.UVttw_solution
-D.Wttw_solution
-D.Wocn_solution
+## These are timeseries variables 
+| Description | Program varaible | per-dive netCDF variable(s) |
+|:------------|:-----------------|-----------------------------|
+|             | D.time           |                             |
+|             | D.z0             |                             |
+|             | D.UVocn_solution |                             |
+|             | D.UVttw_solution |                             |
+|             | D.Wttw_solution  |                             |
+|             | D.Wocn_solution  |                             |
+|             |                  |                             |
 
-profile.z
-profile.UVocn
-profile.Wocn
+## These variables are gridded onto a regular vertical grid
+| Description | Program varaible | per-dive netCDF variable(s) |
+|:------------|:-----------------|-----------------------------|
+|             | profile.z        |                             |
+|             | profile.UVocn    |                             |
+|             | profile.Wocn     |                             |
 
-# Note on code structure
-
-This code is directly derived from the  matlab version *insert link here*.  The overall structure 
-and naming conventions are kept the same to help with readability and insight.
