@@ -79,7 +79,7 @@ def GenerateNewLatLons(ds, D):
     # Then, change the plotting code to run off the lat/lons
 
     # i_dive = np.logical_and(gps_times[1] <= D.time, D.time <= gps_times[2])
-    i_dive = np.logical_and(D.time >= gps_times[1])
+    i_dive = np.logical_and(D.time >= gps_times[1], D.time <= gps_times[2])
     total_speed = D.UVocn_solution[i_dive] + D.UVttw_solution[i_dive]
     duration = np.hstack((D.time[i_dive][0] - gps_times[1], np.diff(D.time[i_dive])))
 
@@ -190,7 +190,7 @@ def load_additional_arguments():
                 },
             ),
             "adcp_include_updated_latlon": BaseOptsType.options_t(
-                True,
+                False,
                 (
                     "Base",
                     "BaseADCP",
