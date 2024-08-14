@@ -17,6 +17,8 @@ ADCP dataset that is available on the Seaglider's scicon after recovery.
 Only processing of the real-time data is supported at this time. The stand alone processing
 does not currently save any meaningful output products.
 
+Processing downward looking ADCPs is not currently working correctly.  A fix is in the works.
+
 # Note on code structure
 
 This code is directly derived from the matlab version authored by Luc Rainville.  The overall structure 
