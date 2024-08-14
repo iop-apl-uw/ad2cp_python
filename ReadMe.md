@@ -23,7 +23,55 @@ This code is directly derived from the matlab version authored by Luc Rainville.
 and naming conventions are kept the same to help with readability and insight.  At some point in the near 
 future, we will have the matlab version available for use.
 
-# Overview
+# Installation
+
+For standalone processing, download the code and install the required packages via `pip install -r requirements.txt`.  As 
+with any python code project, use of a virutal environemnt setup is highly recommended.
+
+For installation in an exisitng [basestation3](https://github.com/iop-apl-uw/basestation3) setup, place a copy of this code
+into `/usr/local/basestation3/adcp` on the basestation machine.  Starting with basestation3 release [v3.0.3](https://github.com/iop-apl-uw/basestation3/releases/tag/v3.0.3)
+the required packages for this software are included in the basestation3 `requirements.txt` file, so by following the basestation3 
+setup the correct packages will be installed.
+
+To enable this processing code to be run as part of the basestation3 conversion, add the extensions:
+
+	adcp/BaseADCP.py
+	
+to the  `[postnetcdf]` section to any of the following:
+
+| File                                         | Comment                                                |
+|:---------------------------------------------|:-------------------------------------------------------|
+| `/usr/local/basestation3/etc/.extensions`    | For any glider on the basestation server (recommended) |
+| `~sgxxx/.extensions`                         | To enable for a particular glider                      |
+| `.extensions` in the `--group_etc` directory | To eanble for a particular groups of gliders           |
+
+The extension will ignore any netcdf file not including AD2CP data, so installing globally is recommended.
+
+To add the plotting routines to the basestation3 processing stream, first create the directory:
+
+	/usr/local/basestation3/Plotting/local
+	
+if it does not already exists.  Then add a symlink to the plotting code:
+
+	ln -s /usr/local/basestation3/adcp/BasePlotting/DiveOcean.py /usr/local/basestation3/Plotting/local/DiveOcean.py
+
+# Use
+
+The standalone driver is `SGADCP.py`.  Run 
+
+	python SGADCP.py --help
+	
+to see the command line usage.  The Seaglider per-dive netCDF files are not updated or altered using the program.
+
+The basesation3 extension - `BaseADCP.py` can be run from the commannd line (in addition to being invoked as part of normal 
+Seaglider processing) - run
+
+	/opt/basestation/bin/python /usr/local/basestation3/adcp/BaseADCP.py --help
+	
+For a list of options.  When run from the command line or as part of the normal Seaglider processing, the per-dive 
+netCDF files will be updated.
+
+# Overview of processing
 *Insert link to "Seaglider ADCP Processing" here*
 
 # Output products
