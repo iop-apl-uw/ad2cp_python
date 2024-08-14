@@ -262,7 +262,6 @@ def Inverse(
     # D.Z0 = interp1(glider.Mtime, glider.ctd_depth, D.Mtime);
     D.time = np.arange(param.time_limits[0], param.time_limits[-1], dt)
 
-    # TODO Review with Luc
     # Note - this is the first place we get differences in code - it comes down to the matlab handling
     # of interp1d for out-of-bounds values (tails of D.time are outside glider.ctd_time).  Pushing ahead
     # to see of its an issue.
@@ -388,7 +387,6 @@ def Inverse(
     ia = np.logical_not(np.isnan(dc))
     # RHS, long vector of weighted measured velocities
     # *matlab* - transpose to preserve matlab order
-    # TODO - Check with Luc here - d_adcp goes to Mx1 that is dependent on the
     # FORTRAN order of unrolling
     d_adcp = weights.W_MEAS * dc.T[ia.T]
     Na = d_adcp.size
@@ -648,7 +646,6 @@ def Inverse(
             w[ii[:-1]] = 0.5 * dti
             w[ii[1:]] = w[ii[1:]] + 0.5 * dti  # "w" is non zero only during the time of these measurements...
 
-            # TODO - what does the leading + do?
             # G_dac = [+w w*Ai0]*W_DAC;
             # d_dac = UVbt*W_DAC;
             G_dac = sp.sparse.csr_array(np.atleast_2d(np.hstack([+w, w @ Ai0]) * weights.W_DAC))
@@ -702,8 +699,6 @@ def Inverse(
     # end
 
     if weights.W_MODEL_DAC:
-        # TODO - check with Luc - looks like matlab code is off
-        # ii = find(D.Z0)>3;
         ii = np.nonzero(D.Z0 > 3)[0]
         # time-average using trapezoid rule
         dti = np.diff(D.time[ii])
@@ -754,7 +749,6 @@ def Inverse(
         # dd = sp.sparse.spdiags(diags.T, [0, 1, 2], 2 * Nz - 2, 2 * Nz).tolil()
         dd = sp.sparse.diags_array(diags.T, offsets=[0, 1, 2], shape=(2 * Nz - 2, 2 * Nz)).tolil()
         dd[Nz - 1, :] = 0
-        # TODO - Check with Luc on this - what's going on here?
         #   dd(Nz,Nz-1) = -1/param.dz;
         #   dd(Nz,Nz) = 2/param.dz;
         #   dd(Nz,2*Nz) = -1/param.dz;
@@ -799,27 +793,8 @@ def Inverse(
         imax = np.argmax(glider.ctd_depth)
         #   time1 = interp_nm(glider.ctd_depth(1:imax), glider.Mtime(1:imax), gz);
         #   time2 = interp_nm(glider.ctd_depth(imax:end), glider.Mtime(imax:end), gz);
-        # TODO - try straight interp for now - probably need to build interp_nm for general case
-        if True:
-            time1 = ADCPUtils.interp_nm(
-                glider.ctd_depth[: imax + 1], glider.ctd_time[: imax + 1], gz, fill_value=np.nan
-            )
-            time2 = ADCPUtils.interp_nm(glider.ctd_depth[imax:], glider.ctd_time[imax:], gz, fill_value=np.nan)
-        else:
-            time1 = sp.interpolate.interp1d(
-                glider.ctd_depth[: imax + 1],
-                glider.ctd_time[: imax + 1],
-                bounds_error=False,
-                # fill_value="extrapolate",
-                fill_value=np.nan,
-            )(gz)
-            time2 = sp.interpolate.interp1d(
-                glider.ctd_depth[imax:],
-                glider.ctd_time[imax:],
-                bounds_error=False,
-                # fill_value="extrapolate",
-                fill_value=np.nan,
-            )(gz)
+        time1 = ADCPUtils.interp_nm(glider.ctd_depth[: imax + 1], glider.ctd_time[: imax + 1], gz, fill_value=np.nan)
+        time2 = ADCPUtils.interp_nm(glider.ctd_depth[imax:], glider.ctd_time[imax:], gz, fill_value=np.nan)
         #   ss = 1-(time2-time1); % 1-diff in days
         #   ss(ss<0)=0; % limit to zero.
         #   for k=1:length(ss)
@@ -832,7 +807,6 @@ def Inverse(
         #   ii = find(ss>0 & isfinite(ss));
         #   dd_dnup=dd_dnup(ii,:);
         ii = np.nonzero(np.logical_and(ss > 0, np.isfinite(ss)))[0]
-        # TODO - this should work:
         # dd_dnup = dd_dnup[ii, :]
         # But we get "IndexError: index results in >2 dimensions" - which seems to be
         # an issue with fancy indexing in sparse along multiple dimensions.  Update scipy and see if things
@@ -1023,7 +997,6 @@ def Inverse(
 
     # UVocn = transpose(M(Nt+1:end));
     # UVocn = reshape(UVocn,[],2);
-    # TODO - Luc - Reshape needed for profile below
     UVocn = M[Nt:].reshape(-1, 2, order="F")
 
     if inverse_tmp is not None:
@@ -1098,7 +1071,6 @@ def Inverse(
 
     # Wocn = M(Nt+1:end);
     # Wocn = reshape(Wocn,[],2);
-    # TODO - Luc - Reshape needed for profile below
     # Imaginary components are all 0 - matches matlab
     Wocn = M[Nt:].reshape(-1, 2, order="F")
 

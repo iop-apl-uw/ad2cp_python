@@ -75,8 +75,6 @@ def GenerateNewLatLons(ds, D):
     # TODO - Need to get the lat/lon for the positions before GPS2
     # Do that by doing a separate inegration starting at GPS1 for the surface drifts and
     # combining the two vectors
-    #
-    # Then, change the plotting code to run off the lat/lons
 
     # i_dive = np.logical_and(gps_times[1] <= D.time, D.time <= gps_times[2])
     i_dive = np.logical_and(D.time >= gps_times[1], D.time <= gps_times[2])

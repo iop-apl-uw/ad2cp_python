@@ -269,7 +269,7 @@ class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
                 continue
             qc_var = f"{var_n}_qc"
             if qc_var in self:
-                # TODO - apply QC to data
+                # TODO - apply QC to data - need corresponding change in matlab code
                 pass
 
         # Derived/calculated
