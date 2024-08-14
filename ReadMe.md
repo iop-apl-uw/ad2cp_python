@@ -72,7 +72,7 @@ For a list of options.  When run from the command line or as part of the normal 
 netCDF files will be updated.
 
 # Overview of processing
-*Insert link to "Seaglider ADCP Processing" here*
+See [Seaglider ADCP Processing](docs/Seaglider_ADCP_processing.pdf) for a description of the processing.
 
 # Output products
 
