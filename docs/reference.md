@@ -1,11 +1,11 @@
 ## Entry Points
 
-::: SGMicroStructure
-::: BaseMicroStructure
+::: SGADCP
+::: BaseADCP
 
 ## Utilities
 
-::: MicroConfig
-::: MicroLog
-::: MicroOpts
+::: ADCPConfig
+::: ADCPLog
+::: ADCPOpts
 ::: ExtendedDataClass
