@@ -272,13 +272,17 @@ def main(
     for dive_nc_file_name in dive_nc_file_names:
         dive_nc_file_name = pathlib.Path(dive_nc_file_name)
 
-        log_info(f"Processing {dive_nc_file_name}")
-
         try:
             ds = Utils.open_netcdf_file(dive_nc_file_name)
         except Exception:
             log_error(f"Failed to open {dive_nc_file_name} - skipping update", "exc")
             continue
+
+        if "ad2cp_time" not in ds.variables:
+            ds.close()
+            continue
+
+        log_info(f"Processing {dive_nc_file_name}")
 
         if not param.sg:
             param.sg = ds.glider
@@ -289,6 +293,7 @@ def main(
         except Exception:
             DEBUG_PDB_F()
             log_error("Problem loading data", "exc")
+            ds.close()
             continue
 
         param.time_limits = np.array((np.min(gps.log_gps_time), np.max(gps.log_gps_time)))
@@ -299,6 +304,7 @@ def main(
         except Exception:
             DEBUG_PDB_F()
             log_error("Problem transforming compass data", "exc")
+            ds.close
             continue
 
         # Clean up adcp data
@@ -307,6 +313,7 @@ def main(
         except Exception:
             DEBUG_PDB_F()
             log_error("Problem cleaning realtime adcp data", "exc")
+            ds.close()
             continue
 
         # Perfrom inverse
@@ -315,6 +322,7 @@ def main(
         except Exception:
             DEBUG_PDB_F()
             log_error("Problem performing inverse calculation", "exc")
+            ds.close()
             continue
 
         # U == EW == real
@@ -384,6 +392,7 @@ def main(
             dso = Utils.open_netcdf_file(tmp_filename, "w")
         except Exception:
             log_error(f"Failed to open tempfile {tmp_filename} - skipping update to {dive_nc_file_name}", "exc")
+            ds.close()
             continue
 
         try:
@@ -391,9 +400,17 @@ def main(
         except Exception:
             DEBUG_PDB_F()
             log_error(f"Problem stripping old variables from {dive_nc_file_name}", "exc")
+            ds.close()
             continue
 
-        ADCPUtils.CreateNCVars(dso, ad2cp_variable_mapping, var_meta)
+        try:
+            ADCPUtils.CreateNCVars(dso, ad2cp_variable_mapping, var_meta)
+        except Exception:
+            DEBUG_PDB_F()
+            log_error(f"Problem stripping creating variables in {tmp_filename}", "exc")
+            ds.close()
+            dso.close()
+            continue
 
         ds.close()
         dso.sync()
