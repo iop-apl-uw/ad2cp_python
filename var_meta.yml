@@ -154,6 +154,18 @@ inverse_profile_velocity_north:
     coverage_content_type: physicalMeasurement
   nc_type: f
   decimal_pts: 3
+inverse_profile_velocity_vertical:
+  nc_varname: ad2cp_inv_profile_wocn
+  nc_dimensions: ['ad2cp_inv_profile_point', 'ad2cp_inv_profile']
+  nc_attribs:
+    _FillValue: -999
+    description: Vertical ocean velocity at the profile depth
+    comments: Output of ad2cp inverse processing of realtime data
+    standard_name: ocean speed
+    units: meters/second
+    coverage_content_type: physicalMeasurement
+  nc_type: f
+  decimal_pts: 3
 ad2cp_frame_Ux:
   nc_varname: ad2cp_Ux
   nc_dimensions: ['ad2cp_cell_data_point', 'ad2cp_glider_data_point']

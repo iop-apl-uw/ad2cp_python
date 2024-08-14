@@ -345,6 +345,7 @@ def main(
             "inverse_profile_depth": profile.z,
             "inverse_profile_velocity_north": profile.UVocn.imag,
             "inverse_profile_velocity_east": profile.UVocn.real,
+            "inverse_profile_velocity_vertical": profile.Wocn,
         }
 
         if base_opts.adcp_include_frame_vel:

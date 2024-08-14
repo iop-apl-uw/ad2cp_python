@@ -43,20 +43,21 @@ The following tables map the internal code variables into the Seaglider per-dive
 for each are available in the "Seaglider ADCP Processing" (Rainville et al. 2024) and the metadata associated with each varaible - see [Meta data definitions](var_meta.yml).
 
 ## These are timeseries variables 
-| Description | Program varaible | per-dive netCDF variable(s) |
-|:------------|:-----------------|-----------------------------|
-|             | D.time           |                             |
-|             | D.z0             |                             |
-|             | D.UVocn_solution |                             |
-|             | D.UVttw_solution |                             |
-|             | D.Wttw_solution  |                             |
-|             | D.Wocn_solution  |                             |
-|             |                  |                             |
+| Description                                | Program variable   | per-dive netCDF variable(s)                      |
+|:-------------------------------------------|:-------------------|:-------------------------------------------------|
+| epoch time for each point                  | `D.time`           | `ad2cp_inv_glider_time`                          |
+| Depth of glider                            | `D.z0`             | `ad2cp_inv_glider_depth`                         |
+| Ocean velocity at the glider               | `D.UVocn_solution` | `ad2cp_inv_glider_uocn`, `ad2cp_inv_glider_vocn` |
+| Glider velocity through the water          | `D.UVttw_solution` | `ad2cp_inv_glider_uttw`, `ad2cp_inv_glider_vttw` |
+| Vertical glider velocity through the water | `D.Wttw_solution ` | `ad2cp_inv_glider_wttw`                          |
+| Vertical ocean velocity at glider          | `D.Wocn_solution`  | `ad2cp_inv_glider_wocn`                          |
+
 
 ## These variables are gridded onto a regular vertical grid
-| Description | Program varaible | per-dive netCDF variable(s) |
-|:------------|:-----------------|-----------------------------|
-|             | profile.z        |                             |
-|             | profile.UVocn    |                             |
-|             | profile.Wocn     |                             |
+
+| Description                                  | Program variable | per-dive netCDF variable(s)                        |
+|:---------------------------------------------|:-----------------|:---------------------------------------------------|
+| Depth of the profile grid                    | `profile.z`      | `ad2cp_inv_profile_point`                          |
+| Ocean velocity at the profile depth          | `profile.UVocn`  | `ad2cp_inv_profile_uocn`, `ad2cp_inv_profile_vocn` |
+| Vertical ocean velocity at the profile depth | `profile.Wocn`   | `ad2cp_inv_profile_wocn`                           |
 
