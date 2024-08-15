@@ -36,6 +36,7 @@ import pathlib
 # import pdb
 import re
 import sys
+import warnings
 
 import netCDF4
 import numpy as np
@@ -403,7 +404,9 @@ def bindata(x, y, gx):
         sum = np.hstack((sum, np.zeros(np.shape(gx)[0] - np.shape(sum)[0], dtype=y.dtype)))
     else:
         sum = sum[: np.shape(nn)[0]]
-    b = sum / nn
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        b = sum / nn
     return (b, nn)
 
 
