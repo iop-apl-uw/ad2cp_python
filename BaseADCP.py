@@ -302,7 +302,7 @@ def main(
         except Exception:
             DEBUG_PDB_F()
             log_error("Problem transforming compass data", "exc")
-            ds.close
+            ds.close()
             continue
 
         # Clean up adcp data
