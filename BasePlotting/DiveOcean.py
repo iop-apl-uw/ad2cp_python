@@ -35,8 +35,8 @@ from __future__ import annotations
 
 import typing
 
-import plotly.graph_objects
 import numpy as np
+import plotly.graph_objects
 import scipy
 
 if typing.TYPE_CHECKING:
@@ -44,7 +44,7 @@ if typing.TYPE_CHECKING:
 
 import PlotUtils
 import PlotUtilsPlotly
-from BaseLog import log_warning, log_info
+from BaseLog import log_info, log_warning
 from Plotting import plotdivesingle
 
 
