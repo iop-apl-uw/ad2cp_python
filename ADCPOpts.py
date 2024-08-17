@@ -80,6 +80,13 @@ def ADCPOptions(description: str) -> argparse.Namespace:
     )
     ap.add_argument("--adcp_config_file", help="Configuration input file", action=FullPathAction, default="")
 
+    ap.add_argument(
+        "--save_details",
+        help="Save detailed variables for later comparison",
+        action="store_true",
+        default=False,
+    )
+
     ap.add_argument("ncf_files", help="Seaglider netcdf files", nargs="*")
 
     args = ap.parse_args()

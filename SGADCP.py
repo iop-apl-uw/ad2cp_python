@@ -167,12 +167,15 @@ def main() -> int:
 
         # Perfrom inverse
         try:
-            D, profile, variables_for_plot, inverse_tmp = ADCP.Inverse(adcp_realtime, gps, glider, weights, param, {})
+            D, profile, variables_for_plot, inverse_tmp = ADCP.Inverse(
+                adcp_realtime, gps, glider, weights, param, {} if adcp_opts.save_details else None
+            )
         except Exception:
             DEBUG_PDB_F()
             log_error("Problem performing inverse calculation", "exc")
             continue
 
+        pdb.set_trace()
         # For standalone, build out data saving into standalone (netcdf) file, following same path
         # as matlab code
 
@@ -180,15 +183,16 @@ def main() -> int:
 
         # Debug save out - for comparision with other processing
         # TODO - need a better name - match with input file
-        with h5py.File("test.hdf5", "w") as hdf:
-            adcp_realtime.save_to_hdf5("adcp_realtime", hdf)
-            glider.save_to_hdf5("glider", hdf)
-            gps.save_to_hdf5("gps", hdf)
-            D.save_to_hdf5("D", hdf)
-            profile.save_to_hdf5("profile", hdf)
-            grp = hdf.create_group("inverse_tmp")
-            for k, v in inverse_tmp.items():
-                grp.create_dataset(k, data=v)
+        if adcp_opts.save_details:
+            with h5py.File("test.hdf5", "w") as hdf:
+                adcp_realtime.save_to_hdf5("adcp_realtime", hdf)
+                glider.save_to_hdf5("glider", hdf)
+                gps.save_to_hdf5("gps", hdf)
+                D.save_to_hdf5("D", hdf)
+                profile.save_to_hdf5("profile", hdf)
+                grp = hdf.create_group("inverse_tmp")
+                for k, v in inverse_tmp.items():
+                    grp.create_dataset(k, data=v)
 
     return 0
 

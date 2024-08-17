@@ -38,8 +38,8 @@ from typing import Any, Tuple
 
 import netCDF4
 import numpy as np
-import scipy as sp
 import numpy.typing as npt
+import scipy as sp
 
 import ADCPConfig
 import ADCPUtils
