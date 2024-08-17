@@ -87,6 +87,13 @@ def ADCPOptions(description: str) -> argparse.Namespace:
         default=False,
     )
 
+    ap.add_argument(
+        "--adcp_var_meta_filename",
+        help="ADCP variable metadata configiuration YAML file",
+        action=FullPathAction,
+        default=pathlib.Path(__file__).parent.joinpath("var_meta.yml"),
+    )
+
     ap.add_argument("ncf_files", help="Seaglider netcdf files", nargs="*")
 
     args = ap.parse_args()

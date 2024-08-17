@@ -1,3 +1,6 @@
+#
+# Timeseries related
+#
 inverse_time:
   nc_varname: ad2cp_inv_glider_time
   nc_dimensions: ['ad2cp_inv_glider_point']
@@ -118,54 +121,9 @@ inverse_glider_velocity_vertical:
     coverage_content_type: physicalMeasurement
   nc_type: f
   decimal_pts: 3
-inverse_profile_depth:
-  nc_varname: ad2cp_inv_profile_depth
-  nc_dimensions: ['ad2cp_inv_profile_point']
-  nc_attribs:
-    _FillValue: -999
-    description: Depth of the profile grid
-    comments: Output of ad2cp inverse processing of realtime data
-    standard_name: depth
-    units: meters
-    coverage_content_type: coordinate
-  nc_type: f
-  decimal_pts: 2
-inverse_profile_velocity_east:
-  nc_varname: ad2cp_inv_profile_uocn
-  nc_dimensions: ['ad2cp_inv_profile_point', 'ad2cp_inv_profile']
-  nc_attribs:
-    _FillValue: -999
-    description: Eastward ocean velocity at the profile depth
-    comments: Output of ad2cp inverse processing of realtime data
-    standard_name: ocean speed
-    units: meters/second
-    coverage_content_type: physicalMeasurement
-  nc_type: f
-  decimal_pts: 3
-inverse_profile_velocity_north:
-  nc_varname: ad2cp_inv_profile_vocn
-  nc_dimensions: ['ad2cp_inv_profile_point', 'ad2cp_inv_profile']
-  nc_attribs:
-    _FillValue: -999
-    description: Northward ocean velocity at the profile depth
-    comments: Output of ad2cp inverse processing of realtime data
-    standard_name: ocean speed
-    units: meters/second
-    coverage_content_type: physicalMeasurement
-  nc_type: f
-  decimal_pts: 3
-inverse_profile_velocity_vertical:
-  nc_varname: ad2cp_inv_profile_wocn
-  nc_dimensions: ['ad2cp_inv_profile_point', 'ad2cp_inv_profile']
-  nc_attribs:
-    _FillValue: -999
-    description: Vertical ocean velocity at the profile depth
-    comments: Output of ad2cp inverse processing of realtime data
-    standard_name: ocean speed
-    units: meters/second
-    coverage_content_type: physicalMeasurement
-  nc_type: f
-  decimal_pts: 3
+#
+# Timeseries - velocities in glider reference frame
+#
 ad2cp_frame_Ux:
   nc_varname: ad2cp_Ux
   nc_dimensions: ['ad2cp_cell_data_point', 'ad2cp_glider_data_point']
@@ -216,6 +174,9 @@ ad2cp_frame_time:
     coverage_content_type: physicalMeasurement
   nc_type: d
   decimal_pts: 0
+#
+# Timeseries - lon/lat
+#
 ad2cp_lonlat_time:
   nc_varname: ad2cp_lonlat_time
   nc_dimensions: ['ad2cp_lonlat_point']
@@ -260,3 +221,91 @@ ad2cp_latitude:
     valid_max: 90.0
   nc_type: f
   decimal_pts: 4
+  
+#
+# Profile related
+#
+inverse_profile_depth:
+  nc_varname: ad2cp_inv_profile_depth
+  nc_dimensions: ['ad2cp_inv_profile_point']
+  nc_attribs:
+    _FillValue: -999
+    description: Depth of the profile grid
+    comments: Output of ad2cp inverse processing of realtime data
+    standard_name: depth
+    units: meters
+    coverage_content_type: coordinate
+  nc_type: f
+  decimal_pts: 2
+inverse_profile_velocity_east:
+  nc_varname: ad2cp_inv_profile_uocn
+  nc_dimensions: ['ad2cp_inv_profile_point', 'ad2cp_inv_profile']
+  nc_attribs:
+    _FillValue: -999
+    description: Eastward ocean velocity at the profile depth
+    comments: Output of ad2cp inverse processing of realtime data
+    standard_name: ocean speed
+    units: meters/second
+    coverage_content_type: physicalMeasurement
+  nc_type: f
+  decimal_pts: 3
+inverse_profile_velocity_north:
+  nc_varname: ad2cp_inv_profile_vocn
+  nc_dimensions: ['ad2cp_inv_profile_point', 'ad2cp_inv_profile']
+  nc_attribs:
+    _FillValue: -999
+    description: Northward ocean velocity at the profile depth
+    comments: Output of ad2cp inverse processing of realtime data
+    standard_name: ocean speed
+    units: meters/second
+    coverage_content_type: physicalMeasurement
+  nc_type: f
+  decimal_pts: 3
+inverse_profile_velocity_vertical:
+  nc_varname: ad2cp_inv_profile_wocn
+  nc_dimensions: ['ad2cp_inv_profile_point', 'ad2cp_inv_profile']
+  nc_attribs:
+    _FillValue: -999
+    description: Vertical ocean velocity at the profile depth
+    comments: Output of ad2cp inverse processing of realtime data
+    standard_name: ocean speed
+    units: meters/second
+    coverage_content_type: physicalMeasurement
+  nc_type: f
+  decimal_pts: 3
+inverse_profile_dive:
+  nc_varname: ad2cp_inv_profile_dive
+  nc_dimensions: ['ad2cp_inv_profile',]
+  nc_attribs:
+    _FillValue: -999
+    description: Dive number associated with the profile
+    comments: Output of ad2cp inverse processing of realtime data
+    cf_role: trajectory_id
+    coverage_content_type: coordinate
+  nc_type: i
+inverse_profile_time:
+  nc_varname: ad2cp_inv_profile_time
+  nc_dimensions: ['ad2cp_inv_profile_point', 'ad2cp_inv_profile']
+  nc_attribs:
+    _FillValue: -999
+    description: Date in seconds for each solution point
+    comments: Output of ad2cp inverse processing of realtime data
+  units: seconds since 1970-1-1 00:00:00
+  standard_name: time
+  coverage_content_type: physicalMeasurement
+  nc_type: d
+  decimal_pts: 0
+# Note - different dimension since this is just the array of depth bins
+inverse_profile_z:
+  nc_varname: ad2cp_inv_profile_depth
+  nc_dimensions: ['ad2cp_inv_depth_point']
+  nc_attribs:
+    _FillValue: -999
+    description: Depth of the profile grid
+    comments: Output of ad2cp inverse processing of realtime data
+    standard_name: depth
+    units: meters
+    coverage_content_type: coordinate
+  nc_type: f
+  decimal_pts: 2
+  

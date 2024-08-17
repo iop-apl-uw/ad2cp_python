@@ -106,10 +106,44 @@ def main() -> int:
 
     log_debug(param)
 
-    # timeseries_adcp.time = [];
-    # timeseries_adcp.Ux = [];
-    # timeseries_adcp.Uy = [];
-    # timeseries_adcp.Uz = [];
+    # Whole mission accumulators
+    depth_grid = None
+    mission_dive = []
+    mission_time = []
+    mission_uocn = []
+    mission_vocn = []
+    mission_wocn = []
+
+    # adcp_grid.UVttw_model(iiz,n_dive*2-1:n_dive*2) = profile.UVttw_model(itmp,:);
+    # adcp_grid.UVerr(iiz,n_dive*2-1:n_dive*2) = profile.UVerr(itmp,:);
+
+    # adcp_grid.Wocn(iiz,n_dive*2-1:n_dive*2) = profile.Wocn(itmp,:);
+    # adcp_grid.Wttw_solution(iiz,n_dive*2-1:n_dive*2) = profile.Wttw_solution(itmp,:);
+    # adcp_grid.Wttw_model(iiz,n_dive*2-1:n_dive*2) = profile.Wttw_model(itmp,:);
+
+    # % NaN the edges
+    # adcp_grid.time(i0z,n_dive*2-1:n_dive*2) = NaN;
+    # adcp_grid.UVocn(i0z,n_dive*2-1:n_dive*2) = NaN;
+    # adcp_grid.UVttw_solution(i0z,n_dive*2-1:n_dive*2) = NaN;
+    # adcp_grid.UVttw_model(i0z,n_dive*2-1:n_dive*2) = NaN;
+    # adcp_grid.UVerr(i0z,n_dive*2-1:n_dive*2) = NaN;
+
+    # adcp_grid.Wocn(i0z,n_dive*2-1:n_dive*2) = NaN;
+    # adcp_grid.Wttw_solution(i0z,n_dive*2-1:n_dive*2) = NaN;
+    # adcp_grid.Wttw_model(i0z,n_dive*2-1:n_dive*2) = NaN;
+
+    # % from the glider profile
+    # [~,imax] = max(glider.ctd_depth);
+    # adcp_grid.lon(1,n_dive*2-1)=mean(glider.longitude(1:imax));
+    # adcp_grid.lon(1,n_dive*2  )=mean(glider.longitude(imax:end));
+    # adcp_grid.lat(1,n_dive*2-1)=mean(glider.latitude(1:imax));
+    # adcp_grid.lat(1,n_dive*2  )=mean(glider.latitude(imax:end));
+
+    output_filename = None
+
+    # TODO - load template for header meta data and override template
+
+    var_meta = ADCPConfig.LoadVarMeta(adcp_opts.adcp_var_meta_filename)
 
     dive_nc_filenames: list[pathlib.Path] = []
 
@@ -130,6 +164,11 @@ def main() -> int:
         if not param.sg:
             param.sg = ds.glider
 
+        if not output_filename:
+            output_filename = pathlib.Path(adcp_opts.mission_dir).joinpath(
+                f"{ADCPUtils.GetMissionStr(ds).replace(' ', '-').replace('_', '-')}-adcp-realtime.nc"
+            )
+
         # Read real-time
         try:
             glider, gps, adcp_realtime = ADCPFiles.ADCPReadSGNCF(ds, ncf_name, param)
@@ -137,8 +176,8 @@ def main() -> int:
             DEBUG_PDB_F()
             log_error("Problem loading data", "exc")
             continue
-
-        ds.close()
+        finally:
+            ds.close()
 
         param.time_limits = np.array((np.min(gps.log_gps_time), np.max(gps.log_gps_time)))
 
@@ -149,9 +188,6 @@ def main() -> int:
             DEBUG_PDB_F()
             log_error("Problem transforming compass data", "exc")
             continue
-
-        # TODO: Add a "cone plot" here - x y z is lon, lat, depth and u v w is from ADCP
-        # TODO: Compare frame Ux, Uy, Uz with matlab output
 
         # Clean up adcp data
         try:
@@ -175,10 +211,14 @@ def main() -> int:
             log_error("Problem performing inverse calculation", "exc")
             continue
 
-        # For standalone, build out data saving into standalone (netcdf) file, following same path
-        # as matlab code
-
-        # Plot output
+        mission_dive.append(glider.dive)
+        mission_dive.append(glider.dive)
+        mission_time.append(profile.time)
+        mission_uocn.append(profile.UVocn.real)
+        mission_vocn.append(profile.UVocn.imag)
+        mission_wocn.append(profile.Wocn)
+        if depth_grid is None:
+            depth_grid = profile.z
 
         # Debug save out - for comparision with other processing
         # TODO - need a better name - match with input file
@@ -192,6 +232,37 @@ def main() -> int:
                 grp = hdf.create_group("inverse_tmp")
                 for k, v in inverse_tmp.items():
                     grp.create_dataset(k, data=v)
+
+    # Output results
+
+    # TODO - CONSIDER - trim arrays based on deepest actual observation
+
+    # Header templates
+    ad2cp_variable_mapping = {
+        # ADCP profile variables
+        "inverse_profile_depth": depth_grid,
+        "inverse_profile_dive": np.hstack(mission_dive),
+        "inverse_profile_time": np.hstack(mission_time),
+        "inverse_profile_velocity_north": np.hstack(mission_uocn),
+        "inverse_profile_velocity_east": np.hstack(mission_vocn),
+        "inverse_profile_velocity_vertical": np.hstack(mission_wocn),
+    }
+
+    dso = ADCPUtils.open_netcdf_file(output_filename, "w")
+    if dso is None:
+        log_error(f"Could not open {output_filename}")
+        return 1
+
+    try:
+        ADCPUtils.CreateNCVars(dso, ad2cp_variable_mapping, var_meta)
+    except Exception:
+        DEBUG_PDB_F()
+        log_error(f"Problem stripping creating variables in {output_filename}", "exc")
+    finally:
+        dso.sync()
+        dso.close()
+
+    # TODO - apply global attributes
 
     return 0
 

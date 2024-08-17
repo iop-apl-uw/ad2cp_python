@@ -44,9 +44,9 @@ import numpy.typing as npt
 import scipy
 
 if "BaseLog" in sys.modules:
-    from BaseLog import log_critical, log_error
+    from BaseLog import log_critical, log_error, log_warning
 else:
-    from ADCPLog import log_critical, log_error
+    from ADCPLog import log_critical, log_error, log_warning
 
 required_python_version = (3, 10, 9)
 required_numpy_version = "1.26.0"
@@ -85,9 +85,18 @@ def check_versions() -> int:
     return 0
 
 
-def open_netcdf_file(ncf_name: pathlib.Path) -> None | netCDF4.Dataset:
+def open_netcdf_file(ncf_name: pathlib.Path, mode: str = "r") -> None | netCDF4.Dataset:
+    # netCDF4 tries to open with a write exclusive, which will fail if some other process has
+    # the file open for read.
+    if "w" in mode:
+        try:
+            ncf_name.unlink()
+        except FileNotFoundError:
+            pass
+        except Exception:
+            log_warning(f"Failed to remove {ncf_name} before write", "exc")
     try:
-        ds = netCDF4.Dataset(ncf_name, "r")
+        ds = netCDF4.Dataset(ncf_name, mode)
     except Exception:
         log_error(f"Failed to open {ncf_name}", "exc")
         return None
@@ -478,8 +487,8 @@ def CreateNCVar(dso, template, key_name, data):
     else:
         inp_data = data.astype(template[key_name]["nc_type"])
 
-    if "num_digits" in template[key_name]:
-        inp_data = inp_data.round(template[key_name]["num_digits"])
+    if "decimal_pts" in template[key_name]:
+        inp_data = inp_data.round(template[key_name]["decimal_pts"])
 
     # Check for scalar variables
     if np.ndim(inp_data) == 0:
@@ -513,3 +522,14 @@ def CreateNCVar(dso, template, key_name, data):
 def CreateNCVars(dso, ad2cp_var_map, var_meta):
     for key_name, data in ad2cp_var_map.items():
         CreateNCVar(dso, var_meta, key_name, data)
+
+
+def GetMissionStr(dive_nc_file):
+    """Assembles the mission str"""
+    log_id = None
+    mission_title = ""
+    if "log_ID" in dive_nc_file.variables:
+        log_id = int(dive_nc_file.variables["log_ID"].getValue())
+    if "sg_cal_mission_title" in dive_nc_file.variables:
+        mission_title = dive_nc_file.variables["sg_cal_mission_title"][:].tobytes().decode("utf-8")
+    return f"SG{'%03d' % (log_id if log_id else 0,)} {mission_title}"
