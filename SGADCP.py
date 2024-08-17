@@ -175,7 +175,6 @@ def main() -> int:
             log_error("Problem performing inverse calculation", "exc")
             continue
 
-        pdb.set_trace()
         # For standalone, build out data saving into standalone (netcdf) file, following same path
         # as matlab code
 
