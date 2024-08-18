@@ -236,16 +236,35 @@ def main() -> int:
     # Output results
 
     # TODO - CONSIDER - trim arrays based on deepest actual observation
-
+    mission_time_arr = np.hstack(mission_time)
+    mission_uocn_arr = np.hstack(mission_uocn)
+    mission_vocn_arr = np.hstack(mission_vocn)
+    mission_wocn_arr = np.hstack(mission_wocn)
+    # Trim off bottom of profile
+    deepest_i = (
+        max(
+            np.nonzero(
+                np.logical_or.reduce(
+                    (
+                        np.logical_not(np.isnan(mission_time_arr)),
+                        np.logical_not(np.isnan(mission_uocn_arr)),
+                        np.logical_not(np.isnan(mission_vocn_arr)),
+                        np.logical_not(np.isnan(mission_wocn_arr)),
+                    ),
+                )
+            )[0]
+        )
+        + 1
+    )
     # Header templates
     ad2cp_variable_mapping = {
         # ADCP profile variables
-        "inverse_profile_depth": depth_grid,
+        "inverse_profile_depth": depth_grid[:deepest_i],
         "inverse_profile_dive": np.hstack(mission_dive),
-        "inverse_profile_time": np.hstack(mission_time),
-        "inverse_profile_velocity_north": np.hstack(mission_uocn),
-        "inverse_profile_velocity_east": np.hstack(mission_vocn),
-        "inverse_profile_velocity_vertical": np.hstack(mission_wocn),
+        "inverse_profile_time": mission_time_arr[:deepest_i],
+        "inverse_profile_velocity_north": mission_uocn_arr[:deepest_i, :],
+        "inverse_profile_velocity_east": mission_vocn_arr[:deepest_i, :],
+        "inverse_profile_velocity_vertical": mission_wocn_arr[:deepest_i, :],
     }
 
     dso = ADCPUtils.open_netcdf_file(output_filename, "w")
