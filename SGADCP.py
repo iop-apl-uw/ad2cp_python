@@ -141,9 +141,9 @@ def main() -> int:
 
     output_filename = None
 
-    # TODO - load template for header meta data and override template
+    global_meta = ADCPConfig.LoadGlobalMeta(adcp_opts.global_meta_filename)
 
-    var_meta = ADCPConfig.LoadVarMeta(adcp_opts.adcp_var_meta_filename)
+    var_meta = ADCPConfig.LoadVarMeta(adcp_opts.var_meta_filename)
 
     dive_nc_filenames: list[pathlib.Path] = []
 
@@ -277,11 +277,20 @@ def main() -> int:
     except Exception:
         DEBUG_PDB_F()
         log_error(f"Problem stripping creating variables in {output_filename}", "exc")
-    finally:
-        dso.sync()
         dso.close()
+        return 1
 
-    # TODO - apply global attributes
+    try:
+        for a, value in global_meta["global_attributes"].items():
+            dso.setncattr(a, value)
+    except Exception:
+        DEBUG_PDB_F()
+        log_error(f"Problem add attribute {a}:{value} to {output_filename}", "exc")
+        dso.close()
+        return 1
+
+    dso.sync()
+    dso.close()
 
     return 0
 

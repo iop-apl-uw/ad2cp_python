@@ -184,3 +184,44 @@ def LoadVarMeta(var_meta_file):
     except Exception:
         log_error(f"Could not process {var_meta_file}", "exc")
     return var_meta
+
+
+def LoadGlobalMeta(global_meta_file_local):
+    global_meta = {}
+
+    global_meta_file = pathlib.Path(__file__).parent.joinpath("config/global_meta.yml")
+
+    try:
+        with open(global_meta_file, "r") as fi:
+            global_meta = yaml.safe_load(fi)
+    except Exception:
+        log_error(f"Could not process {global_meta_file}", "exc")
+
+    if global_meta_file_local is not None:
+        try:
+            with open(global_meta_file_local, "r") as fi:
+                global_meta_local = yaml.safe_load(fi)
+        except Exception:
+            log_error(f"Could not process {global_meta_file_local}", "exc")
+        global_meta = MergeDict(global_meta, global_meta_local)
+
+    return global_meta
+
+
+def MergeDict(a, b, path=None, allow_override=False):
+    "Merges dict b into dict a"
+    if path is None:
+        path = []
+    for key in b:
+        if key in a:
+            if isinstance(a[key], dict) and isinstance(b[key], dict):
+                MergeDict(a[key], b[key], path + [str(key)])
+            elif a[key] == b[key]:
+                pass  # same leaf value
+            elif allow_override:
+                a[key] = b[key]
+            else:
+                raise Exception("Conflict at %s" % ".".join(path + [str(key)]))
+        else:
+            a[key] = b[key]
+    return a
