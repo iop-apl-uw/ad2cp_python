@@ -107,17 +107,6 @@ def main() -> int:
 
     log_debug(param)
 
-    # mission_uttw_solution = []
-    # mission_vttw_solution = []
-    # mission_wttw_solution = []
-
-    # mission_uttw_model = []
-    # mission_vttw_model = []
-    # mission_wttw_model = []
-
-    # mission_uerr = []
-    # mission_verr = []
-
     var_t = collections.namedtuple("var_t", ("accessor", "var_meta_name"))
 
     mission_vars = {
@@ -125,30 +114,24 @@ def main() -> int:
         "uocn": var_t(lambda x: x.UVocn.real, "inverse_profile_velocity_north"),
         "vocn": var_t(lambda x: x.UVocn.imag, "inverse_profile_velocity_east"),
         "wocn": var_t(lambda x: x.Wocn, "inverse_profile_velocity_vertical"),
+        "uttw_solution": var_t(lambda x: x.UVttw_solution.real, "inverse_profile_glider_velocity_north"),
+        "vttw_solution": var_t(lambda x: x.UVttw_solution.imag, "inverse_profile_glider_velocity_east"),
+        "wttw_solution": var_t(lambda x: x.Wttw_solution, "inverse_profile_glider_velocity_vertical"),
+        "uttw_model": var_t(lambda x: x.UVttw_model.real, "inverse_profile_model_velocity_north"),
+        "vttw_model": var_t(lambda x: x.UVttw_model.imag, "inverse_profile_model_velocity_east"),
+        "wttw_model": var_t(lambda x: x.Wttw_model, "inverse_profile_model_velocity_vertical"),
+        "uverr": var_t(lambda x: x.UVerr, "inverse_profile_velocity_error"),
     }
 
     # Whole mission accumulators
     depth_grid = None
     mission_dive = []
+    mission_lon = []
+    mission_lat = []
 
     mission_accums = {}
     for k in mission_vars:
         mission_accums[k] = []
-
-    # adcp_grid.UVttw_solution(iiz,n_dive*2-1:n_dive*2) = profile.UVttw_solution(itmp,:);
-    # adcp_grid.Wttw_solution(iiz,n_dive*2-1:n_dive*2) = profile.Wttw_solution(itmp,:);
-
-    # adcp_grid.UVttw_model(iiz,n_dive*2-1:n_dive*2) = profile.UVttw_model(itmp,:);
-    # adcp_grid.Wttw_model(iiz,n_dive*2-1:n_dive*2) = profile.Wttw_model(itmp,:);
-
-    # adcp_grid.UVerr(iiz,n_dive*2-1:n_dive*2) = profile.UVerr(itmp,:);
-
-    # % from the glider profile
-    # [~,imax] = max(glider.ctd_depth);
-    # adcp_grid.lon(1,n_dive*2-1)=mean(glider.longitude(1:imax));
-    # adcp_grid.lon(1,n_dive*2  )=mean(glider.longitude(imax:end));
-    # adcp_grid.lat(1,n_dive*2-1)=mean(glider.latitude(1:imax));
-    # adcp_grid.lat(1,n_dive*2  )=mean(glider.latitude(imax:end));
 
     output_filename = None
 
@@ -222,8 +205,16 @@ def main() -> int:
             log_error("Problem performing inverse calculation", "exc")
             continue
 
+        # Record the ouput into the accumulators
+
         mission_dive.append(glider.dive)
         mission_dive.append(glider.dive)
+
+        imax = np.argmax(glider.ctd_depth)
+        mission_lon.append(np.nanmean(glider.longitude[: imax + 1]))
+        mission_lon.append(np.nanmean(glider.longitude[imax:]))
+        mission_lat.append(np.nanmean(glider.latitude[: imax + 1]))
+        mission_lat.append(np.nanmean(glider.latitude[imax:]))
 
         for k, v in mission_vars.items():
             mission_accums[k].append(v.accessor(profile))
@@ -246,6 +237,7 @@ def main() -> int:
 
     # Output results
 
+    # Convert accumulator lists into arrays
     mission_var_arrs = {}
     non_nans = []
     for k in mission_vars:
@@ -273,8 +265,9 @@ def main() -> int:
     ad2cp_variable_mapping = {
         "inverse_profile_depth": depth_grid[:deepest_i],
         "inverse_profile_dive": np.hstack(mission_dive),
+        "inverse_profile_longitude": np.hstack(mission_lon),
+        "inverse_profile_latitude": np.hstack(mission_lat),
     }
-
     for k, v in mission_vars.items():
         ad2cp_variable_mapping[v.var_meta_name] = mission_var_arrs[k][:deepest_i, :]
 

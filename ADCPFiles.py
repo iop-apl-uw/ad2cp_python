@@ -177,8 +177,8 @@ class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
 
     # From the current dives netcdf file
     dive: int = 0
-    # longitude: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
-    # latitude: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
+    longitude: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
+    latitude: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     # longitude_gsm: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     # latitude_gsm: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     ctd_depth: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
@@ -222,8 +222,8 @@ class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
         """List of variables to be loaded from the netcdf file"""
         return [
             "dive",
-            # "longitude",
-            # "latitude",
+            "longitude",
+            "latitude",
             # "longitude_gsm",
             # "latitude_gsm",
             "ctd_depth",
