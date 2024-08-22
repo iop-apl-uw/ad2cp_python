@@ -51,7 +51,7 @@ import ADCPFiles
 import ADCPOpts
 import ADCPRealtime
 import ADCPUtils
-from ADCPLog import ADCPLogger, log_critical, log_debug, log_error, log_info
+from ADCPLog import ADCPLogger, log_critical, log_debug, log_error, log_info, log_warning
 
 DEBUG_PDB = True
 
@@ -166,9 +166,12 @@ def main() -> int:
         # Read real-time
         try:
             glider, gps, adcp_realtime = ADCPFiles.ADCPReadSGNCF(ds, ncf_name, param)
+        except KeyError as e:
+            log_warning(f"{e} - skipping")
+            continue
         except Exception:
             DEBUG_PDB_F()
-            log_error("Problem loading data", "exc")
+            log_error(f"Problem loading data from {ncf_name}", "exc")
             continue
         finally:
             ds.close()
