@@ -85,7 +85,7 @@ def check_versions() -> int:
     return 0
 
 
-def open_netcdf_file(ncf_name: pathlib.Path, mode: str = "r") -> None | netCDF4.Dataset:
+def open_netcdf_file(ncf_name: pathlib.Path, mode: str = "r", mask_results: bool = False) -> None | netCDF4.Dataset:
     # netCDF4 tries to open with a write exclusive, which will fail if some other process has
     # the file open for read.
     if "w" in mode:
@@ -100,7 +100,7 @@ def open_netcdf_file(ncf_name: pathlib.Path, mode: str = "r") -> None | netCDF4.
     except Exception:
         log_error(f"Failed to open {ncf_name}", "exc")
         return None
-    ds.set_auto_mask(False)
+    ds.set_auto_mask(mask_results)
     return ds
 
 
@@ -533,3 +533,26 @@ def GetMissionStr(dive_nc_file):
     if "sg_cal_mission_title" in dive_nc_file.variables:
         mission_title = dive_nc_file.variables["sg_cal_mission_title"][:].tobytes().decode("utf-8")
     return f"SG{'%03d' % (log_id if log_id else 0,)} {mission_title}"
+
+
+def SetupPlotDirectory(adcp_opts) -> int:
+    """Ensures plot_directory is set in base_opts and creates it if needed
+
+    Returns:
+        0 for success
+        1 for failure
+
+    """
+    if adcp_opts.plot_directory.exists():
+        if adcp_opts.plot_directory.is_dir():
+            return 0
+        else:
+            log_error(f"{adcp_opts.plot_directory} is not a directory")
+            return 1
+    else:
+        try:
+            adcp_opts.plot_directory.mkdir(mode=0x777)
+        except Exception:
+            log_error(f"Could not create {adcp_opts.plot_directory}", "exc")
+            return 1
+    return 0

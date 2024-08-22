@@ -78,7 +78,9 @@ def main() -> int:
     # NOTE: Minimum options here - debug level and name for yaml config file
 
     # Get options
-    adcp_opts = ADCPOpts.ADCPOptions("Command line driver Seaglider ADCPx data processing")
+    adcp_opts = ADCPOpts.ADCPOptions(
+        "Command line driver Seaglider ADCPx data processing", calling_module=pathlib.Path(__file__).stem
+    )
 
     # Initialize log
     ADCPLogger(adcp_opts, include_time=True)

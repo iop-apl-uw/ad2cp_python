@@ -32,8 +32,8 @@ ADCPOpts.py - SG ADCP processing options and command-line parsing
 """
 
 import argparse
-import os
 import pathlib
+import sys
 from typing import Any, Sequence
 
 
@@ -60,8 +60,10 @@ class FullPathAction(argparse.Action):
             setattr(namespace, self.dest, list(map(lambda y: pathlib.Path(y).expanduser().absolute(), values)))
 
 
-def ADCPOptions(description: str) -> argparse.Namespace:
-    app_name, _ = os.path.splitext(__file__)
+def ADCPOptions(description: str, calling_module: str) -> argparse.Namespace:
+    if calling_module not in ("SGADCP", "SGADCPPlot"):
+        sys.stderr.write(f"Unknown calling_module {calling_module}")
+        return None
 
     ap = argparse.ArgumentParser(description=__doc__)
 
@@ -73,35 +75,47 @@ def ADCPOptions(description: str) -> argparse.Namespace:
         action=FullPathAction,
     )
     ap.add_argument(
-        "--mission_dir",
-        help="Directory where profile netcdfs are located",
-        action=FullPathAction,
-        required=True,
-    )
-    ap.add_argument("--adcp_config_file", help="Configuration input file", action=FullPathAction, default="")
-
-    ap.add_argument(
-        "--save_details",
-        help="Save detailed variables for later comparison",
-        action="store_true",
-        default=False,
-    )
-
-    ap.add_argument(
-        "--var_meta_filename",
-        help="ADCP variable metadata configiuration YAML file",
-        action=FullPathAction,
-        default=pathlib.Path(__file__).parent.joinpath("config/var_meta.yml"),
-    )
-
-    ap.add_argument(
-        "--global_meta_filename",
-        help="ADCP global metadata configiuration YAML file",
+        "--plot_directory",
+        help="Override default plot directory location",
         action=FullPathAction,
         default=None,
     )
 
-    ap.add_argument("ncf_files", help="Seaglider netcdf files", nargs="*")
+    if calling_module == "SGADCP":
+        ap.add_argument(
+            "--mission_dir",
+            help="Directory where profile netcdfs are located",
+            action=FullPathAction,
+            required=True,
+        )
+
+        ap.add_argument("--adcp_config_file", help="Configuration input file", action=FullPathAction, default="")
+
+        ap.add_argument(
+            "--save_details",
+            help="Save detailed variables for later comparison",
+            action="store_true",
+            default=False,
+        )
+
+        ap.add_argument(
+            "--var_meta_filename",
+            help="ADCP variable metadata configiuration YAML file",
+            action=FullPathAction,
+            default=pathlib.Path(__file__).parent.joinpath("config/var_meta.yml"),
+        )
+
+        ap.add_argument(
+            "--global_meta_filename",
+            help="ADCP global metadata configiuration YAML file",
+            action=FullPathAction,
+            default=None,
+        )
+
+        ap.add_argument("ncf_files", help="Seaglider netcdf files", nargs="*")
+
+    if calling_module == "SGADCPPlot":
+        ap.add_argument("ncf_filename", help="Seaglider ADCP processing output netcdf file", action=FullPathAction)
 
     args = ap.parse_args()
 
