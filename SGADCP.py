@@ -32,6 +32,7 @@ SGADCP.py - main entry point for stand alone processing of the Seaglider
 ADCP data
 """
 
+import collections
 import os
 import pathlib
 import pdb
@@ -106,31 +107,41 @@ def main() -> int:
 
     log_debug(param)
 
+    # mission_uttw_solution = []
+    # mission_vttw_solution = []
+    # mission_wttw_solution = []
+
+    # mission_uttw_model = []
+    # mission_vttw_model = []
+    # mission_wttw_model = []
+
+    # mission_uerr = []
+    # mission_verr = []
+
+    var_t = collections.namedtuple("var_t", ("accessor", "var_meta_name"))
+
+    mission_vars = {
+        "time": var_t(lambda x: x.time, "inverse_profile_time"),
+        "uocn": var_t(lambda x: x.UVocn.real, "inverse_profile_velocity_north"),
+        "vocn": var_t(lambda x: x.UVocn.imag, "inverse_profile_velocity_east"),
+        "wocn": var_t(lambda x: x.Wocn, "inverse_profile_velocity_vertical"),
+    }
+
     # Whole mission accumulators
     depth_grid = None
     mission_dive = []
-    mission_time = []
-    mission_uocn = []
-    mission_vocn = []
-    mission_wocn = []
+
+    mission_accums = {}
+    for k in mission_vars:
+        mission_accums[k] = []
+
+    # adcp_grid.UVttw_solution(iiz,n_dive*2-1:n_dive*2) = profile.UVttw_solution(itmp,:);
+    # adcp_grid.Wttw_solution(iiz,n_dive*2-1:n_dive*2) = profile.Wttw_solution(itmp,:);
 
     # adcp_grid.UVttw_model(iiz,n_dive*2-1:n_dive*2) = profile.UVttw_model(itmp,:);
-    # adcp_grid.UVerr(iiz,n_dive*2-1:n_dive*2) = profile.UVerr(itmp,:);
-
-    # adcp_grid.Wocn(iiz,n_dive*2-1:n_dive*2) = profile.Wocn(itmp,:);
-    # adcp_grid.Wttw_solution(iiz,n_dive*2-1:n_dive*2) = profile.Wttw_solution(itmp,:);
     # adcp_grid.Wttw_model(iiz,n_dive*2-1:n_dive*2) = profile.Wttw_model(itmp,:);
 
-    # % NaN the edges
-    # adcp_grid.time(i0z,n_dive*2-1:n_dive*2) = NaN;
-    # adcp_grid.UVocn(i0z,n_dive*2-1:n_dive*2) = NaN;
-    # adcp_grid.UVttw_solution(i0z,n_dive*2-1:n_dive*2) = NaN;
-    # adcp_grid.UVttw_model(i0z,n_dive*2-1:n_dive*2) = NaN;
-    # adcp_grid.UVerr(i0z,n_dive*2-1:n_dive*2) = NaN;
-
-    # adcp_grid.Wocn(i0z,n_dive*2-1:n_dive*2) = NaN;
-    # adcp_grid.Wttw_solution(i0z,n_dive*2-1:n_dive*2) = NaN;
-    # adcp_grid.Wttw_model(i0z,n_dive*2-1:n_dive*2) = NaN;
+    # adcp_grid.UVerr(iiz,n_dive*2-1:n_dive*2) = profile.UVerr(itmp,:);
 
     # % from the glider profile
     # [~,imax] = max(glider.ctd_depth);
@@ -213,10 +224,10 @@ def main() -> int:
 
         mission_dive.append(glider.dive)
         mission_dive.append(glider.dive)
-        mission_time.append(profile.time)
-        mission_uocn.append(profile.UVocn.real)
-        mission_vocn.append(profile.UVocn.imag)
-        mission_wocn.append(profile.Wocn)
+
+        for k, v in mission_vars.items():
+            mission_accums[k].append(v.accessor(profile))
+
         if depth_grid is None:
             depth_grid = profile.z
 
@@ -235,37 +246,37 @@ def main() -> int:
 
     # Output results
 
-    # TODO - CONSIDER - trim arrays based on deepest actual observation
-    mission_time_arr = np.hstack(mission_time)
-    mission_uocn_arr = np.hstack(mission_uocn)
-    mission_vocn_arr = np.hstack(mission_vocn)
-    mission_wocn_arr = np.hstack(mission_wocn)
-    # Trim off bottom of profile
-    deepest_i = (
-        max(
-            np.nonzero(
-                np.logical_or.reduce(
-                    (
-                        np.logical_not(np.isnan(mission_time_arr)),
-                        np.logical_not(np.isnan(mission_uocn_arr)),
-                        np.logical_not(np.isnan(mission_vocn_arr)),
-                        np.logical_not(np.isnan(mission_wocn_arr)),
-                    ),
-                )
-            )[0]
-        )
-        + 1
-    )
-    # Header templates
+    mission_var_arrs = {}
+    non_nans = []
+    for k in mission_vars:
+        mission_var_arrs[k] = np.hstack(mission_accums[k])
+        non_nans.append(np.logical_not(np.isnan(mission_var_arrs[k])))
+
+    # Find the deepest data
+    deepest_i = max(np.nonzero(np.logical_or.reduce(non_nans))[0]) + 1
+
+    # TODO - matlab code applies these edge cases - appropriate to do?
+
+    # % NaN the edges
+    # adcp_grid.time(i0z,n_dive*2-1:n_dive*2) = NaN;
+    # adcp_grid.UVocn(i0z,n_dive*2-1:n_dive*2) = NaN;
+    # adcp_grid.UVttw_solution(i0z,n_dive*2-1:n_dive*2) = NaN;
+    # adcp_grid.UVttw_model(i0z,n_dive*2-1:n_dive*2) = NaN;
+    # adcp_grid.UVerr(i0z,n_dive*2-1:n_dive*2) = NaN;
+
+    # adcp_grid.Wocn(i0z,n_dive*2-1:n_dive*2) = NaN;
+    # adcp_grid.Wttw_solution(i0z,n_dive*2-1:n_dive*2) = NaN;
+    # adcp_grid.Wttw_model(i0z,n_dive*2-1:n_dive*2) = NaN;
+
+    # Associate variables with meta data and trim
+    # data to the deepest observation
     ad2cp_variable_mapping = {
-        # ADCP profile variables
         "inverse_profile_depth": depth_grid[:deepest_i],
         "inverse_profile_dive": np.hstack(mission_dive),
-        "inverse_profile_time": mission_time_arr[:deepest_i],
-        "inverse_profile_velocity_north": mission_uocn_arr[:deepest_i, :],
-        "inverse_profile_velocity_east": mission_vocn_arr[:deepest_i, :],
-        "inverse_profile_velocity_vertical": mission_wocn_arr[:deepest_i, :],
     }
+
+    for k, v in mission_vars.items():
+        ad2cp_variable_mapping[v.var_meta_name] = mission_var_arrs[k][:deepest_i, :]
 
     dso = ADCPUtils.open_netcdf_file(output_filename, "w")
     if dso is None:
@@ -280,6 +291,7 @@ def main() -> int:
         dso.close()
         return 1
 
+    # Add global attributes
     try:
         for a, value in global_meta["global_attributes"].items():
             dso.setncattr(a, value)

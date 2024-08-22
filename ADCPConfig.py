@@ -221,6 +221,7 @@ def MergeDict(a, b, path=None, allow_override=False):
             elif allow_override:
                 a[key] = b[key]
             else:
+                # ruff: noqa: UP031
                 raise Exception("Conflict at %s" % ".".join(path + [str(key)]))
         else:
             a[key] = b[key]
