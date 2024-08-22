@@ -91,7 +91,7 @@ def ADCPOptions(description: str) -> argparse.Namespace:
         "--var_meta_filename",
         help="ADCP variable metadata configiuration YAML file",
         action=FullPathAction,
-        default=pathlib.Path(__file__).parent.joinpath("var_meta.yml"),
+        default=pathlib.Path(__file__).parent.joinpath("config/var_meta.yml"),
     )
 
     ap.add_argument(
