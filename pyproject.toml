@@ -36,6 +36,8 @@ select = [
     "SIM",
     # isort
     "I",
+    # Numpy2.0 compat
+    "NPY201"
 ]
 ignore = [
   # redundant-open-modes
