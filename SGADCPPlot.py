@@ -186,6 +186,8 @@ def PlotOceanVelocity(ncf_name, ds, adcp_opts):
         log_error("Problems with load", "exc")
         return
 
+    depth_i = np.logical_and(depth >= adcp_opts.min_plot_depth, depth <= adcp_opts.max_plot_depth)
+
     fig = plotly.subplots.make_subplots(
         rows=2,
         cols=1,
@@ -206,33 +208,19 @@ def PlotOceanVelocity(ncf_name, ds, adcp_opts):
     format_spec = ":.4f"
     unit_tag = "m s-1"
 
-    # zmax = np.nanmax((np.abs(uocn), np.abs(vocn)))
-    zmax = 1.0
+    zmax = np.nanmax((np.abs(uocn), np.abs(vocn)))
+    # zmax = 1.0
     zmin = -zmax
 
-    # zmin = np.nanmin((np.abs(uocn),
+    # Notes - specifying "contour" instead of "heatmap" yields bad coloring - the center of the colorscale is not zero
+    #
     fig.add_trace(
         {
             "x": dive_num,
-            "y": depth,
-            "z": uocn,
-            # "zauto": False,
-            # "zmax": zmax,
-            # "zmin": zmin,
-            "type": "contour",
-            # "contours_coloring": "heatmap",
-            # "colorscale": cmocean_to_plotly("balance", 100),
+            "y": depth[depth_i],
+            "z": uocn[depth_i, :],
+            "type": "heatmap",
             "coloraxis": "coloraxis",
-            "connectgaps": False,
-            # "contours": contours,
-            "colorbar": {
-                "title": {
-                    "text": "m s-1",
-                    "side": "top",
-                },
-                # "thickness": 0.02,
-                # "thicknessmode": "fraction",
-            },
             "hovertemplate": f"Dive %{{x:.0f}}<br>Depth %{{y}} meters<br>%{{z{format_spec}}}{unit_tag}<extra></extra>",
         },
         row=1,
@@ -242,34 +230,22 @@ def PlotOceanVelocity(ncf_name, ds, adcp_opts):
     fig.add_trace(
         {
             "x": dive_num,
-            "y": depth,
-            "z": vocn,
-            "type": "contour",
-            # "zauto": False,
-            # "zmax": zmax,
-            # "zmin": zmin,
-            # "contours_coloring": "heatmap",
-            # "colorscale": cmocean_to_plotly("balance", 100),
+            "y": depth[depth_i],
+            "z": vocn[depth_i, :],
+            "type": "heatmap",
             "coloraxis": "coloraxis",
-            "connectgaps": False,
-            # "contours": contours,
-            "colorbar": {
-                "title": {
-                    "text": "m s-1",
-                    "side": "top",
-                },
-                # "thickness": 0.02,
-                # "thicknessmode": "fraction",
-            },
             "hovertemplate": f"Dive %{{x:.0f}}<br>Depth %{{y}} meters<br>%{{z{format_spec}}}{unit_tag}<extra></extra>",
         },
         row=2,
         col=1,
     )
 
+    # TODO - get this correct
     # mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
     mission_dive_str = ""
     title_text = f"{mission_dive_str}<br>AD2CP Ocean Velocity vs Depth"
+
+    # pdb.set_trace()
 
     fig.update_layout(
         {
@@ -298,8 +274,21 @@ def PlotOceanVelocity(ncf_name, ds, adcp_opts):
             },
             "coloraxis": {
                 "colorscale": cmocean_to_plotly("balance", 100),
+                "colorbar": {
+                    # "title": "m s-1",
+                    "title": {
+                        "text": "m s-1",
+                        # "side": "right",
+                        "side": "top",
+                    }
+                },
+                # "colorscale": "balance",
+                # "colorscale": "RdBu",
                 "cmin": zmin,
                 "cmax": zmax,
+                # "cmin": -0.5,
+                # "cmax": 0.5,
+                "cmid": 0.0,
             },
             "margin": {
                 "t": 100,
@@ -307,6 +296,7 @@ def PlotOceanVelocity(ncf_name, ds, adcp_opts):
         }
     )
 
+    # fig.show()
     outs = write_output_files(adcp_opts, pathlib.Path(ncf_name.stem + "_ocean_velocity"), fig)
 
     return (
@@ -318,6 +308,10 @@ def PlotOceanVelocity(ncf_name, ds, adcp_opts):
 def GeneratePlots(ncf_name, adcp_opts) -> None:
     ds = ADCPUtils.open_netcdf_file(ncf_name, mask_results=True)
     if ds is None:
+        return
+
+    if adcp_opts.min_plot_depth > adcp_opts.max_plot_depth:
+        log_error(f"min_plot_depth:{min_plot_depth:.2f} > max_plot_depth:{max_plot_depth:.2f}")
         return
 
     for plot_func in (PlotOceanVelocity,):

@@ -116,6 +116,8 @@ def ADCPOptions(description: str, calling_module: str) -> argparse.Namespace:
 
     if calling_module == "SGADCPPlot":
         ap.add_argument("ncf_filename", help="Seaglider ADCP processing output netcdf file", action=FullPathAction)
+        ap.add_argument("--min_plot_depth", help="Minimum depth to plot", type=float, default=0.0)
+        ap.add_argument("--max_plot_depth", help="Maximum depth to plot", type=float, default=1000.0)
 
     args = ap.parse_args()
 
