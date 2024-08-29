@@ -289,7 +289,7 @@ def PlotOceanVelocity(ncf_name, ds, adcp_opts):
                 {
                     "x": contour_dive_num,
                     "y": contour,
-                    "name": "isopycnls<br>0.5 kg m-s incr",
+                    "name": "isopycnals<br>0.5 kg m-s/incr",
                     "type": "scatter",
                     "mode": "lines",
                     "marker": {
