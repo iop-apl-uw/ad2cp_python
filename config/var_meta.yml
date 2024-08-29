@@ -410,3 +410,128 @@ inverse_profile_velocity_error:
     coverage_content_type: physicalMeasurement
   nc_type: f
   decimal_pts: 3
+
+profile_temperature:
+  nc_dimensions: ['ad2cp_inv_profile_point', 'ad2cp_inv_profile']
+  nc_varname: ad2cp_profile_temperature
+  nc_attribs:
+    _FillValue: -999
+    instrument: inst_ctd      
+    description: corrected in-situ temperature
+    units: degrees_C
+    standard_name: sea_water_temperature
+    long_name: CTD temperature
+    coverage_content_type: physicalMeasurement
+    #valid_min: -2.6
+    #valid_max: 40.0
+  nc_type: f
+  decimal_pts: 3
+profile_salinity:
+  nc_dimensions: ['ad2cp_inv_profile_point', 'ad2cp_inv_profile']
+  nc_varname: ad2cp_profile_salinity
+  nc_attribs:
+    _FillValue: -999
+    instrument: inst_ctd
+    description: corrected salinity
+    units: "1"
+    standard_name: sea_water_practical_salinity
+    long_name: CTD salinity
+    coverage_content_type: physicalMeasurement
+    l1_coords : "time lat lon z"
+    #valid_min: 0.0
+    #valid_max: 40.0
+  nc_type: f
+  decimal_pts: 3
+
+
+#
+# Glider CTD related
+# 
+glider_ctd_time:
+  nc_varname: ctd_time
+  nc_dimensions: ['glider_data_point']
+  nc_attribs:
+    _FillValue: -999
+    description: time for every sample point
+    units: seconds since 1970-1-1T00:00:00Z
+    standard_name: time
+    long_name: CTD time
+    coverage_content_type: physicalMeasurement
+    axis: T
+  nc_type: d
+  decimal_pts: 0
+glider_ctd_depth:
+  nc_dimensions: ['glider_data_point']
+  nc_varname: ctd_depth
+  nc_attribs:
+    _FillValue: false
+    description: depth
+    standard_name: depth
+    long_name: CTD Depth
+    units: m
+    coverage_content_type: coordinate
+    axis: Z
+  nc_type: f
+  decimal_pts: 2
+glider_temperature:
+  nc_dimensions: ['glider_data_point']
+  nc_varname: T
+  nc_attribs:
+    _FillValue: -999
+    instrument: inst_ctd      
+    description: corrected in-situ temperature
+    units: degrees_C
+    standard_name: sea_water_temperature
+    long_name: CTD temperature
+    coverage_content_type: physicalMeasurement
+    valid_min: -2.6
+    valid_max: 40.0
+  nc_type: f
+  decimal_pts: 3
+glider_salinity:
+  nc_dimensions: ['glider_data_point']
+  nc_varname: S
+  nc_attribs:
+    _FillValue: -999
+    instrument: inst_ctd
+    description: corrected salinity
+    units: "1"
+    standard_name: sea_water_practical_salinity
+    long_name: CTD salinity
+    coverage_content_type: physicalMeasurement
+    l1_coords : "time lat lon z"
+    valid_min: 0.0
+    valid_max: 40.0
+  nc_type: f
+  decimal_pts: 3
+glider_latitude:
+  nc_dimensions: ['glider_data_point']
+  nc_varname: glider_latitude
+  nc_attribs:
+    _FillValue: -999
+    description: latitude of every sample point, from the flight model when underwater
+    standard_name: latitude
+    long_name: estimated latitude
+    units: degrees_north
+    coverage_content_type: coordinate
+    axis: Y
+    valid_min: -90.0
+    valid_max: 90.0
+  nc_type: f
+  decimal_pts: 4
+glider_longitude:
+  nc_dimensions: ['glider_data_point']
+  nc_varname: glider_longitude
+  include_in_L3: false
+  nc_attribs:
+    _FillValue: false
+    description: longitude of every sample point, from the flight model when underwater
+    units: degrees_east
+    standard_name: longitude
+    long_name: estimate longitude
+    coverage_content_type: coordinate
+    axis: X
+    valid_min: -180.0
+    valid_max: 180.0
+  nc_type: f
+  decimal_pts: 4

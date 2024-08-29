@@ -1083,7 +1083,6 @@ def Inverse(
 
     # [~,iiz, itmp] = intersect(gz, profile.z);
     _, iiz, itmp = np.intersect1d(gz, profile.z, return_indices=True)
-
     profile.UVocn[itmp, :] = UVocn[iiz, :]
     idn = np.nonzero(D.upcast == 0)[0]
     iup = np.nonzero(D.upcast == 1)[0]

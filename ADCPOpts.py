@@ -112,6 +112,13 @@ def ADCPOptions(description: str, calling_module: str) -> argparse.Namespace:
             default=None,
         )
 
+        ap.add_argument(
+            "--include_glider_vars",
+            help="Includes a selection of varibles from the Seglider CTD (used for plotting)",
+            default=False,
+            action=argparse.BooleanOptionalAction,
+        )
+
         ap.add_argument("ncf_files", help="Seaglider netcdf files", nargs="*")
 
     if calling_module == "SGADCPPlot":

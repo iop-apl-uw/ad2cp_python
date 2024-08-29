@@ -41,9 +41,11 @@ import traceback
 import warnings
 
 import cmocean
+import gsw
 import numpy as np
 from plotly.subplots import make_subplots
 import plotly
+import xarray as xr
 
 import ADCPOpts
 import ADCPUtils
@@ -179,6 +181,10 @@ def PlotOceanVelocity(ncf_name, ds, adcp_opts):
         dive_num = ds.variables["ad2cp_inv_profile_dive"][:]
         profile_time = ds.variables["ad2cp_inv_profile_time"][:]
         depth = ds.variables["ad2cp_inv_profile_depth"][:]
+        profile_temperature = ds.variables["ad2cp_profile_temperature"][:]
+        profile_salinity = ds.variables["ad2cp_profile_salinity"][:]
+        latitude = ds.variables["ad2cp_inv_profile_latitude"][:]
+        longitude = ds.variables["ad2cp_inv_profile_longitude"][:]
     except KeyError as e:
         log_warning(f"Could not load {e}")
         return
@@ -187,6 +193,37 @@ def PlotOceanVelocity(ncf_name, ds, adcp_opts):
         return
 
     depth_i = np.logical_and(depth >= adcp_opts.min_plot_depth, depth <= adcp_opts.max_plot_depth)
+
+    profile_latitude = np.tile(np.atleast_2d(latitude).T, np.shape(profile_temperature)[0]).T
+    profile_longitude = np.tile(np.atleast_2d(longitude).T, np.shape(profile_temperature)[0]).T
+    profile_depth = np.tile(np.atleast_2d(depth).T, np.shape(profile_temperature)[1])
+
+    profile_pressure = gsw.p_from_z(-profile_depth, profile_latitude)
+    profile_salinity_absolute = gsw.SA_from_SP(profile_salinity, profile_pressure, profile_longitude, profile_latitude)
+    profile_dens = np.ma.getdata(
+        gsw.pot_rho_t_exact(profile_salinity_absolute, profile_temperature, profile_pressure, 0.0) - 1000.0
+    )
+
+    pd_ds = xr.DataArray(profile_dens, coords={"depth": depth, "dive": dive_num})
+
+    density_contours = np.arange(
+        np.floor(np.nanmin(profile_dens) * 10.0) / 10.0, np.ceil(np.nanmax(profile_dens) * 10.0) / 10.0, 0.1
+    )
+
+    # Isopycnals
+    contours = []
+    for dc in density_contours:
+        temp = ADCPUtils.isoSurface(pd_ds, dc, "depth")
+        temp[temp < adcp_opts.min_plot_depth] = np.nan
+        temp[temp > adcp_opts.max_plot_depth] = np.nan
+        contours.append(temp)
+
+    contour_dive_num = np.copy(dive_num).astype(np.float32)
+    for ii in range(0, contour_dive_num.size, 2):
+        contour_dive_num[ii] += 0.25
+        contour_dive_num[ii + 1] += 0.75
+
+    # TODO plot isopycnal
 
     fig = plotly.subplots.make_subplots(
         rows=2,
@@ -198,12 +235,6 @@ def PlotOceanVelocity(ncf_name, ds, adcp_opts):
         shared_xaxes="all",
         shared_yaxes="all",
     )
-
-    contours = {
-        "coloring": "heatmap",
-        "showlabels": True,
-        "labelfont": {"family": "Raleway", "size": 12, "color": "white"},
-    }
 
     format_spec = ":.4f"
     unit_tag = "m s-1"
@@ -239,6 +270,39 @@ def PlotOceanVelocity(ncf_name, ds, adcp_opts):
         row=2,
         col=1,
     )
+
+    # TODO: Add button to toggle isopycnals on/off
+    # TODO: Look for lighter grey
+    # TODO: This is all 0.5 kg m-3 intervals as 0.1 was way to dense.
+    # Add hovertips for the isopycnl - keep it tight
+    for ii, contour in enumerate(contours):
+        if ii % 5 != 0:
+            color = "LightGrey"
+            continue
+        else:
+            color = "LightSlateGrey"
+            # color = "DarkSlateGrey"
+        for jj in range(1, 3):
+            fig.add_trace(
+                {
+                    "x": contour_dive_num,
+                    "y": contour,
+                    "type": "scatter",
+                    "mode": "lines",
+                    "marker": {
+                        "line": {
+                            "width": 1,
+                            "color": color,
+                        },
+                        "color": color,
+                    },
+                    "showlegend": False,
+                    "legendgroup": "Isopycnals",
+                    # "hovertemplate": f"Dive %{{x:.0f}}<br>Depth %{{y}} meters<br>%{{z{format_spec}}}{unit_tag}<extra></extra>",
+                },
+                row=jj,
+                col=1,
+            )
 
     # TODO - get this correct
     # mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
@@ -311,7 +375,7 @@ def GeneratePlots(ncf_name, adcp_opts) -> None:
         return
 
     if adcp_opts.min_plot_depth > adcp_opts.max_plot_depth:
-        log_error(f"min_plot_depth:{min_plot_depth:.2f} > max_plot_depth:{max_plot_depth:.2f}")
+        log_error(f"min_plot_depth:{adcp_opts.min_plot_depth:.2f} > max_plot_depth:{adcp_opts.max_plot_depth:.2f}")
         return
 
     for plot_func in (PlotOceanVelocity,):

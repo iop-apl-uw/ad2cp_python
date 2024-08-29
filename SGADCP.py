@@ -111,6 +111,10 @@ def main() -> int:
 
     var_t = collections.namedtuple("var_t", ("accessor", "var_meta_name"))
 
+    # TODO - add in temperature and salinity
+    # 1) interpolate both onto profile grid using profile.time
+    # 2) propagate into the netcdf file
+
     mission_vars = {
         "time": var_t(lambda x: x.time, "inverse_profile_time"),
         "uocn": var_t(lambda x: x.UVocn.real, "inverse_profile_velocity_north"),
@@ -125,15 +129,33 @@ def main() -> int:
         "uverr": var_t(lambda x: x.UVerr, "inverse_profile_velocity_error"),
     }
 
+    if adcp_opts.include_glider_vars:
+        glider_vars = {
+            "ctd_time": var_t(lambda x: x.time, "glider_ctd_time"),
+            "ctd_depth": var_t(lambda x: x.time, "glider_ctd_depth"),
+            "temperature": var_t(lambda x: x.time, "glider_temperature"),
+            "salinity": var_t(lambda x: x.time, "glider_salinity"),
+            "longitude": var_t(lambda x: x.time, "glider_longitude"),
+            "latitude": var_t(lambda x: x.time, "glider_latitude"),
+        }
+    else:
+        glider_vars = {}
+
     # Whole mission accumulators
     depth_grid = None
     mission_dive = []
     mission_lon = []
     mission_lat = []
+    mission_temperature = []
+    mission_salinity = []
 
     mission_accums = {}
     for k in mission_vars:
         mission_accums[k] = []
+
+    glider_accums = {}
+    for k in glider_vars:
+        glider_accums[k] = []
 
     output_filename = None
 
@@ -212,6 +234,9 @@ def main() -> int:
 
         # Record the ouput into the accumulators
 
+        if depth_grid is None:
+            depth_grid = profile.z
+
         mission_dive.append(glider.dive)
         mission_dive.append(glider.dive)
 
@@ -220,12 +245,20 @@ def main() -> int:
         mission_lon.append(np.nanmean(glider.longitude[imax:]))
         mission_lat.append(np.nanmean(glider.latitude[: imax + 1]))
         mission_lat.append(np.nanmean(glider.latitude[imax:]))
+        mission_temperature.append(
+            ADCPUtils.bindata(glider.ctd_depth[: imax + 1], glider.temperature[: imax + 1], depth_grid)[0]
+        )
+        mission_temperature.append(ADCPUtils.bindata(glider.ctd_depth[imax:], glider.temperature[imax:], depth_grid)[0])
+        mission_salinity.append(
+            ADCPUtils.bindata(glider.ctd_depth[: imax + 1], glider.salinity[: imax + 1], depth_grid)[0]
+        )
+        mission_salinity.append(ADCPUtils.bindata(glider.ctd_depth[imax:], glider.salinity[imax:], depth_grid)[0])
 
         for k, v in mission_vars.items():
             mission_accums[k].append(v.accessor(profile))
 
-        if depth_grid is None:
-            depth_grid = profile.z
+        for k, v in glider_vars.items():
+            glider_accums[k].append(v.accessor(glider))
 
         # Debug save out - for comparision with other processing
         # TODO - need a better name - match with input file
@@ -249,21 +282,12 @@ def main() -> int:
         mission_var_arrs[k] = np.hstack(mission_accums[k])
         non_nans.append(np.logical_not(np.isnan(mission_var_arrs[k])))
 
+    glider_var_arrs = {}
+    for k in glider_vars:
+        glider_var_arrs[k] = np.hstack(glider_accums[k])
+
     # Find the deepest data
     deepest_i = max(np.nonzero(np.logical_or.reduce(non_nans))[0]) + 1
-
-    # TODO - matlab code applies these edge cases - appropriate to do?
-
-    # % NaN the edges
-    # adcp_grid.time(i0z,n_dive*2-1:n_dive*2) = NaN;
-    # adcp_grid.UVocn(i0z,n_dive*2-1:n_dive*2) = NaN;
-    # adcp_grid.UVttw_solution(i0z,n_dive*2-1:n_dive*2) = NaN;
-    # adcp_grid.UVttw_model(i0z,n_dive*2-1:n_dive*2) = NaN;
-    # adcp_grid.UVerr(i0z,n_dive*2-1:n_dive*2) = NaN;
-
-    # adcp_grid.Wocn(i0z,n_dive*2-1:n_dive*2) = NaN;
-    # adcp_grid.Wttw_solution(i0z,n_dive*2-1:n_dive*2) = NaN;
-    # adcp_grid.Wttw_model(i0z,n_dive*2-1:n_dive*2) = NaN;
 
     # Associate variables with meta data and trim
     # data to the deepest observation
@@ -275,6 +299,12 @@ def main() -> int:
     }
     for k, v in mission_vars.items():
         ad2cp_variable_mapping[v.var_meta_name] = mission_var_arrs[k][:deepest_i, :]
+
+    ad2cp_variable_mapping["profile_temperature"] = np.vstack(mission_temperature).T[:deepest_i, :]
+    ad2cp_variable_mapping["profile_salinity"] = np.vstack(mission_salinity).T[:deepest_i, :]
+
+    for k, v in glider_vars.items():
+        ad2cp_variable_mapping[v.var_meta_name] = glider_var_arrs[k]
 
     dso = ADCPUtils.open_netcdf_file(output_filename, "w")
     if dso is None:

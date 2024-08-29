@@ -42,6 +42,7 @@ import netCDF4
 import numpy as np
 import numpy.typing as npt
 import scipy
+import xarray as xr
 
 if "BaseLog" in sys.modules:
     from BaseLog import log_critical, log_error, log_warning
@@ -515,6 +516,9 @@ def CreateNCVar(dso, template, key_name, data):
     )
     nc_var[:] = inp_data
     for a_name, attrib in template[key_name]["nc_attribs"].items():
+        # TODO - finish this off
+        # if a_name in ("valid_min", "valid_max"):
+        #    nc_var.setncattr(a_name, np.array(attrib).astype(template[key_name]["nc_type"])
         if a_name != "_FillValue":
             nc_var.setncattr(a_name, attrib)
 
@@ -556,3 +560,49 @@ def SetupPlotDirectory(adcp_opts) -> int:
             log_error(f"Could not create {adcp_opts.plot_directory}", "exc")
             return 1
     return 0
+
+
+def isoSurface(field, target, dim):
+    """
+    Linearly interpolate a coordinate isosurface where a field
+    equals a target
+
+    Parameters
+    ----------
+    field : xarray DataArray
+        The field in which to interpolate the target isosurface
+    target : float
+        The target isosurface value
+    dim : str
+        The field dimension to interpolate
+
+    Examples
+    --------
+    Calculate the depth of an isotherm with a value of 5.5:
+
+    >>> temp = xr.DataArray(
+    ...     range(10,0,-1),
+    ...     coords={"depth": range(10)}
+    ... )
+    >>> isoSurface(temp, 5.5, dim="depth")
+    <xarray.DataArray ()>
+    array(4.5)
+    """
+    slice0 = {dim: slice(None, -1)}
+    slice1 = {dim: slice(1, None)}
+
+    field0 = field.isel(slice0).drop_vars(dim)
+    field1 = field.isel(slice1).drop_vars(dim)
+
+    crossing_mask_decr = (field0 > target) & (field1 <= target)
+    crossing_mask_incr = (field0 < target) & (field1 >= target)
+    crossing_mask = xr.where(crossing_mask_decr | crossing_mask_incr, 1, np.nan)
+
+    coords0 = crossing_mask * field[dim].isel(slice0).drop_vars(dim)
+    coords1 = crossing_mask * field[dim].isel(slice1).drop_vars(dim)
+    field0 = crossing_mask * field0
+    field1 = crossing_mask * field1
+
+    iso = coords0 + (target - field0) * (coords1 - coords0) / (field1 - field0)
+
+    return iso.max(dim, skipna=True)

@@ -183,6 +183,8 @@ class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
     # latitude_gsm: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     ctd_depth: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     ctd_time: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
+    temperature: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
+    salinity: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     speed: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     vert_speed: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     speed_gsm: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
@@ -228,6 +230,8 @@ class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
             # "latitude_gsm",
             "ctd_depth",
             "ctd_time",
+            "temperature",
+            "salinity",
             "speed",
             "vert_speed",
             "speed_gsm",
