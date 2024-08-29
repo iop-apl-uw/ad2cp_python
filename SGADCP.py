@@ -39,6 +39,7 @@ import pdb
 import sys
 import time
 import traceback
+import uuid
 
 import h5py
 
@@ -111,9 +112,18 @@ def main() -> int:
 
     var_t = collections.namedtuple("var_t", ("accessor", "var_meta_name"))
 
-    # TODO - add in temperature and salinity
-    # 1) interpolate both onto profile grid using profile.time
-    # 2) propagate into the netcdf file
+    global_nc_attrs = [
+        "platform_id",
+        "source",
+        "platform",
+        "summary",
+        "project",
+        "glider",
+        "mission",
+        "base_station_version",
+        "base_station_micro_version",
+    ]
+    copy_ncattrs = {}
 
     mission_vars = {
         "time": var_t(lambda x: x.time, "inverse_profile_time"),
@@ -140,6 +150,12 @@ def main() -> int:
         }
     else:
         glider_vars = {}
+
+    # Extents
+    lat_max = -90.0
+    lat_min = 90.0
+    lon_max = -180.0
+    lon_min = 180.0
 
     # Whole mission accumulators
     depth_grid = None
@@ -181,6 +197,10 @@ def main() -> int:
 
         if not param.sg:
             param.sg = ds.glider
+
+        if not copy_ncattrs:
+            for attr in global_nc_attrs:
+                copy_ncattrs[attr] = ds.getncattr(attr)
 
         if not output_filename:
             output_filename = pathlib.Path(adcp_opts.mission_dir).joinpath(
@@ -239,6 +259,11 @@ def main() -> int:
 
         mission_dive.append(glider.dive)
         mission_dive.append(glider.dive)
+
+        lon_min = min(lon_min, np.nanmin(glider.longitude))
+        lon_max = max(lon_max, np.nanmax(glider.longitude))
+        lat_min = min(lat_min, np.nanmin(glider.latitude))
+        lat_max = max(lat_max, np.nanmax(glider.latitude))
 
         imax = np.argmax(glider.ctd_depth)
         mission_lon.append(np.nanmean(glider.longitude[: imax + 1]))
@@ -320,7 +345,24 @@ def main() -> int:
         return 1
 
     # Add global attributes
+    dso.setncattr("geospatial_lon_min", lon_min)
+    dso.setncattr("geospatial_lon_max", lon_max)
+    dso.setncattr("geospatial_lat_min", lat_min)
+    dso.setncattr("geospatial_lat_max", lat_max)
+
+    dso.setncattr("geospatial_vertical_min", np.nanmin(depth_grid[:deepest_i]))
+    dso.setncattr("geospatial_vertical_max", np.nanmax(depth_grid[:deepest_i]))
+
+    now_date = time.strftime("%Y-%m-%dT%H:%m:%SZ", time.gmtime(time.time()))
+    dso.setncattr("date_created", now_date)
+    dso.setncattr("date_modified", now_date)
+    dso.setncattr("file_version", "1.0")
+    dso.setncattr("uuid", str(uuid.uuid1()))
+
     try:
+        for attr, value in copy_ncattrs.items():
+            dso.setncattr(attr, value)
+
         for a, value in global_meta["global_attributes"].items():
             dso.setncattr(a, value)
     except Exception:

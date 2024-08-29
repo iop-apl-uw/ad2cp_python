@@ -43,9 +43,8 @@ import warnings
 import cmocean
 import gsw
 import numpy as np
-from plotly.subplots import make_subplots
-import plotly
 import xarray as xr
+from plotly.subplots import make_subplots
 
 import ADCPOpts
 import ADCPUtils
@@ -179,12 +178,13 @@ def PlotOceanVelocity(ncf_name, ds, adcp_opts):
         vocn = ds.variables["ad2cp_inv_profile_vocn"][:].filled(fill_value=np.nan)
         uocn = ds.variables["ad2cp_inv_profile_uocn"][:].filled(fill_value=np.nan)
         dive_num = ds.variables["ad2cp_inv_profile_dive"][:]
-        profile_time = ds.variables["ad2cp_inv_profile_time"][:]
+        # profile_time = ds.variables["ad2cp_inv_profile_time"][:]
         depth = ds.variables["ad2cp_inv_profile_depth"][:]
         profile_temperature = ds.variables["ad2cp_profile_temperature"][:]
         profile_salinity = ds.variables["ad2cp_profile_salinity"][:]
         latitude = ds.variables["ad2cp_inv_profile_latitude"][:]
         longitude = ds.variables["ad2cp_inv_profile_longitude"][:]
+        mission_summary_str = ds.getncattr("summary")
     except KeyError as e:
         log_warning(f"Could not load {e}")
         return
@@ -211,27 +211,26 @@ def PlotOceanVelocity(ncf_name, ds, adcp_opts):
     )
 
     # Isopycnals
-    contours = []
+    contours = {}
     for dc in density_contours:
         temp = ADCPUtils.isoSurface(pd_ds, dc, "depth")
         temp[temp < adcp_opts.min_plot_depth] = np.nan
         temp[temp > adcp_opts.max_plot_depth] = np.nan
-        contours.append(temp)
+        if np.logical_not(np.isnan(temp)).size != 0:
+            contours[dc] = temp
 
     contour_dive_num = np.copy(dive_num).astype(np.float32)
     for ii in range(0, contour_dive_num.size, 2):
         contour_dive_num[ii] += 0.25
         contour_dive_num[ii + 1] += 0.75
 
-    # TODO plot isopycnal
-
-    fig = plotly.subplots.make_subplots(
+    fig = make_subplots(
         rows=2,
         cols=1,
         subplot_titles=("Eastward Ocean Velocity", "Northward Ocean Velocity"),
         vertical_spacing=0.1,
-        # TODO - helps with synchronizing the zoom of the two windows, but hides the x-axis labels in the upper plot
-        # Maybe https://community.plotly.com/t/subplots-with-shared-x-axes-but-show-x-axis-for-each-plot/34800 to fix
+        # Helps with synchronizing the zoom of the two windows, but hides the x-axis labels in the upper plot
+        # Fix below from https://community.plotly.com/t/subplots-with-shared-x-axes-but-show-x-axis-for-each-plot/34800
         shared_xaxes="all",
         shared_yaxes="all",
     )
@@ -273,20 +272,24 @@ def PlotOceanVelocity(ncf_name, ds, adcp_opts):
 
     # TODO: Add button to toggle isopycnals on/off
     # TODO: Look for lighter grey
-    # TODO: This is all 0.5 kg m-3 intervals as 0.1 was way to dense.
-    # Add hovertips for the isopycnl - keep it tight
-    for ii, contour in enumerate(contours):
-        if ii % 5 != 0:
+    f_show_legend = True
+    for kv, contour in contours.items():
+        _, d = np.divmod(kv, 1)
+        if np.isclose(d, 0.0):
+            color = "DarkGrey"
+        elif np.isclose(d, 0.5):
             color = "LightGrey"
-            continue
         else:
-            color = "LightSlateGrey"
-            # color = "DarkSlateGrey"
+            continue
         for jj in range(1, 3):
+            label = f"iso {kv:.1f} kg m-3"
+            # name = f"{kv:.1f}_{jj}"
+
             fig.add_trace(
                 {
                     "x": contour_dive_num,
                     "y": contour,
+                    "name": "isopycnls<br>0.5 kg m-s incr",
                     "type": "scatter",
                     "mode": "lines",
                     "marker": {
@@ -296,26 +299,26 @@ def PlotOceanVelocity(ncf_name, ds, adcp_opts):
                         },
                         "color": color,
                     },
-                    "showlegend": False,
-                    "legendgroup": "Isopycnals",
-                    # "hovertemplate": f"Dive %{{x:.0f}}<br>Depth %{{y}} meters<br>%{{z{format_spec}}}{unit_tag}<extra></extra>",
+                    # "showlegend": False,
+                    # "visible": True,
+                    # "visible": "legendonly",
+                    "legendgroup": "isopycnals_group",
+                    "showlegend": f_show_legend,
+                    "hovertemplate": f"{label}<br>Dive %{{x:.0f}}<br>Depth %{{y:.1f}} meters<extra></extra>",
                 },
                 row=jj,
                 col=1,
             )
+            f_show_legend = False
 
-    # TODO - get this correct
-    # mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
-    mission_dive_str = ""
-    title_text = f"{mission_dive_str}<br>AD2CP Ocean Velocity vs Depth"
-
-    # pdb.set_trace()
+    title_text = f"{mission_summary_str}<br>AD2CP Ocean Velocity vs Depth"
 
     fig.update_layout(
         {
             "xaxis": {
-                # "title": "Dive Number",
+                "title": "Dive Number",
                 "showgrid": True,
+                "showticklabels": True,
             },
             "yaxis": {
                 "title": "Depth (m)",
@@ -324,6 +327,7 @@ def PlotOceanVelocity(ncf_name, ds, adcp_opts):
             "xaxis2": {
                 "title": "DiveNumber",
                 "showgrid": True,
+                "showticklabels": True,
             },
             "yaxis2": {
                 "title": "Depth (m)",
@@ -344,7 +348,8 @@ def PlotOceanVelocity(ncf_name, ds, adcp_opts):
                         "text": "m s-1",
                         # "side": "right",
                         "side": "top",
-                    }
+                    },
+                    "len": 0.9,
                 },
                 # "colorscale": "balance",
                 # "colorscale": "RdBu",
@@ -355,7 +360,7 @@ def PlotOceanVelocity(ncf_name, ds, adcp_opts):
                 "cmid": 0.0,
             },
             "margin": {
-                "t": 100,
+                "t": 120,
             },
         }
     )
