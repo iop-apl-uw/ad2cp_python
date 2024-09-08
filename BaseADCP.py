@@ -135,6 +135,7 @@ def load_additional_arguments():
     """Defines and extends arguments related to this extension.
     Called by BaseOpts when the extension is set to be loaded
     """
+
     return (
         # Add this module to these options defined in BaseOpts
         ["mission_dir", "netcdf_filename"],
@@ -147,6 +148,7 @@ def load_additional_arguments():
                 (
                     "Base",
                     "BaseADCP",
+                    "Reprocess",
                 ),
                 ("--adcp_config_file",),
                 BaseOpts.FullPath,
@@ -162,6 +164,7 @@ def load_additional_arguments():
                 (
                     "Base",
                     "BaseADCP",
+                    "Reprocess",
                 ),
                 ("--adcp_var_meta_file",),
                 BaseOpts.FullPath,
@@ -177,6 +180,7 @@ def load_additional_arguments():
                 (
                     "Base",
                     "BaseADCP",
+                    "Reprocess",
                 ),
                 ("--adcp_include_frame_vel",),
                 bool,
@@ -192,6 +196,7 @@ def load_additional_arguments():
                 (
                     "Base",
                     "BaseADCP",
+                    "Reprocess",
                 ),
                 ("--adcp_include_updated_latlon",),
                 bool,
