@@ -158,7 +158,7 @@ def load_additional_arguments():
                 },
             ),
             "adcp_var_meta_file": BaseOptsType.options_t(
-                pathlib.Path(__file__).parent.joinpath("var_meta.yml"),
+                pathlib.Path(__file__).parent.joinpath("config/var_meta.yml"),
                 (
                     "Base",
                     "BaseADCP",
