@@ -8,7 +8,7 @@ inverse_time:
     _FillValue: -999
     description: Date in seconds for each solution point
     comments: Output of ad2cp inverse processing of realtime data
-  units: seconds since 1970-1-1 00:00:00
+    units: seconds since 1970-1-1 00:00:00
   standard_name: time
   coverage_content_type: physicalMeasurement
   nc_type: d
@@ -187,7 +187,6 @@ ad2cp_lonlat_time:
     #standard_name: ocean speed
     units: seconds since 1970-1-1 00:00:00
     standard_name: time
-    units: m s-1
     coverage_content_type: physicalMeasurement
   nc_type: d
   decimal_pts: 0
@@ -318,7 +317,7 @@ inverse_profile_time:
     _FillValue: -999
     description: Date in seconds for each solution point
     comments: Output of ad2cp inverse processing of realtime data
-  units: seconds since 1970-1-1 00:00:00
+    units: seconds since 1970-1-1 00:00:00
   standard_name: time
   coverage_content_type: physicalMeasurement
   nc_type: d
