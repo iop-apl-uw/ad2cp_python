@@ -31,14 +31,23 @@
 ADCPConfig.py - Routines to process SG ADCP config file
 """
 
+import enum
 import pathlib
 import sys
 from dataclasses import dataclass, field
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import numpy.typing as npt
 import yaml
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    NonNegativeInt,
+    StrictFloat,
+    StrictStr,
+    ValidationError,
+)
 
 import ExtendedDataClass
 
@@ -173,14 +182,60 @@ class AttributeDict(dict):
     __delattr__ = dict.__delitem__
 
 
+class NCDataType(enum.Enum):
+    f: str = "f"
+    d: str = "d"
+    i: str = "i"
+
+
+# Models for var_meta.yml file contents
+class NCCoverageContentType(enum.Enum):
+    physicalMeasurement: str = "physicalMeasurement"
+    coordinate: str = "coordinate"
+    modelResult: str = "modelResult"
+    auxiliaryInformation: str = "auxiliaryInformation"
+
+
+class NCAttribs(BaseModel):
+    FillValue: StrictFloat
+    description: StrictStr
+    units: StrictStr
+    coverage_content_type: NCCoverageContentType
+    comments: Optional[StrictStr] = None
+    standard_name: Optional[StrictStr] = None
+
+
+class NCVarMeta(BaseModel):
+    nc_varname: StrictStr
+    nc_dimensions: List[StrictStr]
+    nc_attribs: NCAttribs
+    nc_type: NCDataType
+    decimal_pts: NonNegativeInt
+    model_config = ConfigDict(extra="forbid")
+
+
 def LoadVarMeta(var_meta_file):
+    """Loads and validates yaml data"""
     var_meta = {}
     try:
         with open(var_meta_file, "r") as fi:
             var_meta_tmp = yaml.safe_load(fi)
 
-        for k in var_meta_tmp:
-            var_meta[k] = AttributeDict(var_meta_tmp[k])
+        for k, v in var_meta_tmp.items():
+            try:
+                if isinstance(v, dict):
+                    NCVarMeta(**v)
+                else:
+                    log_error(f"{k} in {var_meta_file} is not a dictionary")
+                    continue
+            except ValidationError as e:
+                for error in e.errors():
+                    # pdb.set_trace()
+                    location = f"{k}:{':'.join([x for x in error['loc']])}"
+                    log_error(f"In {var_meta_file} - {location}, {error['msg']}")
+                log_error(f"Skipping {k}")
+            else:
+                var_meta[k] = AttributeDict(var_meta_tmp[k])
     except Exception:
         log_error(f"Could not process {var_meta_file}", "exc")
     return var_meta

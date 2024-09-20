@@ -335,6 +335,7 @@ def main() -> int:
     if dso is None:
         log_error(f"Could not open {output_filename}")
         return 1
+    log_info(f"Writing out {output_filename}")
 
     try:
         ADCPUtils.CreateNCVars(dso, ad2cp_variable_mapping, var_meta)

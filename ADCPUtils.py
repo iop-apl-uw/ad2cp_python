@@ -494,9 +494,9 @@ def CreateNCVar(dso, template, key_name, data):
     # Check for scalar variables
     if np.ndim(inp_data) == 0:
         if inp_data == np.nan:
-            inp_data = template[key_name]["nc_attribs"]["_FillValue"]
+            inp_data = template[key_name]["nc_attribs"]["FillValue"]
     else:
-        inp_data[np.isnan(inp_data)] = template[key_name]["nc_attribs"]["_FillValue"]
+        inp_data[np.isnan(inp_data)] = template[key_name]["nc_attribs"]["FillValue"]
 
     # assert len(template[key_name]["nc_dimensions"]) == 1
     # if template[key_name]["nc_dimensions"][0] not in dso.dimensions:
@@ -510,7 +510,7 @@ def CreateNCVar(dso, template, key_name, data):
         template[key_name]["nc_varname"],
         template[key_name]["nc_type"],
         template[key_name]["nc_dimensions"],
-        fill_value=template[key_name]["nc_attribs"]["_FillValue"],
+        fill_value=template[key_name]["nc_attribs"]["FillValue"],
         compression="zlib",
         complevel=9,
     )
@@ -519,7 +519,7 @@ def CreateNCVar(dso, template, key_name, data):
         # TODO - finish this off
         # if a_name in ("valid_min", "valid_max"):
         #    nc_var.setncattr(a_name, np.array(attrib).astype(template[key_name]["nc_type"])
-        if a_name != "_FillValue":
+        if a_name != "FillValue":
             nc_var.setncattr(a_name, attrib)
 
 
