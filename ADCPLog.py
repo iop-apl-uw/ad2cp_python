@@ -209,7 +209,9 @@ def log_critical(s: object, loc: str = ADCPLogger.critical_loc, alert: str | Non
 log_error_max_count: DefaultDict[str, int] = collections.defaultdict(int)
 
 
-def log_error(s: str, loc: str = ADCPLogger.error_loc, alert: str | None = None, max_count: int | None = None) -> None:
+def log_error(
+    s: object, loc: str = ADCPLogger.error_loc, alert: str | None = None, max_count: int | None = None
+) -> None:
     """Report string to baselog as an ERROR
     Input:
     s - string

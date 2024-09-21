@@ -82,6 +82,8 @@ def main() -> int:
     adcp_opts = ADCPOpts.ADCPOptions(
         "Command line driver Seaglider ADCPx data processing", calling_module=pathlib.Path(__file__).stem
     )
+    if adcp_opts is None:
+        return
 
     # Initialize log
     ADCPLogger(adcp_opts, include_time=True)

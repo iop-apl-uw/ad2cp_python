@@ -58,7 +58,11 @@ else:
 
 
 def init_helper(
-    config_obj: Any, config_file_name: pathlib.PosixPath, cfg_dict: Dict, section_name: str, convert_fn: Any
+    config_obj: Any,
+    config_file_name: pathlib.PosixPath,
+    cfg_dict: Dict,
+    section_name: str,
+    convert_fn: Any,
 ) -> None:
     if section_name in cfg_dict and isinstance(cfg_dict[section_name], dict):
         for k, v in cfg_dict[section_name].items():
@@ -108,6 +112,7 @@ class Params(ExtendedDataClass.ExtendedDataClass):
         }
 
     def init(self, cfg_dict: dict, config_file_name: pathlib.PosixPath) -> None:
+        reveal_type(cfg_dict)
         init_helper(self, config_file_name, cfg_dict, "params", self.params_conversion)
 
         # Transposition - was in the matlab code, but doesn't look right for the python case

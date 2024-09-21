@@ -34,7 +34,7 @@ ADCPOpts.py - SG ADCP processing options and command-line parsing
 import argparse
 import pathlib
 import sys
-from typing import Any, Sequence
+from typing import Any, Optional, Sequence
 
 
 class FullPathAction(argparse.Action):
@@ -60,7 +60,7 @@ class FullPathAction(argparse.Action):
             setattr(namespace, self.dest, list(map(lambda y: pathlib.Path(y).expanduser().absolute(), values)))
 
 
-def ADCPOptions(description: str, calling_module: str) -> argparse.Namespace:
+def ADCPOptions(description: str, calling_module: str) -> Optional[argparse.Namespace]:
     if calling_module not in ("SGADCP", "SGADCPPlot"):
         sys.stderr.write(f"Unknown calling_module {calling_module}")
         return None
