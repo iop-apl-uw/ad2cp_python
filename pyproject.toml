@@ -1,5 +1,5 @@
 [tool.mypy]
-plugins = ['numpy.typing.mypy_plugin']
+plugins = ['numpy.typing.mypy_plugin', 'pydantic.mypy']
 # This only applies to the basestation extension being checked
 mypy_path = '..'
 files = ['SGADCP.py','ADCPFiles.py','ExtendedDataClass.py','ADCPUtils.py','ADCPLog.py','ADCPOpts.py','ADCPConfig.py','ADCPRealtime.py', 'ADCP.py', ]

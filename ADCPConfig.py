@@ -34,8 +34,8 @@ ADCPConfig.py - Routines to process SG ADCP config file
 import enum
 import pathlib
 import sys
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from dataclasses import field
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import numpy.typing as npt
@@ -48,36 +48,17 @@ from pydantic import (
     StrictStr,
     ValidationError,
 )
+from pydantic.dataclasses import dataclass
 
 import ExtendedDataClass
 
 if "BaseLog" in sys.modules:
-    from BaseLog import log_error
+    from BaseLog import log_error, log_debug
 else:
-    from ADCPLog import log_error
+    from ADCPLog import log_error, log_debug
 
 
-def init_helper(
-    config_obj: Any,
-    config_file_name: pathlib.PosixPath,
-    cfg_dict: Dict,
-    section_name: str,
-    convert_fn: Any,
-) -> None:
-    if section_name in cfg_dict and isinstance(cfg_dict[section_name], dict):
-        for k, v in cfg_dict[section_name].items():
-            try:
-                if k not in convert_fn():
-                    log_error(f"Unknown config variable {k} - skipping")
-                    continue
-                config_obj[k] = convert_fn()[k](v)
-            except ValueError:
-                log_error(f"Failed to convert {k}:{v} in {config_file_name} to type {type(config_obj[k])}")
-            except Exception:
-                log_error(f"Failed to handle {k} in {config_file_name}", "exc")
-
-
-@dataclass
+@dataclass(config=dict(extra="forbid", arbitrary_types_allowed=True))
 class Params(ExtendedDataClass.ExtendedDataClass):
     # Gilder number int
     sg: int = field(default=0)
@@ -101,26 +82,26 @@ class Params(ExtendedDataClass.ExtendedDataClass):
     # restrict range bins
     gz: npt.ArrayLike = field(default_factory=(lambda: np.zeros(0)))
 
-    def params_conversion(self) -> Dict:
-        return {
-            "sg": int,
-            "dz": float,
-            "sfc_blank": float,
-            "index_bins": lambda x: np.array(x, np.int32),
-            "VEHICLE_MODEL": str,
-            "use_glider_pressure": bool,
-        }
-
-    def init(self, cfg_dict: dict, config_file_name: pathlib.PosixPath) -> None:
-        reveal_type(cfg_dict)
-        init_helper(self, config_file_name, cfg_dict, "params", self.params_conversion)
-
+    def __post_init__(self) -> None:
         # Transposition - was in the matlab code, but doesn't look right for the python case
         # self.gz = np.arange(0, 1000 + self.dz, self.dz)[:, np.newaxis]
         self.gz = np.arange(0, 1000 + self.dz, self.dz)
 
+        # TODO - short term hack for new input from the config yaml.  Right now, these
+        # are not converted to the correct type by pydantic.
+        try:
+            if not isinstance(self.time_limits, np.ndarray):
+                self.time_limits = np.array(self.time_limits)
+        except Exception:
+            log_error('Failed to convert "time_limits"', "exc")
+        try:
+            if not isinstance(self.index_bins, np.ndarray):
+                self.index_bins = np.array(self.index_bins, np.int32)
+        except Exception:
+            log_error('Failed to convert "index_bins"', "exc")
 
-@dataclass
+
+@dataclass(config=dict(extra="forbid"))
 class Weights(ExtendedDataClass.ExtendedDataClass):
     W_MEAS: float = field(default=1)  # measurement weight: ~ 1/(0.05);
     OCN_SMOOTH: float = field(default=1)  # 100/param.dz; % smoothness factors
@@ -134,25 +115,14 @@ class Weights(ExtendedDataClass.ExtendedDataClass):
     W_deep_z0: float = field(default=500)
     W_MODEL_bottom: bool = field(default=False)  # Bool to set ttw speed zero at the bottom
 
-    def params_conversion(self) -> dict:
-        return {
-            "W_MEAS": float,
-            "OCN_SMOOTH": float,
-            "VEH_SMOOTH": float,
-            "W_DAC": float,
-            "W_MODEL": float,
-            "W_MODEL_DAC": float,
-            "W_SURFACE": float,
-            "W_OCN_DNUP": float,
-            "W_deep": float,
-            "W_deep_z0": float,
-        }
 
-    def init(self, cfg_dict: dict, config_file_name: pathlib.PosixPath) -> None:
-        init_helper(self, config_file_name, cfg_dict, "weights", self.params_conversion)
+@dataclass(config=dict(extra="forbid"))
+class ConfigModel:
+    weights: Optional[Weights]
+    params: Optional[Params]
 
 
-def ProcessConfigFile(config_file_name: pathlib.PosixPath) -> Tuple[Params, Weights]:
+def ProcessConfigFile(config_file_name: pathlib.PosixPath) -> Union[Tuple[Params, Weights] | Tuple[None, None]]:
     """Return the default set of options, with updated by a config file if present
 
     Args:
@@ -170,16 +140,24 @@ def ProcessConfigFile(config_file_name: pathlib.PosixPath) -> Tuple[Params, Weig
         except Exception:
             log_error(f"Failed to process {config_file_name} - continuing", "exc")
 
-    opt_p = Params()
-    opt_p.init(cfg_dict, config_file_name)
+    for k in ("weights", "params"):
+        if k not in cfg_dict:
+            cfg_dict[k] = {}
 
-    weights = Weights()
-    weights.init(cfg_dict, config_file_name)
+    try:
+        config_model = ConfigModel(**cfg_dict)
+    except ValidationError as e:
+        for error in e.errors():
+            location = f"{':'.join([x for x in error['loc']])}"
+            log_error(f"In {config_file_name} - {location}, {error['msg']}")
+        return (None, None)
 
-    return (opt_p, weights)
+    log_debug(config_model)
+
+    return (config_model.params, config_model.weights)
 
 
-class AttributeDict(dict):
+class AttributeDict(dict[Any, Any]):
     """Allow dot access for dictionaries"""
 
     __getattr__ = dict.__getitem__
