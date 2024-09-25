@@ -148,11 +148,14 @@ def ProcessConfigFile(config_file_name: pathlib.PosixPath) -> Union[Tuple[Params
         config_model = ConfigModel(**cfg_dict)
     except ValidationError as e:
         for error in e.errors():
-            location = f"{':'.join([x for x in error['loc']])}"
+            location = f"{':'.join([str(x) for x in error['loc']])}"
             log_error(f"In {config_file_name} - {location}, {error['msg']}")
         return (None, None)
 
     log_debug(config_model)
+
+    if config_model.params is None or config_model.weights is None:
+        return (None, None)
 
     return (config_model.params, config_model.weights)
 
@@ -161,8 +164,8 @@ class AttributeDict(dict[Any, Any]):
     """Allow dot access for dictionaries"""
 
     __getattr__ = dict.__getitem__
-    __setattr__ = dict.__setitem__
-    __delattr__ = dict.__delitem__
+    __setattr__ = dict.__setitem__  # type: ignore
+    __delattr__ = dict.__delitem__  # type: ignore
 
 
 class NCDataType(enum.Enum):
@@ -214,7 +217,7 @@ def LoadVarMeta(var_meta_file):
             except ValidationError as e:
                 for error in e.errors():
                     # pdb.set_trace()
-                    location = f"{k}:{':'.join([x for x in error['loc']])}"
+                    location = f"{k}:{':'.join([str(x) for x in error['loc']])}"
                     log_error(f"In {var_meta_file} - {location}, {error['msg']}")
                 log_error(f"Skipping {k}")
             else:
