@@ -484,42 +484,42 @@ def CreateNCVar(dso, template, key_name, data):
         # is_str = True
     elif np.ndim(data) == 0:
         # Scalar data
-        inp_data = np.dtype(template[key_name]["nc_type"]).type(data)
+        inp_data = np.dtype(template[key_name].nc_type).type(data)
     else:
-        inp_data = data.astype(template[key_name]["nc_type"])
+        inp_data = data.astype(template[key_name].nc_type)
 
-    if "decimal_pts" in template[key_name]:
-        inp_data = inp_data.round(template[key_name]["decimal_pts"])
+    if hasattr(template[key_name], "decimal_pts"):
+        inp_data = inp_data.round(template[key_name].decimal_pts)
 
     # Check for scalar variables
     if np.ndim(inp_data) == 0:
         if inp_data == np.nan:
-            inp_data = template[key_name]["nc_attribs"]["FillValue"]
+            inp_data = template[key_name].nc_attribs.FillValue
     else:
-        inp_data[np.isnan(inp_data)] = template[key_name]["nc_attribs"]["FillValue"]
+        inp_data[np.isnan(inp_data)] = template[key_name].nc_attribs.FillValue
 
     # assert len(template[key_name]["nc_dimensions"]) == 1
     # if template[key_name]["nc_dimensions"][0] not in dso.dimensions:
     #    dso.createDimension(template[key_name]["nc_dimensions"][0], np.shape(data)[0])
 
-    for ii, dim in enumerate(template[key_name]["nc_dimensions"]):
+    for ii, dim in enumerate(template[key_name].nc_dimensions):
         if dim not in dso.dimensions:
             dso.createDimension(dim, np.shape(data)[ii])
 
     nc_var = dso.createVariable(
-        template[key_name]["nc_varname"],
-        template[key_name]["nc_type"],
-        template[key_name]["nc_dimensions"],
-        fill_value=template[key_name]["nc_attribs"]["FillValue"],
+        template[key_name].nc_varname,
+        template[key_name].nc_type,
+        template[key_name].nc_dimensions,
+        fill_value=template[key_name].nc_attribs.FillValue,
         compression="zlib",
         complevel=9,
     )
     nc_var[:] = inp_data
-    for a_name, attrib in template[key_name]["nc_attribs"].items():
+    for a_name, attrib in iter(template[key_name].nc_attribs):
         # TODO - finish this off
         # if a_name in ("valid_min", "valid_max"):
         #    nc_var.setncattr(a_name, np.array(attrib).astype(template[key_name]["nc_type"])
-        if a_name != "FillValue":
+        if a_name != "FillValue" and attrib is not None:
             nc_var.setncattr(a_name, attrib)
 
 

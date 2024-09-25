@@ -31,11 +31,10 @@
 ADCPConfig.py - Routines to process SG ADCP config file
 """
 
-import enum
 import pathlib
 import sys
 from dataclasses import field
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 
 import numpy as np
 import numpy.typing as npt
@@ -160,47 +159,49 @@ def ProcessConfigFile(config_file_name: pathlib.PosixPath) -> Union[Tuple[Params
     return (config_model.params, config_model.weights)
 
 
-class AttributeDict(dict[Any, Any]):
-    """Allow dot access for dictionaries"""
+# class AttributeDict(dict[Any, Any]):
+#     """Allow dot access for dictionaries"""
 
-    __getattr__ = dict.__getitem__
-    __setattr__ = dict.__setitem__  # type: ignore
-    __delattr__ = dict.__delitem__  # type: ignore
+#     __getattr__ = dict.__getitem__
+#     __setattr__ = dict.__setitem__  # type: ignore
+#     __delattr__ = dict.__delitem__  # type: ignore
 
 
-class NCDataType(enum.Enum):
-    f: str = "f"
-    d: str = "d"
-    i: str = "i"
+# class NCDataType(enum.Enum):
+#     f: str = "f"
+#     d: str = "d"
+#     i: str = "i"
 
 
 # Models for var_meta.yml file contents
-class NCCoverageContentType(enum.Enum):
-    physicalMeasurement: str = "physicalMeasurement"
-    coordinate: str = "coordinate"
-    modelResult: str = "modelResult"
-    auxiliaryInformation: str = "auxiliaryInformation"
+# class NCCoverageContentType(enum.Enum):
+#    physicalMeasurement: str = "physicalMeasurement"
+#    coordinate: str = "coordinate"
+#    modelResult: str = "modelResult"
+#    auxiliaryInformation: str = "auxiliaryInformation"
 
 
 class NCAttribs(BaseModel):
     FillValue: StrictFloat
     description: StrictStr
     units: StrictStr
-    coverage_content_type: NCCoverageContentType
+    # coverage_content_type: NCCoverageContentType
+    coverage_content_type: Literal["physicalMeasurement", "coordinate", "modelResult", "auxiliaryInformation"]
     comments: Optional[StrictStr] = None
     standard_name: Optional[StrictStr] = None
+    model_config = ConfigDict(extra="allow")
 
 
 class NCVarMeta(BaseModel):
     nc_varname: StrictStr
     nc_dimensions: List[StrictStr]
     nc_attribs: NCAttribs
-    nc_type: NCDataType
+    nc_type: Literal["f", "d", "i"]
     decimal_pts: NonNegativeInt
     model_config = ConfigDict(extra="forbid")
 
 
-def LoadVarMeta(var_meta_file):
+def LoadVarMeta(var_meta_file: pathlib.Path) -> Dict[str, NCVarMeta]:
     """Loads and validates yaml data"""
     var_meta = {}
     try:
@@ -210,7 +211,7 @@ def LoadVarMeta(var_meta_file):
         for k, v in var_meta_tmp.items():
             try:
                 if isinstance(v, dict):
-                    NCVarMeta(**v)
+                    m = NCVarMeta(**v)
                 else:
                     log_error(f"{k} in {var_meta_file} is not a dictionary")
                     continue
@@ -221,13 +222,15 @@ def LoadVarMeta(var_meta_file):
                     log_error(f"In {var_meta_file} - {location}, {error['msg']}")
                 log_error(f"Skipping {k}")
             else:
-                var_meta[k] = AttributeDict(var_meta_tmp[k])
+                # var_meta[k] = AttributeDict(var_meta_tmp[k])
+                var_meta[k] = m
     except Exception:
         log_error(f"Could not process {var_meta_file}", "exc")
+
     return var_meta
 
 
-def LoadGlobalMeta(global_meta_file_local):
+def LoadGlobalMeta(global_meta_file_local: pathlib.Path) -> Dict[str, Any]:
     global_meta = {}
 
     global_meta_file = pathlib.Path(__file__).parent.joinpath("config/global_meta.yml")
@@ -249,7 +252,9 @@ def LoadGlobalMeta(global_meta_file_local):
     return global_meta
 
 
-def MergeDict(a, b, path=None, allow_override=False):
+def MergeDict(
+    a: Dict[Any, Any], b: Dict[Any, Any], path: Union[list[str], None] = None, allow_override: bool = False
+) -> Dict[Any, Any]:
     "Merges dict b into dict a"
     if path is None:
         path = []
