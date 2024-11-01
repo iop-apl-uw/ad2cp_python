@@ -426,7 +426,7 @@ def StripVars(dsi, dso, var_meta):
     Note: at this time, the dimensions are not addressed
 
     """
-    strip_names = [var_meta[k]["nc_varname"] for k in var_meta]
+    strip_names = [var_meta[k].nc_varname for k in var_meta]
 
     strip_dims = []
     for name, var in dsi.variables.items():
