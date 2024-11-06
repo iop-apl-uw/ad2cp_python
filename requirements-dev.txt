@@ -2,7 +2,7 @@
 #
 # Development related
 ## Static Typing
-mypy
+mypy==1.13.0
 types-PyYAML
 ## Documentation (fill in)
 mkdocs

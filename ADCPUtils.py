@@ -37,12 +37,13 @@ import pathlib
 import re
 import sys
 import warnings
+from typing import Literal
 
 import netCDF4
 import numpy as np
-import numpy.typing as npt
 import scipy
 import xarray as xr
+from numpy.typing import NDArray
 
 if "BaseLog" in sys.modules:
     from BaseLog import log_critical, log_error, log_warning
@@ -54,7 +55,7 @@ required_numpy_version = "1.26.0"
 required_scipy_version = "1.14.0"
 
 
-def normalize_version(v):
+def normalize_version(v: str) -> list[int]:
     """Normalizes version stamps"""
     if not isinstance(v, str):
         v = str(v)  # very old versions of base_station_version for example were stored as floats
@@ -86,7 +87,11 @@ def check_versions() -> int:
     return 0
 
 
-def open_netcdf_file(ncf_name: pathlib.Path, mode: str = "r", mask_results: bool = False) -> None | netCDF4.Dataset:
+def open_netcdf_file(
+    ncf_name: pathlib.Path,
+    mode: Literal["r", "w", "r+", "a", "x", "rs", "ws", "r+s", "as"] = "r",
+    mask_results: bool = False,
+) -> None | netCDF4.Dataset:
     # netCDF4 tries to open with a write exclusive, which will fail if some other process has
     # the file open for read.
     if "w" in mode:
@@ -105,7 +110,7 @@ def open_netcdf_file(ncf_name: pathlib.Path, mode: str = "r", mask_results: bool
     return ds
 
 
-def intnan(y: npt.NDArray[np.float64]) -> None:
+def intnan(y: NDArray[np.float64]) -> None:
     """Interpolate over NaNs.  Leading and trailing NaNs are replaced wtih the first/last
     non-nan value. Works on one dimensional items only
     """
@@ -139,10 +144,11 @@ def intnan(y: npt.NDArray[np.float64]) -> None:
 # dx = dlon .* p;
 
 
-def lon_to_m(dlon: npt.NDArray[np.float64], alat: np.float64) -> npt.NDArray[np.float64]:
+def lon_to_m(dlon: NDArray[np.float64], alat: np.float64) -> NDArray[np.float64]:
     rlat = alat * np.pi / 180.0
     p = 111415.13 * np.cos(rlat) - 94.55 * np.cos(3 * rlat)
-    return dlon * p
+    ret_val: NDArray[np.float64] = dlon * p
+    return ret_val
 
 
 # function dy = lat_to_m(dlat,alat)
@@ -158,23 +164,24 @@ def lon_to_m(dlon: npt.NDArray[np.float64], alat: np.float64) -> npt.NDArray[np.
 # dy = dlat .* m ;
 
 
-def lat_to_m(dlat: npt.NDArray[np.float64], alat: np.float64) -> npt.NDArray[np.float64]:
+def lat_to_m(dlat: NDArray[np.float64], alat: np.float64) -> NDArray[np.float64]:
     rlat = alat * np.pi / 180.0
     m = 111132.09 - 566.05 * np.cos(2 * rlat) + 1.2 * np.cos(4 * rlat)
-    return dlat * m
+    retval: NDArray[np.float64] = dlat * m
+    return retval
 
 
-def latlon2xy(ll: npt.NDArray[np.complex128], ll0: np.complex128) -> npt.NDArray[np.complex128]:
+def latlon2xy(ll: NDArray[np.complex128], ll0: np.complex128) -> NDArray[np.complex128]:
     ll -= ll0
 
     # xy =      lon_to_m(real(ll),imag(ll0))+...
     #         i*lat_to_m(imag(ll),imag(ll0));
 
-    xy = lon_to_m(ll.real, ll0.imag) + 1j * lat_to_m(ll.imag, ll0.imag)
+    xy: NDArray[np.complex128] = lon_to_m(ll.real, ll0.imag) + 1j * lat_to_m(ll.imag, ll0.imag)
     return xy * 1e-3
 
 
-def IT_sg_interp_AP(x, y, xi):
+def IT_sg_interp_AP(x: NDArray[np.float64], y: NDArray[np.complex128], xi: NDArray[np.float64]) -> NDArray[np.float64]:
     """complex interpolation, where the amplitude and phase of y are linearly interpolated
     does not require a regular xi.
     """
@@ -222,7 +229,7 @@ def IT_sg_interp_AP(x, y, xi):
         )
         Pi = f(xi)
 
-    yi = Ai * np.exp(1j * Pi)
+    yi: NDArray[np.float64] = Ai * np.exp(1j * Pi)
     return yi
 
 
@@ -234,8 +241,8 @@ def IT_sg_interp_AP(x, y, xi):
 
 
 def course_interp(
-    time: npt.NDArray[np.float64], heading: npt.NDArray[np.float64], new_time: npt.NDArray[np.float64]
-) -> npt.NDArray[np.float64]:
+    time: NDArray[np.float64], heading: NDArray[np.float64], new_time: NDArray[np.float64]
+) -> NDArray[np.float64]:
     """Interpolate course (heading) onto new time grid"""
     time0 = IT_sg_interp_AP(time, np.exp(1j * heading * np.pi / 180), new_time)
     timei = np.angle(time0) * 180 / np.pi
@@ -244,7 +251,14 @@ def course_interp(
 
 
 # Not currently used
-def interp1d(first_epoch_time_s_v, data_v, second_epoch_time_s_v, kind="linear"):
+def interp1d(
+    first_epoch_time_s_v: NDArray[np.float64],
+    data_v: NDArray[np.float64],
+    second_epoch_time_s_v: NDArray[np.float64],
+    kind: Literal[
+        "linear", "nearest", "nearest-up", "zero", "slinear", "quadratic", "cubic", "previous", "next"
+    ] = "linear",
+) -> NDArray[np.float64]:
     """For each data point data_v at first_epoch_time_s_v, determine the value at second_epoch_time_s_v
     Interpolate according to type
     Assumes both epoch_time_s_v arrays increase monotonically
@@ -261,11 +275,15 @@ def interp1d(first_epoch_time_s_v, data_v, second_epoch_time_s_v, kind="linear")
         data_v = np.append(data_v, np.array([data_v[-1]]))
         first_epoch_time_s_v = np.append(first_epoch_time_s_v, np.array([second_epoch_time_s_v[-1]]))
 
-    interp_data_v = scipy.interpolate.interp1d(first_epoch_time_s_v, data_v, kind=kind)(second_epoch_time_s_v)
+    interp_data_v: NDArray[np.float64] = scipy.interpolate.interp1d(first_epoch_time_s_v, data_v, kind=kind)(
+        second_epoch_time_s_v
+    )
     return interp_data_v
 
 
-def interp_nm(x, y, xi, fill_value=np.nan):
+def interp_nm(
+    x: NDArray[np.float64], y: NDArray[np.float64], xi: NDArray[np.float64], fill_value: float = np.nan
+) -> NDArray[np.float64] | None:
     """interpolate a non-monotonic x along a monotonic xi"""
     index = np.nonzero(np.logical_and(np.isfinite(x), np.isfinite(y)))[0]
     if np.shape(index)[0] <= 2:
@@ -273,7 +291,8 @@ def interp_nm(x, y, xi, fill_value=np.nan):
     P = np.polyfit(x[index] - x[index[0]], y[index], 1)
     flag_sign = int(np.sign(P[0]))
     if flag_sign == 0:
-        return np.ones(np.shape(xi)[0]) * P[1]
+        retval: NDArray[np.float64] = np.ones(np.shape(xi)[0]) * P[1]
+        return retval
 
     # Code for multi-dimension - not handled here
     # [m n]=size(x);
@@ -304,13 +323,13 @@ def interp_nm(x, y, xi, fill_value=np.nan):
         return None
 
     # yi=interp1(Y(:,1), Y(:,2), xi);
-    f = scipy.interpolate.interp1d(
+    retval2: NDArray[np.float64] = scipy.interpolate.interp1d(
         Y[:, 0],
         Y[:, 1],
         bounds_error=False,
         fill_value=fill_value,
-    )
-    return f(xi)
+    )(xi)
+    return retval2
 
 
 # function[in]=find_nearest(x,y)

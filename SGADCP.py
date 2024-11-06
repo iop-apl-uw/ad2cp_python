@@ -191,6 +191,10 @@ def main() -> int:
             dive_nc_filenames.append(m)
     dive_nc_filenames = sorted(dive_nc_filenames)
 
+    if not dive_nc_filenames:
+        log_error(f"No profile netCDF files found in {adcp_opts.mission_dir} - bailing out")
+        return 1
+
     for ncf_name in dive_nc_filenames:
         log_info(f"Processing {ncf_name}")
         ds = ADCPUtils.open_netcdf_file(ncf_name)
