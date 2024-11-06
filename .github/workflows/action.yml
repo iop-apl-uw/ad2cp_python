@@ -27,7 +27,7 @@ jobs:
         if [ -f requirements-ci.txt ]; then pip install -r requirements-ci.txt; fi
     - name: Check with Ruff
       run: |
-        ruff check
+        ruff check --output-format=github
     - name: Test with pytest
       run: |
         pytest --cov --cov-report term-missing tests/

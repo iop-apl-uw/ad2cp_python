@@ -34,7 +34,7 @@ ADCPConfig.py - Routines to process SG ADCP config file
 import pathlib
 import sys
 from dataclasses import field
-from typing import Any, Dict, List, Literal, Optional, Tuple, Union
+from typing import Any, Literal
 
 import numpy as np
 import numpy.typing as npt
@@ -117,11 +117,11 @@ class Weights(ExtendedDataClass.ExtendedDataClass):
 
 @dataclass(config=dict(extra="forbid"))
 class ConfigModel:
-    weights: Optional[Weights]
-    params: Optional[Params]
+    weights: Weights | None
+    params: Params | None
 
 
-def ProcessConfigFile(config_file_name: pathlib.PosixPath) -> Union[Tuple[Params, Weights] | Tuple[None, None]]:
+def ProcessConfigFile(config_file_name: pathlib.PosixPath) -> tuple[Params, Weights] | tuple[None, None]:
     """Return the default set of options, with updated by a config file if present
 
     Args:
@@ -187,21 +187,21 @@ class NCAttribs(BaseModel):
     units: StrictStr
     # coverage_content_type: NCCoverageContentType
     coverage_content_type: Literal["physicalMeasurement", "coordinate", "modelResult", "auxiliaryInformation"]
-    comments: Optional[StrictStr] = None
-    standard_name: Optional[StrictStr] = None
+    comments: StrictStr | None = None
+    standard_name: StrictStr | None = None
     model_config = ConfigDict(extra="allow")
 
 
 class NCVarMeta(BaseModel):
     nc_varname: StrictStr
-    nc_dimensions: List[StrictStr]
+    nc_dimensions: list[StrictStr]
     nc_attribs: NCAttribs
     nc_type: Literal["f", "d", "i"]
     decimal_pts: NonNegativeInt
     model_config = ConfigDict(extra="forbid")
 
 
-def LoadVarMeta(var_meta_file: pathlib.Path) -> Dict[str, NCVarMeta]:
+def LoadVarMeta(var_meta_file: pathlib.Path) -> dict[str, NCVarMeta]:
     """Loads and validates yaml data"""
     var_meta = {}
     try:
@@ -230,7 +230,7 @@ def LoadVarMeta(var_meta_file: pathlib.Path) -> Dict[str, NCVarMeta]:
     return var_meta
 
 
-def LoadGlobalMeta(global_meta_file_local: pathlib.Path) -> Dict[str, Any]:
+def LoadGlobalMeta(global_meta_file_local: pathlib.Path) -> dict[str, Any]:
     global_meta = {}
 
     global_meta_file = pathlib.Path(__file__).parent.joinpath("config/global_meta.yml")
@@ -253,8 +253,8 @@ def LoadGlobalMeta(global_meta_file_local: pathlib.Path) -> Dict[str, Any]:
 
 
 def MergeDict(
-    a: Dict[Any, Any], b: Dict[Any, Any], path: Union[list[str], None] = None, allow_override: bool = False
-) -> Dict[Any, Any]:
+    a: dict[Any, Any], b: dict[Any, Any], path: list[str] | None = None, allow_override: bool = False
+) -> dict[Any, Any]:
     "Merges dict b into dict a"
     if path is None:
         path = []

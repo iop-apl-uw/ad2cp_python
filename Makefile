@@ -16,3 +16,5 @@ mypy:
 test:
 	pytest --cov --cov-report term-missing tests/
 
+act:
+	act -j check --container-daemon-socket -  --container-architecture linux/aarch64 push

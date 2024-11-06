@@ -34,7 +34,7 @@ ADCPFiles.py - Routines to process Seaglider ADCP files
 import pathlib
 import sys
 from dataclasses import dataclass, field
-from typing import Any, Tuple
+from typing import Any
 
 import netCDF4
 import numpy as np
@@ -264,7 +264,7 @@ class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
                         self[var_n][self[var_n] == ds.variables[var_n].getncattr("_FillValue")] = np.nan
             elif var_n == "dive":
                 self[var_n] = ds.variables["trajectory"][0]
-            elif isinstance(v, (int, float)):
+            elif isinstance(v, int | float):
                 self[var_n] = ds.variables[var_n][0]
             else:
                 log_error(f"Don't know how to handle {var_n}")
@@ -366,7 +366,7 @@ class ADCPData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
 
 def ADCPReadSGNCF(
     ds: netCDF4.Dataset, ncf_name: pathlib.Path, param: ADCPConfig.Params
-) -> Tuple[SGData, GPSData, ADCPRealtimeData]:
+) -> tuple[SGData, GPSData, ADCPRealtimeData]:
     """ """
     adcp_realtime_data = ADCPRealtimeData()
     adcp_realtime_data.init(ds, ncf_name)

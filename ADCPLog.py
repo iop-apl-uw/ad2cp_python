@@ -40,7 +40,6 @@ import logging
 import os
 import sys
 import traceback
-from typing import DefaultDict
 
 _stack_options = ["caller", "caller", "caller", "caller", "exc"]  # default
 
@@ -206,7 +205,7 @@ def log_critical(s: object, loc: str = ADCPLogger.critical_loc, alert: str | Non
         sys.stderr.write(f"CRITICAL: {s}\n")
 
 
-log_error_max_count: DefaultDict[str, int] = collections.defaultdict(int)
+log_error_max_count: collections.defaultdict[str, int] = collections.defaultdict(int)
 
 
 def log_error(
@@ -232,7 +231,7 @@ def log_error(
         sys.stderr.write(f"ERROR: {s}\n")
 
 
-log_warning_max_count: DefaultDict[str, int] = collections.defaultdict(int)
+log_warning_max_count: collections.defaultdict[str, int] = collections.defaultdict(int)
 
 
 def log_warning(
@@ -264,7 +263,7 @@ def log_warning(
         sys.stderr.write(f"WARNING: {s}\n")
 
 
-log_info_max_count: DefaultDict[str, int] = collections.defaultdict(int)
+log_info_max_count: collections.defaultdict[str, int] = collections.defaultdict(int)
 
 
 def log_info(s: object, loc: str = ADCPLogger.info_loc, alert: str | None = None, max_count: int | None = None) -> None:
@@ -290,7 +289,7 @@ def log_info(s: object, loc: str = ADCPLogger.info_loc, alert: str | None = None
         sys.stderr.write(f"INFO: {s}\n")
 
 
-log_debug_max_count: DefaultDict[str, int] = collections.defaultdict(int)
+log_debug_max_count: collections.defaultdict[str, int] = collections.defaultdict(int)
 
 
 def log_debug(

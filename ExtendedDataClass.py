@@ -85,7 +85,7 @@ class ExtendedDataClass:
         object.__setattr__(self, key, value)
 
     # Allows iteration over the data fields like a dictionary
-    def items(self) -> typing.Generator[typing.Tuple[typing.Any, typing.Any], None, None]:
+    def items(self) -> typing.Generator[tuple[typing.Any, typing.Any], None, None]:
         for item in self.__dataclass_fields__:
             yield item, getattr(self, item)
 
