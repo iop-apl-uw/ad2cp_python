@@ -52,9 +52,9 @@ from pydantic.dataclasses import dataclass
 import ExtendedDataClass
 
 if "BaseLog" in sys.modules:
-    from BaseLog import log_error, log_debug
+    from BaseLog import log_debug, log_error
 else:
-    from ADCPLog import log_error, log_debug
+    from ADCPLog import log_debug, log_error
 
 
 @dataclass(config=dict(extra="forbid", arbitrary_types_allowed=True))
