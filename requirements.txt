@@ -11,3 +11,4 @@ h5py==3.12.1
 pyproj==3.7.0
 cmocean==4.0.3
 pydantic==2.9.2
+PyYAML==6.0.2

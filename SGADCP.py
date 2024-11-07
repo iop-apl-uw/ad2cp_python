@@ -65,7 +65,7 @@ def DEBUG_PDB_F() -> None:
         pdb.post_mortem(traceb)
 
 
-def main() -> int:
+def main(cmdline_args: list[str] = sys.argv) -> int:
     """Command line driver Seaglider ADCP data processing
 
     Returns:
@@ -80,7 +80,9 @@ def main() -> int:
 
     # Get options
     adcp_opts = ADCPOpts.ADCPOptions(
-        "Command line driver Seaglider ADCPx data processing", calling_module=pathlib.Path(__file__).stem
+        "Command line driver Seaglider ADCPx data processing",
+        calling_module=pathlib.Path(__file__).stem,
+        cmdline_args=cmdline_args,
     )
     if adcp_opts is None:
         return

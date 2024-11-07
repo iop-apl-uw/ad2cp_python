@@ -61,7 +61,7 @@ class FullPathAction(argparse.Action):
             setattr(namespace, self.dest, list(map(lambda y: pathlib.Path(y).expanduser().absolute(), values)))
 
 
-def ADCPOptions(description: str, calling_module: str) -> argparse.Namespace | None:
+def ADCPOptions(description: str, calling_module: str, cmdline_args: list[str] = sys.argv) -> argparse.Namespace | None:
     if calling_module not in ("SGADCP", "SGADCPPlot"):
         sys.stderr.write(f"Unknown calling_module {calling_module}")
         return None
@@ -127,6 +127,6 @@ def ADCPOptions(description: str, calling_module: str) -> argparse.Namespace | N
         ap.add_argument("--min_plot_depth", help="Minimum depth to plot", type=float, default=0.0)
         ap.add_argument("--max_plot_depth", help="Maximum depth to plot", type=float, default=1000.0)
 
-    args = ap.parse_args()
+    args = ap.parse_args(cmdline_args)
 
     return args
