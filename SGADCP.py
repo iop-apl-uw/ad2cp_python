@@ -65,7 +65,7 @@ def DEBUG_PDB_F() -> None:
         pdb.post_mortem(traceb)
 
 
-def main(cmdline_args: list[str] = sys.argv) -> int:
+def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     """Command line driver Seaglider ADCP data processing
 
     Returns:
