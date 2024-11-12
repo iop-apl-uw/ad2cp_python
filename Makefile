@@ -1,20 +1,26 @@
-# For source checking and testing
+# For source checking, testing
 
-all: rufflint mypy test
+all: rufffmt rufflint mypy test
 
 rufflint:
-	ruff check .
+	-ruff check .
 
 rufffmt:
 	-ruff check --select I --fix *py tests/*py
 	-ruff format *py tests/*py
 
 mypy:
-	mypy
+	-mypy
 
-# Change to --cov-report html to generate html coverage reports
 test:
-	pytest --cov --cov-report term-missing tests/
+	-pytest --cov --cov-report term-missing tests/
 
+testhtml:
+	-pytest --cov --cov-report html tests/
+
+# Requires act tool to be installed
+# For MacOS
+# brew install act
+# Runs github workflow locally
 act:
-	act -j check --container-daemon-socket -  --container-architecture linux/aarch64 push
+	-act -j check --container-daemon-socket -  --container-architecture linux/aarch64 push
