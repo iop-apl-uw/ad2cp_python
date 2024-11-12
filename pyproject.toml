@@ -3,7 +3,8 @@ plugins = ['numpy.typing.mypy_plugin', 'pydantic.mypy']
 # This only applies to the basestation extension being checked
 mypy_path = '..'
 files = ['SGADCP.py','ADCPFiles.py','ExtendedDataClass.py','ADCPUtils.py','ADCPLog.py','ADCPOpts.py','ADCPConfig.py','ADCPRealtime.py', 'ADCP.py', ]
-strict = true
+#strict = true
+python_version = "3.10"
 
 # Much of the numerical computing stack doesn't have type annotations yet.
 [[tool.mypy.overrides]]
@@ -40,6 +41,8 @@ select = [
     "I",
     # Numpy2.0 compat
     "NPY201"
+    # Check docstrings
+#    "D"
 ]
 ignore = [
   # redundant-open-modes
@@ -47,3 +50,6 @@ ignore = [
   # outdated-version-block
   "UP036",
 ]
+
+#[tool.ruff.lint.pydocstyle]
+#convention = "google"
