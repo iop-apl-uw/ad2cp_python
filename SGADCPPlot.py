@@ -50,7 +50,7 @@ import ADCPOpts
 import ADCPUtils
 from ADCPLog import ADCPLogger, log_critical, log_error, log_warning
 
-DEBUG_PDB = True
+DEBUG_PDB = False
 
 # TODO - make options
 # IOP Standard Figure size

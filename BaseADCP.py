@@ -56,7 +56,7 @@ import ADCPFiles
 import ADCPRealtime
 import ADCPUtils
 
-DEBUG_PDB = True
+DEBUG_PDB = False
 
 
 def DEBUG_PDB_F() -> None:

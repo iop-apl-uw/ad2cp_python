@@ -54,7 +54,7 @@ import ADCPRealtime
 import ADCPUtils
 from ADCPLog import ADCPLogger, log_critical, log_debug, log_error, log_info, log_warning
 
-DEBUG_PDB = True
+DEBUG_PDB = False
 
 
 def DEBUG_PDB_F() -> None:

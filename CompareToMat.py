@@ -45,7 +45,7 @@ import numpy as np
 import ADCPOpts
 from ADCPLog import ADCPLogger, log_critical, log_error, log_warning
 
-DEBUG_PDB = True
+DEBUG_PDB = False
 
 
 def DEBUG_PDB_F() -> None:
