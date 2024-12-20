@@ -44,6 +44,7 @@ from pyproj import Geod
 # is picked up instead of that from the ADCP
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
 # ruff: noqa: E402
+import BaseNetCDF
 import BaseOpts
 import BaseOptsType
 import MakeDiveProfiles
@@ -131,6 +132,98 @@ def GenerateNewLatLons(ds, D):
     return (np.array(lons), np.array(lats), np.array(times))
 
 
+def convert_to_base_meta(var_meta_d, nc_info, f_include):
+    """Converts a adcp var_meta entry to a basestation var_meta dict"""
+
+    attribs_d = {}
+
+    for k, v in iter(var_meta_d.nc_attribs):
+        if k == "FillValue":
+            attribs_d["_FillValue"] = v
+        else:
+            attribs_d[k] = v
+
+    # MMT and MMP require the time vector to be marked as "included"
+    return (f_include, var_meta_d.nc_type, attribs_d, nc_info)
+
+
+def init_extension(module_name: str, base_opts: BaseOpts.BaseOptions | None = None, init_dict=None) -> int:
+    """
+    init_sensor
+
+    Returns:
+        -1 - error in processing
+         0 - success
+    """
+
+    # The only purpose of this function is to add metadata into the basestation's system to
+    # allow MakeMissionTimeSeries and MakeMisionProfile to incorporte and act on the
+    # ADCP timeseries solutions (along to plotting of those solutions).
+
+    # Plotting for the ADCP profile solutions are handled by a dedicated
+    # Basestation plotting routine.  This is because MMT and MMP work strictly on timeseries
+    # data.
+
+    # List of possible variables and which are included in MMT and MMP by default
+    ad2cp_vars = {
+        # Timeseries data - adcp solutions at the gliders position
+        "inverse_time": True,  # Note: this has to be True, as it is required my MMP to do binning
+        "inverse_depth": True,
+        "inverse_ocean_velocity_north": True,
+        "inverse_ocean_velocity_east": True,
+        "inverse_glider_velocity_north": False,
+        "inverse_glider_velocity_east": False,
+        "inverse_ocean_velocity_vertical": False,
+        "inverse_glider_velocity_vertical": False,
+    }
+
+    if init_dict is None:
+        log_error("No datafile supplied for init_extension - version mismatch?")
+        return -1
+
+    # TODO - remove when BaseOpts FullPath is converted to pathlib
+    base_opts.adcp_var_meta_file = pathlib.Path(base_opts.adcp_var_meta_file)
+    var_meta = ADCPConfig.LoadVarMeta(base_opts.adcp_var_meta_file)
+
+    # CONSIDER - this should data driven from the above list
+    # hardcode it for now
+    BaseNetCDF.register_sensor_dim_info(
+        "ad2cp_inv_glider_point_info",
+        "ad2cp_inv_glider_point",
+        "ad2cp_inv_glider_time",  # A time variable must be registered for MMP to run - see note on "inverse_time" above
+        True,
+        # If an instrumnent varaible is need, change to and see note below "ad2cp_inv_glider",
+        None,
+    )
+
+    adds_dict = {
+        #
+        # Something like this could be added if an instrument variable were needed
+        #
+        # "ad2cp_inv_glider": [
+        #     False,
+        #     "c",
+        #     {
+        #         # "long_name": "underway thermosalinograph",
+        #         # "nodc_name": "thermosalinograph",
+        #         # "make_model": "unpumped RBR Legato",
+        #     },
+        #     BaseNetCDF.nc_scalar,
+        # ],  # always scalar
+    }
+    for var_name, f_include in ad2cp_vars.items():
+        new_md = convert_to_base_meta(
+            var_meta[var_name],
+            ("ad2cp_inv_glider_point_info",),
+            f_include,
+        )
+        adds_dict[var_meta[var_name].nc_varname] = new_md
+
+    init_dict[module_name] = {
+        "netcdf_metadata_adds": adds_dict,
+    }
+
+
 def load_additional_arguments():
     """Defines and extends arguments related to this extension.
     Called by BaseOpts when the extension is set to be loaded
@@ -149,6 +242,8 @@ def load_additional_arguments():
                     "Base",
                     "BaseADCP",
                     "Reprocess",
+                    "MakeMissionProfile",
+                    "MakeMissionTimeSeries",
                 ),
                 ("--adcp_config_file",),
                 BaseOpts.FullPath,
@@ -165,6 +260,8 @@ def load_additional_arguments():
                     "Base",
                     "BaseADCP",
                     "Reprocess",
+                    "MakeMissionProfile",
+                    "MakeMissionTimeSeries",
                 ),
                 ("--adcp_var_meta_file",),
                 BaseOpts.FullPath,
@@ -181,6 +278,8 @@ def load_additional_arguments():
                     "Base",
                     "BaseADCP",
                     "Reprocess",
+                    "MakeMissionProfile",
+                    "MakeMissionTimeSeries",
                 ),
                 ("--adcp_include_frame_vel",),
                 bool,
@@ -197,6 +296,8 @@ def load_additional_arguments():
                     "Base",
                     "BaseADCP",
                     "Reprocess",
+                    "MakeMissionProfile",
+                    "MakeMissionTimeSeries",
                 ),
                 ("--adcp_include_updated_latlon",),
                 bool,
@@ -212,6 +313,7 @@ def load_additional_arguments():
 
 
 def main(
+    cmdline_args: list[str] = sys.argv[1:],
     instrument_id=None,
     base_opts=None,
     sg_calib_file_name=None,
@@ -241,6 +343,7 @@ def main(
             additional_arguments=additional_arguments,
             add_option_groups=add_option_groups,
             add_to_arguments=add_to_arguments,
+            cmdline_args=cmdline_args,
         )
 
     BaseLogger(base_opts)  # initializes BaseLog
