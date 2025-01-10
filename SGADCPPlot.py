@@ -394,7 +394,7 @@ def GeneratePlots(ncf_name, adcp_opts) -> None:
     ds.close()
 
 
-def main() -> int:
+def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     """Command line driver Seaglider ADCP plotting
 
     Returns:
@@ -409,7 +409,9 @@ def main() -> int:
 
     # Get options
     adcp_opts = ADCPOpts.ADCPOptions(
-        "Command line driver for Seaglider ADCPx plotting", calling_module=pathlib.Path(__file__).stem
+        "Command line driver for Seaglider ADCPx plotting",
+        calling_module=pathlib.Path(__file__).stem,
+        cmdline_args=cmdline_args,
     )
     if adcp_opts is None:
         return
