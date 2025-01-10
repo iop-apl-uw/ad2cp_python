@@ -1,6 +1,6 @@
 # -*- python-fmt -*-
 
-## Copyright (c) 2024  University of Washington.
+## Copyright (c) 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -38,7 +38,8 @@ from typing import Any
 import pytest
 
 # Each test in a "mission_dir" under the testdata/XXXX directory - testdata/sg179_Guam_Oct19/mission_dir for example
-# Previous runs are removed and the contents of testdata/XXXX (no sub-directories) are copied to testdata/XXXX/mission_dir
+# Previous runs are removed and the contents of testdata/XXXX (no sub-directories) are copied to
+# testdata/XXXX/mission_dir
 
 
 def run_mission(

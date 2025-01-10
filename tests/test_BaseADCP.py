@@ -1,6 +1,6 @@
 # -*- python-fmt -*-
 
-## Copyright (c) 2024  University of Washington.
+## Copyright (c) 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -28,14 +28,11 @@
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import pathlib
-import sys
 
-import pytest
 import numpy as np
-import xarray as xr
-
-
+import pytest
 import testutils
+import xarray as xr
 
 
 def test_extension(caplog):
@@ -44,7 +41,7 @@ def test_extension(caplog):
     # A test like this could be run out of the adcp project in the sub-directory - trying for the direct load of
     # the BaseADCP extension and skipping if it doesn't load (ie. being run as a github workflow)
 
-    BaseADCP = pytest.importorskip("BaseADCP", reason=f"Not installed under basestation3")
+    BaseADCP = pytest.importorskip("BaseADCP", reason="Not installed under basestation3")
 
     data_dir = pathlib.Path("testdata/sg171_EKAMSAT_Apr24")
     mission_dir = data_dir.joinpath("mission_dir")
