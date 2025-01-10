@@ -35,7 +35,7 @@ into `/usr/local/basestation3/adcp` on the basestation machine.  Starting with b
 the required packages for this software are included in the basestation3 `requirements.txt` file, so by following the basestation3 
 setup the correct packages will be installed.
 
-To enable this processing code to be run as part of the basestation3 conversion, add the extensions:
+To enable this processing code to be run as part of the basestation3 conversion, add the extension:
 
 	adcp/BaseADCP.py
 	
@@ -48,6 +48,13 @@ to the  `[postnetcdf]` section to any of the following:
 | `.extensions` in the `--group_etc` directory | To eanble for a particular groups of gliders           |
 
 The extension will ignore any netcdf file not including AD2CP data, so installing globally is recommended.
+
+To optionally generate a whole mission netcdf file that contains same data output as the stand-alone processing, add the extension:
+
+    adcp/BaseADCPMission.py
+	
+to the `[mission]` section of any of the `.extension` files listed above.  Note: the generation of this netcdf file is a prerequisite 
+for generating whole mission section plots (coming soon).
 
 To add the plotting routines to the basestation3 processing stream, first create the directory:
 
