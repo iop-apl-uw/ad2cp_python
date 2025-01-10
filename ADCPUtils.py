@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -574,7 +574,7 @@ def SetupPlotDirectory(adcp_opts) -> int:
             return 1
     else:
         try:
-            adcp_opts.plot_directory.mkdir(mode=0x777)
+            adcp_opts.plot_directory.mkdir(mode=0o775)
         except Exception:
             log_error(f"Could not create {adcp_opts.plot_directory}", "exc")
             return 1
