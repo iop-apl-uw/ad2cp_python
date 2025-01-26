@@ -80,6 +80,7 @@ def load_additional_arguments():
                 pathlib.Path(__file__).parent.joinpath("config/var_meta.yml"),
                 (
                     "Base",
+                    "BaseADCP",
                     "BaseADCPMission",
                     "Reprocess",
                     "MakeMissionProfile",
@@ -128,7 +129,6 @@ def main(
     known_ftp_tags=None,
     processed_file_names=None,
     session=None,
-    nc_dive_file_names=None,
 ):
     """Basestation extension for building whole mission adcp netcdf file
 
@@ -154,13 +154,10 @@ def main(
             cmdline_args=cmdline_args,
         )
 
-    BaseLogger(base_opts)
-
-    global_meta = ADCPConfig.LoadGlobalMeta(base_opts.adcp_global_meta_filename)
-    var_meta = ADCPConfig.LoadVarMeta(base_opts.adcp_var_meta_file)
+    BaseLogger(base_opts, include_time=True)
 
     # If called as an extension and no new netcdf filename created, bail out
-    if not f_from_cli and not nc_dive_file_names:
+    if not f_from_cli and not nc_files_created:
         return 0
 
     if f_from_cli:
@@ -168,6 +165,9 @@ def main(
 
     if not dive_nc_file_names:
         return 0
+
+    global_meta = ADCPConfig.LoadGlobalMeta(base_opts.adcp_global_meta_filename)
+    var_meta = ADCPConfig.LoadVarMeta(base_opts.adcp_var_meta_file)
 
     output_filename = None
 
@@ -214,12 +214,13 @@ def main(
 
     mission_accums = {v: [] for v in mission_vars}
 
-    log_info(f"Started processing {time.strftime('%H:%M:%S %d %b %Y %Z', time.gmtime(time.time()))}")
+    log_info("Started processing")
 
     # Collect variable from dive files - load into accumulators
     f_adcp_present = False
     for ncf_name in dive_nc_file_names:
-        log_info(f"Processing {ncf_name}")
+        log_debug(f"Processing {ncf_name}")
+
         ds = Utils.open_netcdf_file(ncf_name, "r", mask_results=True)
 
         try:
@@ -293,6 +294,10 @@ def main(
 
         # TODO - need a similar reduction in depth for the profile variables
 
+    if not f_adcp_present:
+        log_info("No ADCP found - finished processing")
+        return 0
+
     mission_var_arrs = {}
     non_nans = []
     for k, is_profile in mission_vars.items():
@@ -300,7 +305,7 @@ def main(
             mission_var_arrs[k] = np.hstack(mission_accums[k])
             if is_profile:
                 tmp = np.logical_not(np.isnan(mission_var_arrs[k]))
-                log_info(f"{k}:{np.shape(tmp)}:{tmp.dtype}")
+                # log_info(f"{k}:{np.shape(tmp)}:{tmp.dtype}")
                 non_nans.append(tmp)
         except ValueError:
             log_warning(f"No data found for variable {k} - skipping")
@@ -370,7 +375,7 @@ def main(
     dso.sync()
     dso.close()
 
-    log_info("Finished processing " + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time())))
+    log_info("Finished processing")
     return 0
 
 

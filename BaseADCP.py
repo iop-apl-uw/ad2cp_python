@@ -259,6 +259,7 @@ def load_additional_arguments():
                 (
                     "Base",
                     "BaseADCP",
+                    "BaseADCPMission",
                     "Reprocess",
                     "MakeMissionProfile",
                     "MakeMissionTimeSeries",

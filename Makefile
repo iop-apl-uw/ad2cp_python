@@ -6,8 +6,8 @@ rufflint:
 	-ruff check .
 
 rufffmt:
-	-ruff check --select I --fix *py tests/*py
-	-ruff format *py tests/*py
+	-ruff check --select I --fix *py tests/*py BasePlotting/*py
+	-ruff format *py tests/*py BasePlotting/*py
 
 mypy:
 	-mypy
