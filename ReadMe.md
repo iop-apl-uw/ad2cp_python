@@ -53,8 +53,7 @@ To optionally generate a whole mission netcdf file that contains same data outpu
 
     adcp/BaseADCPMission.py
 	
-to the `[mission]` section of any of the `.extension` files listed above.  Note: the generation of this netcdf file is a prerequisite 
-for generating whole mission section plots (coming soon).
+to the `[mission]` section of any of the `.extension` files listed above.  Note: the generation of this netcdf file is a prerequisite for generating whole mission section plots.
 
 To add the plotting routines to the basestation3 processing stream, first create the directory:
 
@@ -63,6 +62,10 @@ To add the plotting routines to the basestation3 processing stream, first create
 if it does not already exists.  Then add a symlink to the plotting code:
 
 	ln -s /usr/local/basestation3/adcp/BasePlotting/DiveOcean.py /usr/local/basestation3/Plotting/local/DiveOcean.py
+	
+To enable plotting of the whole misison netcdf file (see ```adcp/BaseADCPMission.py``` above), add the following symlink to the basestation ```Plotting/local``` directory:
+
+	ln -s /usr/local/basestation3/adcp/MissionOcean.py /usr/local/basestation3/Plotting/local/MissionOcean.py	
 
 # Use
 
