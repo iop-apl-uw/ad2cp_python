@@ -413,7 +413,7 @@ def mission_oceanvelocityprofile(
         ret_plots.extend(
             PlotUtilsPlotly.write_output_files(
                 base_opts,
-                "eng_ocean_velocity",
+                "sg_ocean_velocity_section_000",
                 fig,
             )
         )
