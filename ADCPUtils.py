@@ -555,7 +555,7 @@ def GetMissionStr(dive_nc_file):
         log_id = int(dive_nc_file.variables["log_ID"].getValue())
     if "sg_cal_mission_title" in dive_nc_file.variables:
         mission_title = dive_nc_file.variables["sg_cal_mission_title"][:].tobytes().decode("utf-8")
-    return f"SG{'%03d' % (log_id if log_id else 0,)} {mission_title}"
+    return f"sg{'%03d' % (log_id if log_id else 0,)} {mission_title}"
 
 
 def SetupPlotDirectory(adcp_opts) -> int:

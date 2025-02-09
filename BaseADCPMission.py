@@ -259,6 +259,7 @@ def main(
             continue
 
         if not output_filename:
+            # Note: this name must match what basestation3/Utils2.py get_mission_timeseries_name() returns
             output_filename = pathlib.Path(base_opts.mission_dir).joinpath(
                 f"{ADCPUtils.GetMissionStr(ds).replace(' ', '_').replace('-', '_')}_adcp_profile_timeseries.nc"
             )
