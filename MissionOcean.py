@@ -169,14 +169,13 @@ def mission_oceanvelocityprofile(
 
     for sk in section_dict["sections"]:
         start = getValue(section_dict, "start", sk, adcp_varn, 1)
-        # TODO step = getValue(section_dict, "step", sk, adcp_varn, 1)
+        # TODO? step = getValue(section_dict, "step", sk, adcp_varn, 1)
         stop = getValue(section_dict, "stop", sk, adcp_varn, -1)
         # TODO flip = getValue(section_dict, "flip", sk, adcp_varn, False)
         cmap = getValue(section_dict, "colormap", sk, adcp_varn, "balance")
         # These may not make sense to do
         # TODO? zmin = getValue(section_dict, "min", sk, adcp_varn, None)
         # TODO? zmax = getValue(section_dict, "max", sk, adcp_varn, None)
-        #
         # TODO? fill = getValue(section_dict, "fill", sk, adcp_varn, False)
         top = getValue(section_dict, "top", sk, adcp_varn, 0)
         bott = getValue(section_dict, "bottom", sk, adcp_varn, 990)
@@ -413,7 +412,7 @@ def mission_oceanvelocityprofile(
         ret_plots.extend(
             PlotUtilsPlotly.write_output_files(
                 base_opts,
-                "sg_ocean_velocity_section_000",
+                fname,
                 fig,
             )
         )
