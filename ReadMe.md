@@ -61,7 +61,7 @@ To add the plotting routines to the basestation3 processing stream, first create
 	
 if it does not already exists.  Then add a symlink to the plotting code:
 
-	ln -s /usr/local/basestation3/adcp/BasePlotting/DiveOcean.py /usr/local/basestation3/Plotting/local/DiveOcean.py
+	ln -s /usr/local/basestation3/adcp/DiveOcean.py /usr/local/basestation3/Plotting/local/DiveOcean.py
 	
 To enable plotting of the whole misison netcdf file (see ```adcp/BaseADCPMission.py``` above), add the following symlink to the basestation ```Plotting/local``` directory:
 
