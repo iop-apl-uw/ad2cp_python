@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -95,8 +95,8 @@ def CleanADCP(
     f = sp.interpolate.interp1d(
         glider.ctd_time,
         glider.sound_velocity,
-        # bounds_error=False,
-        # fill_value="extrapolate",
+        bounds_error=False,
+        fill_value="extrapolate",
     )
     Svel = f(adcp.time)
 
