@@ -48,12 +48,13 @@ import BaseOpts
 import BaseOptsType
 import MakeDiveProfiles
 import Utils
+import Utils2
 from BaseLog import BaseLogger, log_debug, log_error, log_info, log_warning
 
 import ADCPConfig
 import ADCPUtils
 
-DEBUG_PDB = True
+DEBUG_PDB = False
 
 
 def DEBUG_PDB_F() -> None:
@@ -169,7 +170,7 @@ def main(
     global_meta = ADCPConfig.LoadGlobalMeta(base_opts.adcp_global_meta_filename)
     var_meta = ADCPConfig.LoadVarMeta(base_opts.adcp_var_meta_file)
 
-    output_filename = None
+    output_filename = pathlib.Path(Utils2.get_mission_timeseries_name(base_opts, basename="adcp_profile_timeseries"))
 
     global_nc_attrs = [
         "platform_id",
@@ -257,12 +258,6 @@ def main(
         except Exception:
             log_error(f"Problems with loading {ncf_name}", "exc")
             continue
-
-        if not output_filename:
-            # Note: this name must match what basestation3/Utils2.py get_mission_timeseries_name() returns
-            output_filename = pathlib.Path(base_opts.mission_dir).joinpath(
-                f"{ADCPUtils.GetMissionStr(ds).replace(' ', '_').replace('-', '_')}_adcp_profile_timeseries.nc"
-            )
 
         if not copy_ncattrs:
             for attr in global_nc_attrs:
