@@ -171,7 +171,7 @@ def mission_oceanvelocityprofile(
         start = getValue(section_dict, "start", sk, adcp_varn, 1)
         # TODO? step = getValue(section_dict, "step", sk, adcp_varn, 1)
         stop = getValue(section_dict, "stop", sk, adcp_varn, -1)
-        # TODO flip = getValue(section_dict, "flip", sk, adcp_varn, False)
+        flip = getValue(section_dict, "flip", sk, adcp_varn, False)
         cmap = getValue(section_dict, "colormap", sk, adcp_varn, "balance")
         # These may not make sense to do
         # TODO? zmin = getValue(section_dict, "min", sk, adcp_varn, None)
@@ -364,6 +364,9 @@ def mission_oceanvelocityprofile(
                     "title": "Dive Number",
                     "showgrid": True,
                     "showticklabels": True,
+                    "range": [max(contour_dive_num), min(contour_dive_num)]
+                    if flip
+                    else [min(contour_dive_num), max(contour_dive_num)],
                 },
                 "yaxis": {
                     "title": "Depth (m)",
@@ -373,6 +376,9 @@ def mission_oceanvelocityprofile(
                     "title": "DiveNumber",
                     "showgrid": True,
                     "showticklabels": True,
+                    "range": [max(contour_dive_num), min(contour_dive_num)]
+                    if flip
+                    else [min(contour_dive_num), max(contour_dive_num)],
                 },
                 "yaxis2": {
                     "title": "Depth (m)",
