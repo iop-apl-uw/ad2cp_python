@@ -1,0 +1,15 @@
+---
+#
+# The ADCP supplied plotting routines in MissionOcean use the basestation
+# sections.yml file to define what portions of the mission are plotted.
+# The adcp variables to plot are specified in the "adcp_variables"
+# dictionary (instead the "variables" dictionary).  The only options supported are
+# "start", "stop", "flip" "colormap", "top" and "bottom" - other options are ignored.
+#
+# All other parts of the sections.yml file are common with the basestation default processing
+#
+
+# Supported ADCP variables are listed here
+adcp_variables:
+  # Specifying either ad2cp_inv_profile_vocn or ad2cp_inv_profile_uocn will produce the same plot
+  ad2cp_inv_profile_vocn: { top: 0, bottom: 1000, colormap: balance, min: -1, max: 1 }

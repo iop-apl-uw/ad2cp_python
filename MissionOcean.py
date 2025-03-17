@@ -61,8 +61,8 @@ import ADCPPlotUtils
 def getValue(x, v, sk, vk, fallback):
     if v in x["sections"][sk]:
         y = x["sections"][sk][v]
-    elif v in x["variables"][vk]:
-        y = x["variables"][vk][v]
+    elif v in x["adcp_variables"][vk]:
+        y = x["adcp_variables"][vk][v]
     elif v in x["defaults"]:
         y = x["defaults"][v]
     else:
@@ -95,6 +95,10 @@ def mission_oceanvelocityprofile(
     if not section_file_name.exists():
         return (ret_figs, ret_plots)
 
+    ncname = Utils2.get_mission_timeseries_name(base_opts, basename="adcp_profile_timeseries")
+    if not os.path.exists(section_file_name):
+        return (ret_figs, ret_plots)
+
     try:
         with open(section_file_name, "r") as f:
             section_dict = yaml.safe_load(f.read())
@@ -102,8 +106,8 @@ def mission_oceanvelocityprofile(
         log_error(f"Problem processing {section_file_name}", "exc")
         return (ret_figs, ret_plots)
 
-    if "variables" not in section_dict or len(section_dict["variables"]) == 0:
-        log_error(f"No 'variables' key found in {section_file_name} - not plotting")
+    if "adcp_variables" not in section_dict or len(section_dict["adcp_variables"]) == 0:
+        log_info(f"No 'adcp_variables' key found in {section_file_name} - not plotting")
         return (ret_figs, ret_plots)
 
     if "sections" not in section_dict or len(section_dict["sections"]) == 0:
@@ -145,12 +149,10 @@ def mission_oceanvelocityprofile(
         log_info("mission_profiles db closed")
 
     for adcp_varn in ("ad2cp_inv_profile_vocn", "ad2cp_inv_profile_uocn"):
-        if adcp_varn in section_dict["variables"]:
+        if adcp_varn in section_dict["adcp_variables"]:
             break
     else:
         return (ret_figs, ret_plots)
-
-    ncname = Utils2.get_mission_timeseries_name(base_opts, basename="adcp_profile_timeseries")
 
     try:
         ds = Utils.open_netcdf_file(ncname, "r", mask_results=True)

@@ -67,18 +67,25 @@ To enable plotting of the whole misison netcdf file (see ```adcp/BaseADCPMission
 
 	ln -s /usr/local/basestation3/adcp/MissionOcean.py /usr/local/basestation3/Plotting/local/MissionOcean.py	
 
+*Note* You will also need to make entries in the Seaglider's mission `sections.yml` file to enable plotting - please see the sample [sections.yml](docs/sections.yml) for more details.
+
 # Use
 
 The standalone driver is `SGADCP.py`.  Run 
 
 	python SGADCP.py --help
-	
+
+The standalone driver for plotting is `SGADCPPlot.py`.  Run 
+
+	python SGADCPPlot.py --help
+
 to see the command line usage.  The Seaglider per-dive netCDF files are not updated or altered using the program.
 
-The basesation3 extension - `BaseADCP.py` can be run from the commannd line (in addition to being invoked as part of normal 
+The basesation3 extensions - `BaseADCP.py` and `BaseADCPMission.py` can be both run from the commannd line (in addition to being invoked as part of normal 
 Seaglider processing) - run
 
 	/opt/basestation/bin/python /usr/local/basestation3/adcp/BaseADCP.py --help
+    /opt/basestation/bin/python /usr/local/basestation3/adcp/BaseADCPMission.py --help
 	
 For a list of options.  When run from the command line or as part of the normal Seaglider processing, the per-dive 
 netCDF files will be updated.
