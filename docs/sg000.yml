@@ -1,0 +1,32 @@
+---
+#
+# These are configuration parameters that affect ADCP processing, along
+# with their default values (used if the value is not specified).  Use
+# the option --adcp_config_file to specify a configuration file
+#
+params:
+  # Gilder number int
+  sg: 0
+  # Size of vertical grid bins used in inverse solution
+  dz: 5.0
+  # surface blank (if W_SURFACE ~=0, glider velocity is zero AND ADCP data is ignored above that depth
+  sfc_blank: 3.0
+  #  Which bins to use 
+  index_bins: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+  # 'gsm' or 'FlightModel'
+  VEHICLE_MODEL: "FlightModel"
+  # Use the glider pressure sensor
+  use_glider_pressure: True
+  
+weights:
+  W_MEAS: 1.0  # measurement weight: ~ 1/(0.05);
+  OCN_SMOOTH: 1.0  # 100/param.dz; % smoothness factors
+  VEH_SMOOTH: 1.0  # smoothness factors
+  W_DAC: 4.0  # Weight for the total barotropic constraint (gps)
+  W_MODEL: 1.0  # vehicle flight model weight (when we don't have ADCP data).
+  W_MODEL_DAC: 2.0  # vehicle model dac weight
+  W_SURFACE: 1.0  # Weight for surface constraint (gps - surface drift)
+  W_OCN_DNUP: 2.0  # Weight for down and up ocean profile to be the same.
+  W_deep: 0.1  # Weight to make velocities below W_deep_z0 small
+  W_deep_z0: 500
+  W_MODEL_bottom: False  # Bool to set ttw speed zero at the bottom
