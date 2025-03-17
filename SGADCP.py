@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -296,7 +296,9 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         # Debug save out - for comparision with other processing
         # TODO - need a better name - match with input file
         if adcp_opts.save_details:
-            with h5py.File("test.hdf5", "w") as hdf:
+            output_details_filename = ncf_name.with_suffix(".hdf5")
+            with h5py.File(output_details_filename, "w") as hdf:
+                log_info(f"Writing out {output_details_filename}")
                 adcp_realtime.save_to_hdf5("adcp_realtime", hdf)
                 glider.save_to_hdf5("glider", hdf)
                 gps.save_to_hdf5("gps", hdf)
