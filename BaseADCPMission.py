@@ -231,7 +231,7 @@ def main(
         except KeyError as e:
             msg = (f"Could not load {e} from {ncf_name} - skipping",)
             if f_adcp_present:
-                log_info(msg)
+                log_info(msg, max_count=3)
             else:
                 log_debug(msg)
             continue
