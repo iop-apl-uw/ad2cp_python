@@ -421,8 +421,6 @@ def Inverse(
         inverse_tmp["TT"] = TT
         inverse_tmp["Z0"] = Z0
 
-    # pdb.set_trace()
-
     # upcast = repmat(D.upcast,size(D.Z,1),1);
     # upcast = upcast(ia);
     # Na = numel(d_adcp);
@@ -567,7 +565,7 @@ def Inverse(
         G_sfc = []
         d_sfc = []
     if inverse_tmp is not None:
-        inverse_tmp["G_sfc"] = G_sfc.todense()
+        inverse_tmp["G_sfc"] = G_sfc.todense() if sp.sparse.issparse(G_sfc) else G_sfc
 
     # clear gps_constraints
     # for k=1:length(gps.Mtime)-1 % all GPS
@@ -763,7 +761,7 @@ def Inverse(
     else:
         Do = []
     if inverse_tmp is not None:
-        inverse_tmp["Do"] = Do.todense()
+        inverse_tmp["Do"] = Do.todense() if sp.sparse.issparse(Do) else Do
 
     # % Up and down ocean profile should be similar... (weighted by time interval)
     # if exist('W_OCN_DNUP','var')
@@ -827,7 +825,7 @@ def Inverse(
     else:
         Do2 = []
     if inverse_tmp is not None:
-        inverse_tmp["Do2"] = Do2.todense()
+        inverse_tmp["Do2"] = Do2.todense() if sp.sparse.issparse(Do2) else Do2
 
     # % Smoothness of vehicle velocity
     # Dv = [spdiags(repmat([-1 2 -1], Nt-2,1),[0 1 2], Nt-2,Nt), sparse(Nt-2,2*Nz) ]*VEH_SMOOTH  ; % d/dt
@@ -876,7 +874,7 @@ def Inverse(
         d_model = []
 
     if inverse_tmp is not None:
-        inverse_tmp["G_model"] = G_model.todense()
+        inverse_tmp["G_model"] = G_model.todense() if sp.sparse.issparse(G_model) else G_model
         inverse_tmp["d_model"] = d_model
 
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -916,7 +914,7 @@ def Inverse(
         d_deep = []
 
     if inverse_tmp is not None:
-        inverse_tmp["G_deep"] = G_deep.todense()
+        inverse_tmp["G_deep"] = G_deep.todense() if sp.sparse.issparse(G_deep) else G_deep
         inverse_tmp["d_deep"] = d_deep
     # Good to here
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -971,7 +969,11 @@ def Inverse(
         d_adcp,
         d_dac,
         d_sfc,
-        np.zeros(Do.shape[0] + Do2.shape[0] + Dv.shape[0]),
+        np.zeros(
+            (Do.shape[0] if not isinstance(Do, list) else 0)
+            + (Do2.shape[0] if not isinstance(Do2, list) else 0)
+            + (Dv.shape[0] if not isinstance(Dv, list) else 0)
+        ),
         d_model,
         d_deep,
         d_bottom,
@@ -1044,9 +1046,13 @@ def Inverse(
     # B_vars = [dw_adcp, 0 * d_dac, 0 * d_sfc, np.zeros(Do.shape[0] + Do2.shape[0] + Dv.shape[0])]
     B_vars = [
         dw_adcp,
-        np.zeros(d_dac.shape[0]),
-        np.zeros(d_sfc.shape[0]),
-        np.zeros(Do.shape[0] + Do2.shape[0] + Dv.shape[0]),
+        np.zeros(d_dac.shape[0] if not isinstance(d_dac, list) else 0),
+        np.zeros(d_sfc.shape[0] if not isinstance(d_sfc, list) else 0),
+        np.zeros(
+            (Do.shape[0] if not isinstance(Do, list) else 0)
+            + (Do2.shape[0] if not isinstance(Do2, list) else 0)
+            + (Dv.shape[0] if not isinstance(Dv, list) else 0)
+        ),
     ]
     B_list = []
     for ii in range(len(B_vars)):
