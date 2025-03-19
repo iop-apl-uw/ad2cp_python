@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -71,6 +71,13 @@ class Params(ExtendedDataClass.ExtendedDataClass):
     VEHICLE_MODEL: str = field(default="FlightModel")
     # Use the glider pressure sensor
     use_glider_pressure: bool = field(default=True)
+    # maximum tilt (*** probably not correct, since Nortek is using a 3-beam
+    # solution with different beam angles. It assumes a non-zero pitch).
+    MAX_TILT: float = field(default=0.7)  # 0.7 instead of typical 0.8. (0.7 is about a 45+17.4 degree pitch!)
+    # difference between vertical velocity measured by ADCP and vertical motion of the glider.
+    WMAX_error: float = field(default=0.05)
+    # maximum relative velocity
+    UMAX: float = field(default=0.5)
 
     # Not configurable - set from glider data
     # CONSIDER - move to glider object?

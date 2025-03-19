@@ -152,9 +152,7 @@ def CleanADCP(
     # adcp.W(:,mask) = NaN;
 
     # Maximum tilt
-    # CONSIDER - Make a param?  Ask Luc
-    MAX_TILT = 0.8
-    tilt_mask = adcp.TiltFactor < MAX_TILT
+    tilt_mask = adcp.TiltFactor < param.MAX_TILT
     for var_n in ["U", "V", "W"]:
         adcp[var_n][:, tilt_mask] = np.nan
 
@@ -170,10 +168,6 @@ def CleanADCP(
 
     # W error?
     # difference between vertical velocity measured by ADCP and vertical motion of the glider.
-    # CONSIDER - Make a param?  Ask Luc
-
-    # traced to here
-    WMAX_error = 0.05
     f = sp.interpolate.interp1d(
         glider.ctd_time,
         glider.Wmod,
@@ -181,7 +175,7 @@ def CleanADCP(
         # fill_value="extrapolate",
     )
     aW0 = f(adcp.time)
-    w_mask = np.abs(adcp.W + aW0) > WMAX_error
+    w_mask = np.abs(adcp.W + aW0) > param.WMAX_error
     for var_n in ["U", "V", "W"]:
         adcp[var_n][w_mask] = np.nan
 
@@ -193,8 +187,7 @@ def CleanADCP(
     # adcp.W(mask) = NaN;
 
     # maximum relative velocity?
-    UMAX = 0.5
-    rel_vel_mask = np.sqrt(adcp.U**2 + adcp.V**2) > UMAX
+    rel_vel_mask = np.sqrt(adcp.U**2 + adcp.V**2) > param.UMAX
     for var_n in ["U", "V", "W"]:
         adcp[var_n][rel_vel_mask] = np.nan
 
