@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -142,7 +142,7 @@ class ADCPRealtimeData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
             # "ad2cp_foobar": ("foobar", fetch_var),  # for testing
         }
 
-    def init(self, ds: netCDF4.Dataset, ncf_name: pathlib.Path) -> None:
+    def init(self, ds: netCDF4.Dataset, ncf_name: pathlib.Path, params: ADCPConfig.Params) -> None:
         # Load variables from dataset
         for var_n in self.adcp_namemapping():
             if var_n not in ds.variables:
@@ -152,6 +152,8 @@ class ADCPRealtimeData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
         # Tilt factor : the Z component of (0,0,1) vector transformed
         # adcp_realtime.TiltFactor =  cos(pi*adcp_realtime.pitch/180).*cos(pi*adcp_realtime.roll/180);
         self.TiltFactor = np.cos(np.pi * self.pitch / 180.0) * np.cos(np.pi * self.roll / 180)
+        if not params.up_looking:
+            self.TiltFactor *= -1.0
         # adcp_realtime.Range = (1:size(adcp_realtime.U,1))'*adcp_realtime.cellSize/1000+adcp_realtime.blanking/100;
         self.Range = np.arange(1, np.shape(self.U)[0] + 1) * self.cellSize / 1000.0 + self.blanking / 100.0
 
@@ -369,7 +371,7 @@ def ADCPReadSGNCF(
 ) -> tuple[SGData, GPSData, ADCPRealtimeData]:
     """ """
     adcp_realtime_data = ADCPRealtimeData()
-    adcp_realtime_data.init(ds, ncf_name)
+    adcp_realtime_data.init(ds, ncf_name, param)
 
     glider = SGData()
     gps = GPSData()

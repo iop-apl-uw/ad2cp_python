@@ -34,6 +34,7 @@ ADCP.py - Main caclulation functions
 # TODO - review all code blocks and pull out the tight intermixed matlab
 
 # import pdb
+import sys
 import warnings
 from typing import Any
 
@@ -43,6 +44,11 @@ import scipy as sp
 import ADCPConfig
 import ADCPFiles
 import ADCPUtils
+
+if "BaseLog" in sys.modules:
+    from BaseLog import log_warning
+else:
+    from ADCPLog import log_warning
 
 
 def CleanADCP(
@@ -77,6 +83,7 @@ def CleanADCP(
         )
         adcp.Z0 = f(adcp.time)
         adcp.Z0[np.isnan(adcp.Z0)] = 0.0
+        # If the ADCP is downlooking, TiltFactor should be negative.
         adcp.Z = adcp.Z0 - np.atleast_2d(adcp.Range).T * adcp.TiltFactor
     else:
         # TOOO - convert adcp_pressure into depth, then generate the Z and Z0
@@ -145,6 +152,25 @@ def CleanADCP(
     surf_mask = param.sfc_blank > adcp.Z
     for var_n in ["U", "V", "W"]:
         adcp[var_n][surf_mask] = np.nan
+
+    # % remove the bins deeper than the ADCP grid
+    # mask = (adcp.Z>max(param.gz));
+    # if sum(mask(:))>0
+    #   fprintf(' ** ADCP data deeper than ocean grid: adjust param.gz ** \r')
+    #   fprintf(['   dive ',num2str(glider.dive,'%0.4i')])
+    # end
+    # adcp.U(mask) = NaN;
+    # adcp.V(mask) = NaN;
+    # adcp.W(mask) = NaN;
+    depth_mask = adcp.Z > param.depth_max  # noqa: SIM300
+    if np.sum(depth_mask) > 0:
+        log_warning(
+            f"ADCP data (max:{np.max(adcp.Z):.2f}) deeper than ocean grid "
+            + f"(max: {param.depth_max:.2f}) -  adjust param.depth_max"
+        )
+    for var_n in ["U", "V", "W"]:
+        adcp[var_n][depth_mask] = np.nan
+
     # MAX_TILT = 0.8;
     # mask = adcp.TiltFactor<MAX_TILT;
     # adcp.U(:,mask) = NaN;
@@ -152,7 +178,7 @@ def CleanADCP(
     # adcp.W(:,mask) = NaN;
 
     # Maximum tilt
-    tilt_mask = adcp.TiltFactor < param.MAX_TILT
+    tilt_mask = np.abs(adcp.TiltFactor) < param.MAX_TILT
     for var_n in ["U", "V", "W"]:
         adcp[var_n][:, tilt_mask] = np.nan
 
@@ -231,15 +257,15 @@ def Inverse(
 
     profile = ADCPFiles.ADCPProfile()
 
-    profile.z = param.gz
-    profile.UVocn = np.zeros((len(param.gz), 2), dtype=np.complex128) * np.nan
-    profile.UVttw_solution = np.zeros((len(param.gz), 2), dtype=np.complex128) * np.nan
-    profile.UVttw_model = np.zeros((len(param.gz), 2), dtype=np.complex128) * np.nan
-    profile.time = np.zeros((len(param.gz), 2)) * np.nan
-    profile.UVerr = np.zeros((len(param.gz), 2)) * np.nan
-    profile.Wocn = np.zeros((len(param.gz), 2)) * np.nan
-    profile.Wttw_solution = np.zeros((len(param.gz), 2)) * np.nan
-    profile.Wttw_model = np.zeros((len(param.gz), 2)) * np.nan
+    profile.z = np.arange(0, param.depth_max + param.dz, param.dz)
+    profile.UVocn = np.zeros((len(profile.z), 2), dtype=np.complex128) * np.nan
+    profile.UVttw_solution = np.zeros((len(profile.z), 2), dtype=np.complex128) * np.nan
+    profile.UVttw_model = np.zeros((len(profile.z), 2), dtype=np.complex128) * np.nan
+    profile.time = np.zeros((len(profile.z), 2)) * np.nan
+    profile.UVerr = np.zeros((len(profile.z), 2)) * np.nan
+    profile.Wocn = np.zeros((len(profile.z), 2)) * np.nan
+    profile.Wttw_solution = np.zeros((len(profile.z), 2)) * np.nan
+    profile.Wttw_model = np.zeros((len(profile.z), 2)) * np.nan
 
     # Make a new regular time grid, from the first to the last gps fixes, which
     # has the same time interval as most ADCP emsembles.
@@ -362,9 +388,12 @@ def Inverse(
     # through-the-water motion =  U_ttw;
     # where U_drift is U_ocean interpolated onto the vehicle location
 
-    # gz=gz(gz<max(glider.ctd_depth)+median(diff(gz)));
+    # gz = transpose(0:dz:max([max(glider.ctd_depth) max(adcp.Z(:))]));
     # Nz = numel(gz);
-    gz = param.gz[param.gz < np.max(glider.ctd_depth) + np.nanmedian(np.diff(param.gz))]
+
+    gz = np.arange(0, max(np.max(glider.ctd_depth), param.depth_max))
+    # Note: gz might be smaller, or larger, than profile.z because it is
+    # optimized for this dive only, while profile.z is the same for the whole
     Nz = gz.size
     (Nbin, Nt) = np.shape(D.UV)
 
@@ -469,6 +498,7 @@ def Inverse(
     # Two ocean profiles
     # *matlab* - reshape needed because python sparse only allows 1d for initialization
     # *matlab* - iz is indexes that are one based
+    # pdb.set_trace()
     AiM = ADCPUtils.sparse(
         np.tile(np.atleast_2d(np.arange(Na)).T, 2).reshape(2 * Na),
         iz.reshape(2 * Na) - 1,

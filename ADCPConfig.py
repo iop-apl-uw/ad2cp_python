@@ -31,6 +31,7 @@
 ADCPConfig.py - Routines to process SG ADCP config file
 """
 
+# import pdb
 import pathlib
 import sys
 from dataclasses import field
@@ -63,6 +64,8 @@ class Params(ExtendedDataClass.ExtendedDataClass):
     sg: int = field(default=0)
     # Size of vertical grid bins used in inverse solution
     dz: float = field(default=5.0)
+    # Max depth for vertical grid bins used innverse solution
+    depth_max: float = field(default=1000.0)
     # surface blank (if W_SURFACE ~=0, glider velocity is zero AND ADCP data is ignored above that depth
     sfc_blank: float = field(default=3.0)
     # param.index_bins = 1:15
@@ -78,21 +81,13 @@ class Params(ExtendedDataClass.ExtendedDataClass):
     WMAX_error: float = field(default=0.05)
     # maximum relative velocity
     UMAX: float = field(default=0.5)
-
-    # Not configurable - set from glider data
-    # CONSIDER - move to glider object?
+    # Is the ADCP mounted upward or downward looking
+    up_looking: bool = field(default=True)
 
     # Min and max time for each data set
     time_limits: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
 
-    # restrict range bins
-    gz: npt.ArrayLike = field(default_factory=(lambda: np.zeros(0)))
-
     def __post_init__(self) -> None:
-        # Transposition - was in the matlab code, but doesn't look right for the python case
-        # self.gz = np.arange(0, 1000 + self.dz, self.dz)[:, np.newaxis]
-        self.gz = np.arange(0, 1000 + self.dz, self.dz)
-
         # TODO - short term hack for new input from the config yaml.  Right now, these
         # are not converted to the correct type by pydantic.
         try:

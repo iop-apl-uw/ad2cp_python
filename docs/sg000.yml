@@ -9,6 +9,8 @@ params:
   sg: 0
   # Size of vertical grid bins used in inverse solution
   dz: 5.0
+  # Max depth for vertical grid bins used innverse solution
+  depth_max: 1000.0
   # surface blank (if W_SURFACE ~=0, glider velocity is zero AND ADCP data is ignored above that depth
   sfc_blank: 3.0
   #  Which bins to use 
@@ -23,6 +25,8 @@ params:
   WMAX_error: 0.05
   # maximum relative velocity
   UMAX: 0.5
+  # Is the ADCP mounted upward or downward looking
+  up_looking: True
   
 weights:
   W_MEAS: 1.0  # measurement weight: ~ 1/(0.05);
