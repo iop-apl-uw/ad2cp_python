@@ -155,6 +155,9 @@ def main(
             cmdline_args=cmdline_args,
         )
 
+    global DEBUG_PDB
+    DEBUG_PDB = base_opts.debug_pdb
+
     BaseLogger(base_opts, include_time=True)
 
     # If called as an extension and no new netcdf filename created, bail out

@@ -1,6 +1,6 @@
 # -*- python-fmt -*-
 
-## Copyright (c) 2024  University of Washington.
+## Copyright (c) 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -346,6 +346,9 @@ def main(
             add_to_arguments=add_to_arguments,
             cmdline_args=cmdline_args,
         )
+
+    global DEBUG_PDB
+    DEBUG_PDB = base_opts.debug_pdb
 
     BaseLogger(base_opts)  # initializes BaseLog
 
