@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -80,6 +80,12 @@ def ADCPOptions(description: str, calling_module: str, cmdline_args: list[str] =
         help="Override default plot directory location",
         action=FullPathAction,
         default=None,
+    )
+    ap.add_argument(
+        "--debug_pdb",
+        help="Enter the debugger for selected exceptions",
+        action=argparse.BooleanOptionalAction,
+        default=False,
     )
 
     if calling_module == "SGADCP":

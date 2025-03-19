@@ -87,6 +87,9 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     if adcp_opts is None:
         return
 
+    global DEBUG_PDB
+    DEBUG_PDB = adcp_opts.debug_pdb
+
     # Initialize log
     ADCPLogger(adcp_opts, include_time=True)
 
@@ -392,6 +395,7 @@ if __name__ == "__main__":
     # Force to be in UTC
     os.environ["TZ"] = "UTC"
     time.tzset()
+    ret_val = 1
     try:
         ret_val = main()
     except Exception:

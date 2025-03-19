@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -415,6 +415,9 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     )
     if adcp_opts is None:
         return
+
+    global DEBUG_PDB
+    DEBUG_PDB = adcp_opts.debug_pdb
 
     # Initialize log
     ADCPLogger(adcp_opts, include_time=True)
