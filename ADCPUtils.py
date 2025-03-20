@@ -33,7 +33,7 @@ ADCPUtils.py - Utility functions
 
 import pathlib
 
-# import pdb
+import pdb
 import re
 import sys
 import warnings
@@ -496,25 +496,24 @@ def CreateNCVar(dso, template, key_name, data):
         dataarray for variable and matching qc variable
 
     """
-    # is_str = False
+    is_str = False
     if isinstance(data, str):
-        # Should be unused
-        inp_data = np.array(data, dtype=np.dtype(("S", len(data))))
-        # is_str = True
+        inp_data = netCDF4.stringtochar(np.array(data.encode()))
+        is_str = True
     elif np.ndim(data) == 0:
         # Scalar data
         inp_data = np.dtype(template[key_name].nc_type).type(data)
     else:
         inp_data = data.astype(template[key_name].nc_type)
 
-    if hasattr(template[key_name], "decimal_pts"):
+    if hasattr(template[key_name], "decimal_pts") and template[key_name].decimal_pts >= 0:
         inp_data = inp_data.round(template[key_name].decimal_pts)
 
     # Check for scalar variables
     if np.ndim(inp_data) == 0:
         if inp_data == np.nan:
             inp_data = template[key_name].nc_attribs.FillValue
-    else:
+    elif not is_str:
         inp_data[np.isnan(inp_data)] = template[key_name].nc_attribs.FillValue
 
     # assert len(template[key_name]["nc_dimensions"]) == 1
@@ -523,7 +522,10 @@ def CreateNCVar(dso, template, key_name, data):
 
     for ii, dim in enumerate(template[key_name].nc_dimensions):
         if dim not in dso.dimensions:
-            dso.createDimension(dim, np.shape(data)[ii])
+            if is_str:
+                dso.createDimension(dim, np.shape(inp_data)[ii])
+            else:
+                dso.createDimension(dim, np.shape(data)[ii])
 
     nc_var = dso.createVariable(
         template[key_name].nc_varname,
@@ -545,6 +547,18 @@ def CreateNCVar(dso, template, key_name, data):
 def CreateNCVars(dso, ad2cp_var_map, var_meta):
     for key_name, data in ad2cp_var_map.items():
         CreateNCVar(dso, var_meta, key_name, data)
+
+
+def WriteParamsWeights(
+    dso: netCDF4.Dataset,
+    weights,
+    params,
+    template,
+) -> None:
+    for key_name, data in weights.items():
+        CreateNCVar(dso, template, key_name, data)
+    for key_name, data in params.items():
+        CreateNCVar(dso, template, key_name, data)
 
 
 def GetMissionStr(dive_nc_file):

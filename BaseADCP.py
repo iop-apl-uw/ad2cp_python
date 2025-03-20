@@ -394,8 +394,8 @@ def main(
 
         log_info(f"Processing {dive_nc_file_name}")
 
-        if not param.sg:
-            param.sg = ds.glider
+        if not param.sg_id:
+            param.sg_id = ds.glider
 
         # Read real-time
         try:
@@ -495,6 +495,10 @@ def main(
         strip_meta = {}
         for key_n in ad2cp_variable_mapping:
             strip_meta[key_n] = var_meta[key_n]
+        for key_n in weights.keys():
+            strip_meta[key_n] = var_meta[key_n]
+        for key_n in param.keys():
+            strip_meta[key_n] = var_meta[key_n]
 
         # Create temporary output netcdf file
         tmp_filename = dive_nc_file_name.with_suffix(".tmpnc")
@@ -521,6 +525,14 @@ def main(
             ds.close()
             dso.close()
             continue
+            # Write out config
+        try:
+            ADCPUtils.WriteParamsWeights(dso, weights, param, var_meta)
+        except Exception:
+            DEBUG_PDB_F()
+            log_error(f"Problem creating config variables in {tmp_filename}", "exc")
+            dso.close()
+            return 1
 
         ds.close()
         dso.sync()

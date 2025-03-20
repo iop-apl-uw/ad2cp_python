@@ -43,8 +43,8 @@ import yaml
 from pydantic import (
     BaseModel,
     ConfigDict,
-    NonNegativeInt,
     StrictFloat,
+    StrictInt,
     StrictStr,
     ValidationError,
 )
@@ -61,14 +61,14 @@ else:
 @dataclass(config=dict(extra="forbid", arbitrary_types_allowed=True))
 class Params(ExtendedDataClass.ExtendedDataClass):
     # Gilder number int
-    sg: int = field(default=0)
+    sg_id: int = field(default=0)
     # Size of vertical grid bins used in inverse solution
     dz: float = field(default=5.0)
     # Max depth for vertical grid bins used innverse solution
     depth_max: float = field(default=1000.0)
-    # surface blank (if W_SURFACE ~=0, glider velocity is zero AND ADCP data is ignored above that depth
+    # surface blank (if W_SURFACE ~=0, glider velocity is zero AND ADCP data is ignored above that depth)
     sfc_blank: float = field(default=3.0)
-    # param.index_bins = 1:15
+    # Which bins to use in the solution
     index_bins: npt.ArrayLike = field(default_factory=(lambda: np.arange(15)))
     # 'gsm' or 'FlightModel'
     VEHICLE_MODEL: str = field(default="FlightModel")
@@ -198,8 +198,8 @@ class NCVarMeta(BaseModel):
     nc_varname: StrictStr
     nc_dimensions: list[StrictStr]
     nc_attribs: NCAttribs
-    nc_type: Literal["f", "d", "i"]
-    decimal_pts: NonNegativeInt
+    nc_type: Literal["f", "d", "i", "c"]
+    decimal_pts: StrictInt
     model_config = ConfigDict(extra="forbid")
 
 

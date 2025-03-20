@@ -188,6 +188,10 @@ def main(
     ]
     copy_ncattrs = {}
 
+    # Note: the weights and params are not collected for adding back into the timeseries file.
+    # If that feature is ever desired, then here is the place to add in those variables.
+    # Some additional machinery would need to be added to ADCPUtils.CreateNCVar to handle a
+    # different dimension definition
     mission_vars = {
         "inverse_ocean_velocity_north": False,
         "inverse_ocean_velocity_east": False,

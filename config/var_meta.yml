@@ -220,7 +220,7 @@ ad2cp_latitude:
     valid_max: 90.0
   nc_type: f
   decimal_pts: 4
-  
+
 #
 # Profile related
 #
@@ -417,7 +417,7 @@ profile_temperature:
   nc_varname: ad2cp_profile_temperature
   nc_attribs:
     FillValue: -999
-    instrument: inst_ctd      
+    instrument: inst_ctd
     description: corrected in-situ temperature
     units: degrees_C
     standard_name: sea_water_temperature
@@ -447,7 +447,7 @@ profile_salinity:
 
 #
 # Glider CTD related
-# 
+#
 glider_ctd_time:
   nc_varname: ctd_time
   nc_dimensions: ['glider_data_point']
@@ -479,7 +479,7 @@ glider_temperature:
   nc_varname: T
   nc_attribs:
     FillValue: -999
-    instrument: inst_ctd      
+    instrument: inst_ctd
     description: corrected in-situ temperature
     units: degrees_C
     standard_name: sea_water_temperature
@@ -535,3 +535,241 @@ glider_longitude:
     valid_max: 180.0
   nc_type: f
   decimal_pts: 4
+
+#
+# Params
+#
+sg_id:
+  nc_dimensions: []
+  nc_varname: ad2cp_param_sg_id
+  nc_attribs:
+    FillValue: -999
+    description: Gilder serial number
+    coverage_content_type: auxiliaryInformation
+    units: serial number
+  nc_type: i
+  decimal_pts: 3
+dz:
+  nc_dimensions: []
+  nc_varname: ad2cp_param_dz
+  nc_attribs:
+    FillValue: -999
+    description: Size of vertical grid bins used in inverse solution
+    coverage_content_type: auxiliaryInformation
+    units: m
+  nc_type: f
+  decimal_pts: 1
+depth_max:
+  nc_dimensions: []
+  nc_varname: ad2cp_param_depth_max
+  nc_attribs:
+    FillValue: -999
+    description: Max depth for vertical grid bins used innverse solution
+    coverage_content_type: auxiliaryInformation
+    units: m
+  nc_type: f
+  decimal_pts: 1
+sfc_blank:
+  nc_dimensions: []
+  nc_varname: ad2cp_param_sfc_blank
+  nc_attribs:
+    FillValue: -999
+    description: surface blank (if W_SURFACE ~=0, glider velocity is zero AND ADCP data is ignored above that depth)
+    coverage_content_type: auxiliaryInformation
+    units: m
+  nc_type: f
+  decimal_pts: 1
+index_bins:
+  nc_dimensions: ['index_bins_dim']
+  nc_varname: ad2cp_param_index_bins
+  nc_attribs:
+    FillValue: -999
+    description: Which bins to use in the solution
+    coverage_content_type: auxiliaryInformation
+    units: indicies
+  nc_type: i
+  decimal_pts: -1
+VEHICLE_MODEL:
+  nc_dimensions: ['VEHICLE_MODEL_dim']
+  nc_varname: ad2cp_param_VEHICLE_MODEL
+  nc_attribs:
+    FillValue: -999
+    description: gsm or FlightModel
+    coverage_content_type: auxiliaryInformation
+    units: string
+  nc_type: c
+  decimal_pts: -1
+use_glider_pressure:
+  nc_dimensions: []
+  nc_varname: ad2cp_param_use_glider_pressure
+  nc_attribs:
+    FillValue: -999
+    description: Use the glider pressure sensor instead of the ADCP pressure sensor
+    coverage_content_type: auxiliaryInformation
+    units: bool
+  nc_type: i
+  decimal_pts: -1
+MAX_TILT:
+  nc_dimensions: []
+  nc_varname: ad2cp_param_MAX_TILT
+  nc_attribs:
+    FillValue: -999
+    description: maximum tilt (*** probably not correct, since Nortek is using a 3-beam solution with different beam angles. It assumes a non-zero pitch).
+    coverage_content_type: auxiliaryInformation
+    units: degrees
+  nc_type: f
+  decimal_pts: 1
+WMAX_error:
+  nc_dimensions: []
+  nc_varname: ad2cp_param_WMAX_error
+  nc_attribs:
+    FillValue: -999
+    description: difference between vertical velocity measured by ADCP and vertical motion of the glider.
+    coverage_content_type: auxiliaryInformation
+    units: m/s
+  nc_type: f
+  decimal_pts: 1
+UMAX:
+  nc_dimensions: []
+  nc_varname: ad2cp_param_UMAX
+  nc_attribs:
+    FillValue: -999
+    description: maximum relative velocity
+    coverage_content_type: auxiliaryInformation
+    units: m/s
+  nc_type: f
+  decimal_pts: 1
+up_looking:
+  nc_dimensions: []
+  nc_varname: ad2cp_param_up_looking
+  nc_attribs:
+    FillValue: -999
+    description: Is the ADCP mounted upward
+    coverage_content_type: auxiliaryInformation
+    units: bool
+  nc_type: i
+  decimal_pts: -1
+time_limits:
+  nc_dimensions: ["time_limits_dim"]
+  nc_varname: ad2cp_param_time_limits
+  nc_attribs:
+    FillValue: -999
+    description: Min and max time for each data set
+    units: seconds since 1970-1-1 00:00:00
+    standard_name: time
+    coverage_content_type: physicalMeasurement
+  nc_type: d
+  decimal_pts: 2
+#
+# Weights
+#
+W_MEAS:
+  nc_dimensions: []
+  nc_varname: ad2cp_weight_W_MEAS
+  nc_attribs:
+    FillValue: -999
+    description: measurement weight ~ 1/(0.05)
+    coverage_content_type: auxiliaryInformation
+    units: scale_factor
+  nc_type: f
+  decimal_pts: 2
+OCN_SMOOTH:
+  nc_dimensions: []
+  nc_varname: ad2cp_weight_OCN_SMOOTH
+  nc_attribs:
+    FillValue: -999
+    description: 100/param.dz smoothness factors
+    coverage_content_type: auxiliaryInformation
+    units: scale_factor
+  nc_type: f
+  decimal_pts: 2
+VEH_SMOOTH:
+  nc_dimensions: []
+  nc_varname: ad2cp_weight_VEH_SMOOTH
+  nc_attribs:
+    FillValue: -999
+    description: smoothness factor
+    coverage_content_type: auxiliaryInformation
+    units: scale_factor
+  nc_type: f
+  decimal_pts: 2
+W_DAC:
+  nc_dimensions: []
+  nc_varname: ad2cp_weight_W_DAC
+  nc_attribs:
+    FillValue: -999
+    description: Weight for the total barotropic constraint (gps)
+    coverage_content_type: auxiliaryInformation
+    units: scale_factor
+  nc_type: f
+  decimal_pts: 2
+W_MODEL:
+  nc_dimensions: []
+  nc_varname: ad2cp_weight_W_MODEL
+  nc_attribs:
+    FillValue: -999
+    description: vehicle flight model weight (when we don't have ADCP data)
+    coverage_content_type: auxiliaryInformation
+    units: scale_factor
+  nc_type: f
+  decimal_pts: 2
+W_MODEL_DAC:
+  nc_dimensions: []
+  nc_varname: ad2cp_weight_W_MODEL_DAC
+  nc_attribs:
+    FillValue: -999
+    description: vehicle model dac weight
+    coverage_content_type: auxiliaryInformation
+    units: scale_factor
+  nc_type: f
+  decimal_pts: 2
+W_SURFACE:
+  nc_dimensions: []
+  nc_varname: ad2cp_weight_W_SURFACE
+  nc_attribs:
+    FillValue: -999
+    description: Weight for surface constraint (gps - surface drift)
+    coverage_content_type: auxiliaryInformation
+    units: scale_factor
+  nc_type: f
+  decimal_pts: 2
+W_OCN_DNUP:
+  nc_dimensions: []
+  nc_varname: ad2cp_weight_W_OCN_DNUP
+  nc_attribs:
+    FillValue: -999
+    description: Weight for down and up ocean profile to be the same.
+    coverage_content_type: auxiliaryInformation
+    units: scale_factor
+  nc_type: f
+  decimal_pts: 2
+W_deep:
+  nc_dimensions: []
+  nc_varname: ad2cp_weight_W_deep
+  nc_attribs:
+    FillValue: -999
+    description: Weight to make velocities below W_deep_z0 small
+    coverage_content_type: auxiliaryInformation
+    units: scale_factor
+  nc_type: f
+  decimal_pts: 2
+W_deep_z0:
+  nc_dimensions: []
+  nc_varname: ad2cp_weight_W_deep_z0
+  nc_attribs:
+    FillValue: -999
+    description: Upper depth for W_deep
+    coverage_content_type: auxiliaryInformation
+    units: m
+  nc_type: f
+  decimal_pts: 2
+W_MODEL_bottom:
+  nc_dimensions: []
+  nc_varname: ad2cp_weight_W_MODEL_bottom
+  nc_attribs:
+    FillValue: -999
+    description: Bool to set ttw speed zero at the bottom
+    coverage_content_type: auxiliaryInformation
+    units: bool
+  nc_type: i
+  decimal_pts: -1

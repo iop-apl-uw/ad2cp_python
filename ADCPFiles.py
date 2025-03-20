@@ -295,7 +295,7 @@ class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
         #     gps.Mtime = [gps.Mtime;G1.log_gps_time(ige)/86400+datenum(1970,1,1)];
         #   end
         # end
-        next_dive_ncf = ncf_name.parent / f"p{param.sg:03d}{self.dive+1:04d}.nc"
+        next_dive_ncf = ncf_name.parent / f"p{param.sg_id:03d}{self.dive+1:04d}.nc"
         if next_dive_ncf.exists():
             ds = ADCPUtils.open_netcdf_file(next_dive_ncf)
             if ds:

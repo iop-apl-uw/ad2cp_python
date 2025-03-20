@@ -206,8 +206,8 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         if ds is None:
             continue
 
-        if not param.sg:
-            param.sg = ds.glider
+        if not param.sg_id:
+            param.sg_id = ds.glider
 
         if not copy_ncattrs:
             for attr in global_nc_attrs:
@@ -354,7 +354,15 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         ADCPUtils.CreateNCVars(dso, ad2cp_variable_mapping, var_meta)
     except Exception:
         DEBUG_PDB_F()
-        log_error(f"Problem stripping creating variables in {output_filename}", "exc")
+        log_error(f"Problem creating variables in {output_filename}", "exc")
+        dso.close()
+        return 1
+
+    try:
+        ADCPUtils.WriteParamsWeights(dso, weights, param, var_meta)
+    except Exception:
+        DEBUG_PDB_F()
+        log_error(f"Problem creating config variables in {output_filename}", "exc")
         dso.close()
         return 1
 
