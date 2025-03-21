@@ -88,6 +88,7 @@ def main() -> None:
 
     ap.add_argument("--verbose", default=False, action="store_true", help="enable verbose output")
     ap.add_argument("--debug", default=False, action="store_true", help="enable debug output")
+    ap.add_argument("--debug_pdb", default=False, action="store_true", help="trap on exceptions")
     ap.add_argument(
         "--adcp_log",
         help="Name of output logfile",
@@ -98,6 +99,9 @@ def main() -> None:
     ap.add_argument("python_file", help="Python hdf5 file", action=ADCPOpts.FullPathAction)
 
     args = ap.parse_args()
+
+    global DEBUG_PDB
+    DEBUG_PDB = args.debug_pdb
 
     # Initialize log
     ADCPLogger(args, include_time=True)
