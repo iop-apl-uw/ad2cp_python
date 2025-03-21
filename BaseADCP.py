@@ -495,9 +495,9 @@ def main(
         strip_meta = {}
         for key_n in ad2cp_variable_mapping:
             strip_meta[key_n] = var_meta[key_n]
-        for key_n in weights.keys():
+        for key_n in weights.keys():  # noqa: SIM118
             strip_meta[key_n] = var_meta[key_n]
-        for key_n in param.keys():
+        for key_n in param.keys():  # noqa: SIM118
             strip_meta[key_n] = var_meta[key_n]
 
         # Create temporary output netcdf file
