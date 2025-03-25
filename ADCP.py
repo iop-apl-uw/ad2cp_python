@@ -391,7 +391,7 @@ def Inverse(
     # gz = transpose(0:dz:max([max(glider.ctd_depth) max(adcp.Z(:))]));
     # Nz = numel(gz);
 
-    gz = np.arange(0, max(np.max(glider.ctd_depth), param.depth_max))
+    gz = np.arange(0, max(np.max(glider.ctd_depth), param.depth_max), param.dz)
     # Note: gz might be smaller, or larger, than profile.z because it is
     # optimized for this dive only, while profile.z is the same for the whole
     Nz = gz.size
