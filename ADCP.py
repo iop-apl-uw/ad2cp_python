@@ -46,16 +46,16 @@ import ADCPFiles
 import ADCPUtils
 
 if "BaseLog" in sys.modules:
-    from BaseLog import log_warning
+    from BaseLog import log_error, log_warning
 else:
-    from ADCPLog import log_warning
+    from ADCPLog import log_error, log_warning
 
 
 def CleanADCP(
     adcp: ADCPFiles.ADCPRealtimeData,
     glider: ADCPFiles.SGData,
     param: ADCPConfig.Params,
-) -> None:
+) -> ADCPFiles.ADCPRealtimeData | None:
     """Performs some housekeeping cleanup on the adcp data"""
 
     # ruff: noqa: SIM118
@@ -107,7 +107,9 @@ def CleanADCP(
     )
     Svel = f(adcp.time)
 
-    ADCPUtils.intnan(Svel)
+    if ADCPUtils.intnan(Svel) is None:
+        log_error("Failed interpolation of nans in sound velocity")
+        return None
 
     adcp.Svel = Svel
 
@@ -238,7 +240,7 @@ def CleanADCP(
         elif len(var_s) > 1 and var_s[1] == nens:
             adcp[var_n] = adcp[var_n][:, ine]
 
-    return
+    return adcp
 
 
 # Matches ad2cp_inverse6 from matlab code

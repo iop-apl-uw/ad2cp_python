@@ -243,7 +243,9 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
 
         # Clean up adcp data
         try:
-            ADCP.CleanADCP(adcp_realtime, glider, param)
+            if ADCP.CleanADCP(adcp_realtime, glider, param) is None:
+                log_error("Failed cleaning realtime adcp data")
+                continue
         except Exception:
             DEBUG_PDB_F()
             log_error("Problem cleaning realtime adcp data", "exc")

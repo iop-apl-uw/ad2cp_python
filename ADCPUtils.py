@@ -108,13 +108,16 @@ def open_netcdf_file(
     return ds
 
 
-def intnan(y: NDArray[np.float64]) -> None:
+def intnan(y: NDArray[np.float64]) -> NDArray[np.float64] | None:
     """Interpolate over NaNs.  Leading and trailing NaNs are replaced wtih the first/last
     non-nan value. Works on one dimensional items only
     """
     sz = y.size
     good_mask = np.logical_not(np.isnan(y))
-    i_good = np.nonzero(good_mask)
+    i_good = np.squeeze(np.nonzero(good_mask))
+    if i_good.size == 0:
+        log_error("No good points - cannot interpolate over nans")
+        return None
     # Fill in the tails
     y[0 : np.min(i_good)] = y[np.min(i_good)]
     y[np.max(i_good) + 1 :] = y[np.max(i_good)]
@@ -129,6 +132,7 @@ def intnan(y: NDArray[np.float64]) -> None:
         # fill_value="extrapolate",
     )
     y[np.logical_not(good_mask)] = f(t[np.logical_not(good_mask)])
+    return y
 
 
 # function dx = lon_to_m(dlon, alat)
