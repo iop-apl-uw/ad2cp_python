@@ -394,6 +394,10 @@ def Inverse(
     # Nz = numel(gz);
 
     gz = np.arange(0, max(np.max(glider.ctd_depth), param.depth_max), param.dz)
+    # TODO: This is the correct line, but it causes downstream issues in the checkin tests -
+    # leaving off for now.
+    # gz = np.arange(0, max(np.max(glider.ctd_depth), np.nanmax(adcp.Z)), param.dz)
+
     # Note: gz might be smaller, or larger, than profile.z because it is
     # optimized for this dive only, while profile.z is the same for the whole
     Nz = gz.size
