@@ -428,6 +428,10 @@ def main(
             ds.close()
             continue
 
+        if not adcp_realtime.U.size:
+            log_error("No ADCP data left after data cleaning - bailing out")
+            continue
+
         # Perfrom inverse
         try:
             D, profile, variables_for_plot, inverse_tmp = ADCP.Inverse(adcp_realtime, gps, glider, weights, param, {})
