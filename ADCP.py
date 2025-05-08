@@ -33,7 +33,6 @@ ADCP.py - Main caclulation functions
 
 # TODO - review all code blocks and pull out the tight intermixed matlab
 
-# import pdb
 import sys
 import warnings
 from typing import Any
@@ -86,8 +85,8 @@ def CleanADCP(
         # If the ADCP is downlooking, TiltFactor should be negative.
         adcp.Z = adcp.Z0 - np.atleast_2d(adcp.Range).T * adcp.TiltFactor
     else:
-        # TOOO - convert adcp_pressure into depth, then generate the Z and Z0
-        raise RuntimeError("NYI")
+        adcp.Z0 = adcp.pressure * 1e4 / 1030 / 9.8  # quick way to calculate depth from pressure
+        adcp.Z = adcp.Z0 - np.atleast_2d(adcp.Range).T * adcp.TiltFactor
 
     # % fix soundspeed
     # if isfield(adcp,'Svel')
