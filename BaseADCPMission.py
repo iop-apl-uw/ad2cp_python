@@ -266,6 +266,11 @@ def main(
             log_error(f"Problems with loading {ncf_name}", "exc")
             continue
 
+        imax = np.argmax(glider_ctd_depth)
+        # For now, only handle full down and up profiles
+        if glider_longitude[: imax + 1].size <= 1 or glider_longitude[imax:].size <= 1:
+            continue
+
         if not copy_ncattrs:
             for attr in global_nc_attrs:
                 copy_ncattrs[attr] = ds.getncattr(attr)
@@ -281,7 +286,6 @@ def main(
         lat_min = min(lat_min, np.nanmin(glider_latitude))
         lat_max = max(lat_max, np.nanmax(glider_latitude))
 
-        imax = np.argmax(glider_ctd_depth)
         mission_lon.append(np.nanmean(glider_longitude[: imax + 1]))
         mission_lon.append(np.nanmean(glider_longitude[imax:]))
         mission_lat.append(np.nanmean(glider_latitude[: imax + 1]))
