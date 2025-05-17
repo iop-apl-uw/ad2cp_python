@@ -83,6 +83,7 @@ def load_additional_arguments():
                     "Base",
                     "BaseADCP",
                     "BaseADCPMission",
+                    "MakeDiveProfiles",
                     "Reprocess",
                     "MakeMissionProfile",
                     "MakeMissionTimeSeries",
@@ -101,6 +102,7 @@ def load_additional_arguments():
                 (
                     "Base",
                     "BaseADCPMission",
+                    "MakeDiveProfiles",
                     "Reprocess",
                     "MakeMissionProfile",
                     "MakeMissionTimeSeries",
