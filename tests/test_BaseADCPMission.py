@@ -63,7 +63,7 @@ def test_extension(caplog):
     )
 
     # Check for variables
-    dsi = xr.load_dataset(mission_dir.joinpath("SG171_EKAMSAT_2024_adcp_profile_timeseries.nc"))
+    dsi = xr.load_dataset(mission_dir.joinpath("sg171_EKAMSAT_2024_adcp_profile_timeseries.nc"))
 
     var_dict = {
         "ad2cp_inv_profile_uocn": np.dtype("float32"),
