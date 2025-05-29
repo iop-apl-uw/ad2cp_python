@@ -376,8 +376,8 @@ def bindata(x, y, gx):
         Current implimentation only handles the 1-D case
     """
     # x=x(:);y=y(:);
-    x = np.squeeze(x)
-    y = np.squeeze(y)
+    x = np.atleast_1d(np.squeeze(x))
+    y = np.atleast_1d(np.squeeze(y))
 
     # idx=find(~isnan(y));
     # if (isempty(idx)) b=nan*gx;n=nan*gx;s=nan*gx;return;end
