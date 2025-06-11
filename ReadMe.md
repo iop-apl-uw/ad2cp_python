@@ -35,7 +35,11 @@ into `/usr/local/basestation3/adcp` on the basestation machine.  Starting with b
 the required packages for this software are included in the basestation3 `requirements.txt` file, so by following the basestation3 
 setup the correct packages will be installed.
 
-To enable this processing code to be run as part of the basestation3 conversion, add the extension:
+To enable this processing code to be run as part of the basestation3 conversion, first ensure that
+the data conversion program is compiled.  The source code is located in `/usr/local/basestation3/Sensors/sc2mat.c`, 
+with instructions on compilation included in the comments at the top of the file.  
+
+Next, add the extension:
 
 	adcp/BaseADCP.py
 	
@@ -53,7 +57,7 @@ To optionally generate a whole mission netcdf file that contains same data outpu
 
     adcp/BaseADCPMission.py
 	
-to the `[mission]` section of any of the `.extension` files listed above.  Note: the generation of this netcdf file is a prerequisite for generating whole mission section plots.
+to the `[missionearly]` section of any of the `.extension` files listed above.  Note: the generation of this netcdf file is a prerequisite for generating whole mission section plots.
 
 To add the plotting routines to the basestation3 processing stream, first create the directory:
 
