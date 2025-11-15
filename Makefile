@@ -3,20 +3,20 @@
 all: rufffmt rufflint mypy test
 
 rufflint:
-	-ruff check .
+	-uv run ruff check .
 
 rufffmt:
-	-ruff check --select I --fix *py tests/*py
-	-ruff format *py tests/*py 
+	-uv run ruff check --select I --fix *py tests/*py
+	-uv run ruff format *py tests/*py 
 
 mypy:
-	-mypy
+	-uv run mypy
 
 test:
-	-pytest --cov --cov-report term-missing tests/
+	-uv run pytest --cov --cov-report term-missing tests/
 
 testhtml:
-	-pytest --cov --cov-report html tests/
+	-uv run pytest --cov --cov-report html tests/
 
 # Requires act tool to be installed
 # For MacOS

@@ -1,3 +1,44 @@
+[project]
+name = "seaglider_nortex_adcp_processing"
+version = "0.0.1"
+description = "Shore side processing software for the Nortek Signature 1000 ADCP system"
+readme = "Readme.md"
+requires-python = "==3.10.19"
+dependencies = [
+    # Note - these apply to the project being run stand-alone
+    # When running via the Seaglider Basestation extension, the pyproject.toml for the project
+    # should be used.
+    "numpy==1.26.4",
+    "scipy==1.14.1",
+    "gsw==3.6.19",
+    "netCDF4==1.7.2",
+    "xarray==2024.10.0",
+    "h5py==3.12.1",
+    "pyproj==3.7.0",
+    "cmocean==4.0.3",
+    "pydantic==2.9.2",
+    "PyYAML==6.0.2",
+]
+[project.optional-dependencies]
+ci = [
+    ## Testing
+    "pytest==8.3.3",
+    "pytest-cov==6.0.0",
+    ## Linting
+    "ruff==0.7.2",
+]
+dev = [
+    ## Static Typing
+    "mypy==1.13.0",
+    "types-PyYAML",
+    ## Documentation (fill in)
+    "mkdocs",
+    "mkdocstrings[python]",
+    "mkdocs-material",
+    ## Misc
+    "ipython",
+    "flynt",
+]
 [tool.mypy]
 plugins = ['numpy.typing.mypy_plugin', 'pydantic.mypy']
 # This only applies to the basestation extension being checked

@@ -27,8 +27,9 @@ future, we will have the matlab version available for use.
 
 # Installation
 
-For standalone processing, download the code and install the required packages via `pip install -r requirements.txt`.  As 
-with any python code project, use of a virutal environemnt setup is highly recommended.
+For standalone processing, download the code (either by cloning the repo, or downloading the code directly).  
+Python library dependencies are listed in ```pyproject.toml``` under ```dependencies```.  
+For setting up a virtual environment or running directly, [uv](https://github.com/astral-sh/uv) is highly recommended. 
 
 For installation in an exisitng [basestation3](https://github.com/iop-apl-uw/basestation3) setup, place a copy of this code
 into `/usr/local/basestation3/adcp` on the basestation machine.  Starting with basestation3 release [v3.0.3](https://github.com/iop-apl-uw/basestation3/releases/tag/v3.0.3)
@@ -77,11 +78,11 @@ To enable plotting of the whole misison netcdf file (see ```adcp/BaseADCPMission
 
 The standalone driver is `SGADCP.py`.  Run 
 
-	python SGADCP.py --help
+	[uv run | python] SGADCP.py --help
 
-The standalone driver for plotting is `SGADCPPlot.py`.  Run 
+to see the command line usage. The standalone driver for plotting is `SGADCPPlot.py`.  Run 
 
-	python SGADCPPlot.py --help
+	[uv run | python] SGADCPPlot.py --help
 
 to see the command line usage.  The Seaglider per-dive netCDF files are not updated or altered using the program.
 
