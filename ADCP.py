@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -392,13 +392,12 @@ def Inverse(
     # gz = transpose(0:dz:max([max(glider.ctd_depth) max(adcp.Z(:))]));
     # Nz = numel(gz);
 
-    gz = np.arange(0, max(np.max(glider.ctd_depth), param.depth_max), param.dz)
-    # TODO: This is the correct line, but it causes downstream issues in the checkin tests -
-    # leaving off for now.
-    # gz = np.arange(0, max(np.max(glider.ctd_depth), np.nanmax(adcp.Z)), param.dz)
-
+    # ocean vertical grid (gz) reaches the maximum measured depth (not just the maximum glider depth)
+    # Adding param.dz to end of range to ensure the largest value in gz exceeds maximum observed depth
+    gz = np.arange(0, max(np.max(glider.ctd_depth), np.nanmax(adcp.Z)) + param.dz, param.dz)
     # Note: gz might be smaller, or larger, than profile.z because it is
-    # optimized for this dive only, while profile.z is the same for the whole
+    #  optimized for this dive only, while profile.z is the same for the whole mission.
+
     Nz = gz.size
     (Nbin, Nt) = np.shape(D.UV)
 
