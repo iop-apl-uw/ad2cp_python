@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -49,6 +49,32 @@ from BaseLog import log_info, log_warning
 from Plotting import add_arguments, plotdivesingle
 
 
+@add_arguments(
+    additional_arguments={
+        "plot_ocean_velocity_xmin": BaseOptsType.options_t(
+            None,
+            ("Base", "BasePlot", "Reprocess"),
+            ("--plot_ocean_velocity_xmin",),
+            float,
+            {
+                "help": "Min value for the x-axis",
+                "section": "plotting",
+                "option_group": "plotting",
+            },
+        ),
+        "plot_ocean_velocity_xmax": BaseOptsType.options_t(
+            None,
+            ("Base", "BasePlot", "Reprocess"),
+            ("--plot_ocean_velocity_xmax",),
+            float,
+            {
+                "help": "Max value for the x-axis",
+                "section": "plotting",
+                "option_group": "plotting",
+            },
+        ),
+    }
+)
 @plotdivesingle
 def plot_ocean_velocity(
     base_opts: BaseOpts.BaseOptions,
@@ -170,6 +196,7 @@ def plot_ocean_velocity(
             "xaxis": {
                 "title": "Velocity (m/s)",
                 "showgrid": True,
+                "range": [base_opts.plot_ocean_velocity_xmin, base_opts.plot_ocean_velocity_xmax],
             },
             "yaxis": {
                 "title": "Depth (m)",
@@ -178,6 +205,7 @@ def plot_ocean_velocity(
             "xaxis2": {
                 "title": "Velocity (m/s)",
                 "showgrid": True,
+                "range": [base_opts.plot_ocean_velocity_xmin, base_opts.plot_ocean_velocity_xmax],
             },
             "yaxis2": {
                 "title": "Depth (m)",
