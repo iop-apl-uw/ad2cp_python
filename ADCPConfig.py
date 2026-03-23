@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -105,14 +105,14 @@ class Params(ExtendedDataClass.ExtendedDataClass):
 @dataclass(config=dict(extra="forbid"))
 class Weights(ExtendedDataClass.ExtendedDataClass):
     W_MEAS: float = field(default=1)  # measurement weight: ~ 1/(0.05);
-    OCN_SMOOTH: float = field(default=1)  # 100/param.dz; % smoothness factors
+    OCN_SMOOTH: float = field(default=2)  # 100/param.dz; % smoothness factors
     VEH_SMOOTH: float = field(default=1)  # smoothness factors
-    W_DAC: float = field(default=4)  # Weight for the total barotropic constraint (gps)
-    W_MODEL: float = field(default=1)  # vehicle flight model weight (when we don't have ADCP data).
-    W_MODEL_DAC: float = field(default=2)  # vehicle model dac weight
+    W_DAC: float = field(default=5)  # Weight for the total barotropic constraint (gps)
+    W_MODEL: float = field(default=0)  # vehicle flight model weight (when we don't have ADCP data).
+    W_MODEL_DAC: float = field(default=0)  # vehicle model dac weight
     W_SURFACE: float = field(default=1)  # Weight for surface constraint (gps - surface drift)
-    W_OCN_DNUP: float = field(default=2)  # Weight for down and up ocean profile to be the same.
-    W_deep: float = field(default=0.1)  # Weight to make velocities below W_deep_z0 small
+    W_OCN_DNUP: float = field(default=10)  # Weight for down and up ocean profile to be the same.
+    W_deep: float = field(default=0)  # Weight to make velocities below W_deep_z0 small
     W_deep_z0: float = field(default=500)
     W_MODEL_bottom: bool = field(default=False)  # Bool to set ttw speed zero at the bottom
 
