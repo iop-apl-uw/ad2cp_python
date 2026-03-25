@@ -250,6 +250,18 @@ def plot_ocean_velocity(
                 "action": "store_true",
             },
         ),
+        "ocean_velocity_3d_cmax": BaseOptsType.options_t(
+            None,
+            ("Base", "BasePlot", "Reprocess"),
+            ("--ocean_velocity_3d_cmax",),
+            float,
+            {
+                "help": "Max value for the colormap in m/s",
+                "section": "plotting",
+                "option_group": "plotting",
+                # "action": "store_true",
+            },
+        ),
     }
 )
 @plotdivesingle
@@ -328,6 +340,9 @@ def plot_ocean_velocity_3d(
             "sizeref": 5,  # Looks pretty good for both shallow and deep dives
             "hovertemplate": "Ocean Velocity<br>Northward %{u:.2f} m/s<br>"
             "Eastward %{v:.2f} m/s<br>Vert %{w:.2f} m/s<extra></extra>",
+            "cmin": None if base_opts.ocean_velocity_3d_cmax is None else 0.0,
+            "cmax": base_opts.ocean_velocity_3d_cmax,
+            # "anchor": "tip",
         }
     )
 
