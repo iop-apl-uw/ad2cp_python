@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -44,9 +44,9 @@ import xarray as xr
 from numpy.typing import NDArray
 
 if "BaseLog" in sys.modules:
-    from BaseLog import log_critical, log_error, log_warning
+    from BaseLog import log_critical, log_error, log_info, log_warning
 else:
-    from ADCPLog import log_critical, log_error, log_warning
+    from ADCPLog import log_critical, log_error, log_info, log_warning
 
 required_python_version = (3, 10, 9)
 required_numpy_version = "1.26.0"
@@ -59,6 +59,21 @@ def normalize_version(v: str) -> list[int]:
         v = str(v)  # very old versions of base_station_version for example were stored as floats
     return [int(x) for x in re.sub(r"(\.0+)*$", "", v).split(".")]
 
+#TODO - when pythnon version is greater then 3.11, go to this approach to report the version
+# import tomllib
+# from pathlib import Path
+
+# # Adjust path to find your pyproject.toml relative to the script
+# path = Path(__file__).parent / "pyproject.toml"
+
+# with open(path, "rb") as f:
+#     data = tomllib.load(f)
+
+# # Structure depends on your build backend (Poetry vs. Standard PEP 621)
+# version = data.get("project", {}).get("version") or \
+#           data.get("tool", {}).get("poetry", {}).get("version")
+
+# print(f"Local version: {version}")
 
 def check_versions() -> int:
     """
@@ -68,6 +83,28 @@ def check_versions() -> int:
         0 for no issue, 1 for version outside minimum
     """
 
+    log_info("ADCP version: 0.0.1")
+
+    # TODO - get this working
+    # Try for the commit id
+    # cmd_line = f"git --git-dir {pathlib.Path(base_opts.basestation_directory) / '.git'} describe --always"
+
+    # try:
+    #     sts, fo = run_cmd_shell(cmd_line)
+    #     if not sts and fo is not None:
+    #         log_info(f"Commit-ID: {fo.readline().decode().rstrip()}")
+    #         fo.close()
+    #     else:
+    #         log_info("Commit-ID: unknown")
+    # except Exception:
+    #     log_info("Commit-ID: unknown")
+
+    # Check python version
+    log_info(
+        "Python version %d.%d.%d"
+        % (sys.version_info[0], sys.version_info[1], sys.version_info[2])
+    )
+    
     # Python version
     if sys.version_info < (3, 10):
         log_error("Python version 3.10 at minimum is required")
