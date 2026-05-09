@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -40,6 +40,7 @@ import typing
 
 import gsw
 import numpy as np
+import plotly.graph_objects
 import xarray as xr
 import yaml
 from plotly.subplots import make_subplots
@@ -78,7 +79,7 @@ def mission_oceanvelocityprofile(
     dive=None,
     generate_plots=True,
     dbcon=None,
-) -> tuple[list, list]:
+) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     ret_plots = []
     ret_figs = []
 

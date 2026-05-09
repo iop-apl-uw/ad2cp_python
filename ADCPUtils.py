@@ -59,7 +59,8 @@ def normalize_version(v: str) -> list[int]:
         v = str(v)  # very old versions of base_station_version for example were stored as floats
     return [int(x) for x in re.sub(r"(\.0+)*$", "", v).split(".")]
 
-#TODO - when pythnon version is greater then 3.11, go to this approach to report the version
+
+# TODO - when python version is greater then 3.11, go to this approach to report the version
 # import tomllib
 # from pathlib import Path
 
@@ -74,6 +75,7 @@ def normalize_version(v: str) -> list[int]:
 #           data.get("tool", {}).get("poetry", {}).get("version")
 
 # print(f"Local version: {version}")
+
 
 def check_versions() -> int:
     """
@@ -100,11 +102,8 @@ def check_versions() -> int:
     #     log_info("Commit-ID: unknown")
 
     # Check python version
-    log_info(
-        "Python version %d.%d.%d"
-        % (sys.version_info[0], sys.version_info[1], sys.version_info[2])
-    )
-    
+    log_info("Python version %d.%d.%d" % (sys.version_info[0], sys.version_info[1], sys.version_info[2]))
+
     # Python version
     if sys.version_info < (3, 10):
         log_error("Python version 3.10 at minimum is required")
