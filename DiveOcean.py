@@ -38,6 +38,7 @@ import typing
 
 import numpy as np
 import plotly.graph_objects
+import plotly.subplots
 import scipy
 
 if typing.TYPE_CHECKING:
@@ -54,7 +55,7 @@ from Plotting import add_arguments, plotdivesingle
     additional_arguments={
         "plot_ocean_velocity_xmin": BaseOptsType.options_t(
             None,
-            ("Base", "BasePlot", "Reprocess"),
+            {"Base", "BasePlot", "Reprocess"},
             ("--plot_ocean_velocity_xmin",),
             float,
             {
@@ -65,7 +66,7 @@ from Plotting import add_arguments, plotdivesingle
         ),
         "plot_ocean_velocity_xmax": BaseOptsType.options_t(
             None,
-            ("Base", "BasePlot", "Reprocess"),
+            {"Base", "BasePlot", "Reprocess"},
             ("--plot_ocean_velocity_xmax",),
             float,
             {
@@ -82,7 +83,7 @@ def plot_ocean_velocity(
     dive_nc_file: scipy.io._netcdf.netcdf_file,
     generate_plots=True,
     dbcon=None,
-) -> tuple[list, list]:
+) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots ocean velocity"""
 
     ret_plots = []
@@ -241,7 +242,7 @@ def plot_ocean_velocity(
     additional_arguments={
         "enable_ocean_velocity_3d": BaseOptsType.options_t(
             False,
-            ("Base", "BasePlot", "Reprocess"),
+            {"Base", "BasePlot", "Reprocess"},
             ("--ocean_velocity_3d",),
             bool,
             {
@@ -253,7 +254,7 @@ def plot_ocean_velocity(
         ),
         "ocean_velocity_3d_cmax": BaseOptsType.options_t(
             None,
-            ("Base", "BasePlot", "Reprocess"),
+            {"Base", "BasePlot", "Reprocess"},
             ("--ocean_velocity_3d_cmax",),
             float,
             {
