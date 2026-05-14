@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -92,11 +92,11 @@ def main() -> None:
     ap.add_argument(
         "--adcp_log",
         help="Name of output logfile",
-        action=ADCPOpts.FullPathAction,
+        action=ADCPOpts.FullPathlibAction,
     )
-    ap.add_argument("mat_file", help="Matlab file", action=ADCPOpts.FullPathAction)
+    ap.add_argument("mat_file", help="Matlab file", action=ADCPOpts.FullPathliAction)
 
-    ap.add_argument("python_file", help="Python hdf5 file", action=ADCPOpts.FullPathAction)
+    ap.add_argument("python_file", help="Python hdf5 file", action=ADCPOpts.FullPathlibAction)
 
     args = ap.parse_args()
 

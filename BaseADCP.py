@@ -1,6 +1,6 @@
 # -*- python-fmt -*-
 
-## Copyright (c) 2024, 2025  University of Washington.
+## Copyright (c) 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -181,8 +181,6 @@ def init_extension(module_name: str, base_opts: BaseOpts.BaseOptions | None = No
         log_error("No datafile supplied for init_extension - version mismatch?")
         return -1
 
-    # TODO - remove when BaseOpts FullPath is converted to pathlib
-    base_opts.adcp_var_meta_file = pathlib.Path(base_opts.adcp_var_meta_file)
     var_meta = ADCPConfig.LoadVarMeta(base_opts.adcp_var_meta_file)
 
     # CONSIDER - this should data driven from the above list
@@ -222,6 +220,7 @@ def init_extension(module_name: str, base_opts: BaseOpts.BaseOptions | None = No
     init_dict[module_name] = {
         "netcdf_metadata_adds": adds_dict,
     }
+    return 0
 
 
 def load_additional_arguments():
@@ -238,26 +237,26 @@ def load_additional_arguments():
         {
             "adcp_config_file": BaseOptsType.options_t(
                 "",
-                (
+                {
                     "Base",
                     "BaseADCP",
                     "Reprocess",
                     "MakeMissionProfile",
                     "MakeDiveProfiles",
                     "MakeMissionTimeSeries",
-                ),
+                },
                 ("--adcp_config_file",),
-                BaseOpts.FullPath,
+                BaseOpts.FullPathlib,
                 {
                     "help": "ADCP configiuration YAML file",
                     "section": "adcp",
                     "option_group": "adcp",
-                    "action": BaseOpts.FullPathAction,
+                    "action": BaseOpts.FullPathlibAction,
                 },
             ),
             "adcp_var_meta_file": BaseOptsType.options_t(
                 pathlib.Path(__file__).parent.joinpath("config/var_meta.yml"),
-                (
+                {
                     "Base",
                     "BaseADCP",
                     "BaseADCPMission",
@@ -265,26 +264,26 @@ def load_additional_arguments():
                     "MakeDiveProfiles",
                     "MakeMissionProfile",
                     "MakeMissionTimeSeries",
-                ),
+                },
                 ("--adcp_var_meta_file",),
-                BaseOpts.FullPath,
+                BaseOpts.FullPathlib,
                 {
                     "help": "ADCP variable metadata configiuration YAML file",
                     "section": "adcp",
                     "option_group": "adcp",
-                    "action": BaseOpts.FullPathAction,
+                    "action": BaseOpts.FullPathlibAction,
                 },
             ),
             "adcp_include_frame_vel": BaseOptsType.options_t(
                 False,
-                (
+                {
                     "Base",
                     "BaseADCP",
                     "Reprocess",
                     "MakeDiveProfiles",
                     "MakeMissionProfile",
                     "MakeMissionTimeSeries",
-                ),
+                },
                 ("--adcp_include_frame_vel",),
                 bool,
                 {
@@ -296,14 +295,14 @@ def load_additional_arguments():
             ),
             "adcp_include_updated_latlon": BaseOptsType.options_t(
                 False,
-                (
+                {
                     "Base",
                     "BaseADCP",
                     "MakeDiveProfiles",
                     "Reprocess",
                     "MakeMissionProfile",
                     "MakeMissionTimeSeries",
-                ),
+                },
                 ("--adcp_include_updated_latlon",),
                 bool,
                 {
@@ -379,11 +378,10 @@ def main(
     if not param:
         return 1
 
-    # TODO - remove when BaseOpts FullPath is converted to pathlib
-    base_opts.adcp_var_meta_file = pathlib.Path(base_opts.adcp_var_meta_file)
     var_meta = ADCPConfig.LoadVarMeta(base_opts.adcp_var_meta_file)
 
     for dive_nc_file_name in dive_nc_file_names:
+        # TODO - remove when collect_nc_perdive_files is converted to pathlib
         dive_nc_file_name = pathlib.Path(dive_nc_file_name)
 
         try:

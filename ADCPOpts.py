@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -38,7 +38,7 @@ from collections.abc import Sequence
 from typing import Any
 
 
-class FullPathAction(argparse.Action):
+class FullPathlibAction(argparse.Action):
     def __init__(self, option_strings: Any, dest: Any, nargs: Any = None, **kwargs: Any) -> None:
         # if nargs is not None:
         #    raise ValueError("nargs not allowed")
@@ -73,12 +73,12 @@ def ADCPOptions(description: str, calling_module: str, cmdline_args: list[str] =
     ap.add_argument(
         "--adcp_log",
         help="Name of output logfile",
-        action=FullPathAction,
+        action=FullPathlibAction,
     )
     ap.add_argument(
         "--plot_directory",
         help="Override default plot directory location",
-        action=FullPathAction,
+        action=FullPathlibAction,
         default=None,
     )
     ap.add_argument(
@@ -92,11 +92,11 @@ def ADCPOptions(description: str, calling_module: str, cmdline_args: list[str] =
         ap.add_argument(
             "--mission_dir",
             help="Directory where profile netcdfs are located",
-            action=FullPathAction,
+            action=FullPathlibAction,
             required=True,
         )
 
-        ap.add_argument("--adcp_config_file", help="Configuration input file", action=FullPathAction, default="")
+        ap.add_argument("--adcp_config_file", help="Configuration input file", action=FullPathlibAction, default="")
 
         ap.add_argument(
             "--save_details",
@@ -108,14 +108,14 @@ def ADCPOptions(description: str, calling_module: str, cmdline_args: list[str] =
         ap.add_argument(
             "--var_meta_filename",
             help="ADCP variable metadata configiuration YAML file",
-            action=FullPathAction,
+            action=FullPathlibAction,
             default=pathlib.Path(__file__).parent.joinpath("config/var_meta.yml"),
         )
 
         ap.add_argument(
             "--global_meta_filename",
             help="ADCP global metadata configiuration YAML file",
-            action=FullPathAction,
+            action=FullPathlibAction,
             default=None,
         )
 
@@ -129,7 +129,7 @@ def ADCPOptions(description: str, calling_module: str, cmdline_args: list[str] =
         ap.add_argument("ncf_files", help="Seaglider netcdf files", nargs="*")
 
     if calling_module == "SGADCPPlot":
-        ap.add_argument("ncf_filename", help="Seaglider ADCP processing output netcdf file", action=FullPathAction)
+        ap.add_argument("ncf_filename", help="Seaglider ADCP processing output netcdf file", action=FullPathlibAction)
         ap.add_argument("--min_plot_depth", help="Minimum depth to plot", type=float, default=0.0)
         ap.add_argument("--max_plot_depth", help="Maximum depth to plot", type=float, default=1000.0)
 

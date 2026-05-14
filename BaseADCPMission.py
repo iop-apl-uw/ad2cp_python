@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -79,7 +79,7 @@ def load_additional_arguments():
         {
             "adcp_var_meta_file": BaseOptsType.options_t(
                 pathlib.Path(__file__).parent.joinpath("config/var_meta.yml"),
-                (
+                {
                     "Base",
                     "BaseADCP",
                     "BaseADCPMission",
@@ -87,7 +87,7 @@ def load_additional_arguments():
                     "Reprocess",
                     "MakeMissionProfile",
                     "MakeMissionTimeSeries",
-                ),
+                },
                 ("--adcp_var_meta_file",),
                 BaseOpts.FullPathlib,
                 {
@@ -99,14 +99,14 @@ def load_additional_arguments():
             ),
             "adcp_global_meta_filename": BaseOptsType.options_t(
                 None,
-                (
+                {
                     "Base",
                     "BaseADCPMission",
                     "MakeDiveProfiles",
                     "Reprocess",
                     "MakeMissionProfile",
                     "MakeMissionTimeSeries",
-                ),
+                },
                 ("--adcp_global_meta_filename",),
                 BaseOpts.FullPathlib,
                 {
