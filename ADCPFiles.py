@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -126,28 +126,38 @@ class ADCPRealtimeData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
     Z: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
 
     # Load varaibles from netcdf files
-    def adcp_namemapping(self):
-        return {
-            "ad2cp_velX": ("U", lambda x: fetch_var(x).T),
-            "ad2cp_velY": ("V", lambda x: fetch_var(x).T),
-            "ad2cp_velZ": ("W", lambda x: fetch_var(x).T),
-            "ad2cp_pitch": ("pitch", fetch_var),
-            "ad2cp_roll": ("roll", fetch_var),
-            "ad2cp_heading": ("heading", fetch_var),
-            "ad2cp_soundspeed": ("Svel", lambda x: fetch_var(x) / 10.0),
-            "ad2cp_cellSize": ("cellSize", fetch_var),
-            "ad2cp_blanking": ("blanking", fetch_var),
-            "ad2cp_pressure": ("pressure", fetch_var),
-            "ad2cp_time": ("time", fetch_var),
+    def adcp_namemapping(self, prefix: str) -> dict[str, tuple]:
+        ret_dict = {
+            f"{prefix}_velX": ("U", lambda x: fetch_var(x).T),
+            f"{prefix}_velY": ("V", lambda x: fetch_var(x).T),
+            f"{prefix}_velZ": ("W", lambda x: fetch_var(x).T),
+            f"{prefix}_pitch": ("pitch", fetch_var),
+            f"{prefix}_roll": ("roll", fetch_var),
+            f"{prefix}_heading": ("heading", fetch_var),
+            f"{prefix}_cellSize": ("cellSize", fetch_var),
+            f"{prefix}_blanking": ("blanking", fetch_var),
+            f"{prefix}_pressure": ("pressure", fetch_var),
+            f"{prefix}_time": ("time", fetch_var),
             # "ad2cp_foobar": ("foobar", fetch_var),  # for testing
         }
+        # Ignore for the logdev adcp version
+        # TODO - this is probably unneed as we take the sound velocity from the glider
+        if prefix == "ad2cp":
+            ret_dict[f"{prefix}_soundspeed"] = ("Svel", lambda x: fetch_var(x) / 10.0)
+        return ret_dict
 
     def init(self, ds: netCDF4.Dataset, ncf_name: pathlib.Path, params: ADCPConfig.Params) -> None:
         # Load variables from dataset
-        for var_n in self.adcp_namemapping():
+        if "ad2cp_time" in ds.variables:
+            prefix = "ad2cp"
+        elif "cp_time" in ds.variables:
+            prefix = "cp"
+        else:
+            raise KeyError(f"Neither ad2cp_time nor cp_time in {ncf_name}")
+        for var_n in self.adcp_namemapping(prefix):
             if var_n not in ds.variables:
                 raise KeyError(f"Could not find {var_n} in {ncf_name}")
-            self[self.adcp_namemapping()[var_n][0]] = self.adcp_namemapping()[var_n][1](ds.variables[var_n])
+            self[self.adcp_namemapping(prefix)[var_n][0]] = self.adcp_namemapping(prefix)[var_n][1](ds.variables[var_n])
 
         # Tilt factor : the Z component of (0,0,1) vector transformed
         # adcp_realtime.TiltFactor =  cos(pi*adcp_realtime.pitch/180).*cos(pi*adcp_realtime.roll/180);
@@ -295,7 +305,7 @@ class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
         #     gps.Mtime = [gps.Mtime;G1.log_gps_time(ige)/86400+datenum(1970,1,1)];
         #   end
         # end
-        next_dive_ncf = ncf_name.parent / f"p{param.sg_id:03d}{self.dive+1:04d}.nc"
+        next_dive_ncf = ncf_name.parent / f"p{param.sg_id:03d}{self.dive + 1:04d}.nc"
         if next_dive_ncf.exists():
             ds = ADCPUtils.open_netcdf_file(next_dive_ncf)
             if ds:

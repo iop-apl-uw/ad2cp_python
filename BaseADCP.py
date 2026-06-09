@@ -390,7 +390,7 @@ def main(
             log_error(f"Failed to open {dive_nc_file_name} - skipping update", "exc")
             continue
 
-        if "ad2cp_time" not in ds.variables:
+        if "ad2cp_time" not in ds.variables and "cp_time" not in ds.variables:
             ds.close()
             continue
 
