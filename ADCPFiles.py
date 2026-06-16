@@ -164,7 +164,8 @@ class ADCPRealtimeData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
         # for var_n in self.adcp_namemapping(prefix):
         #     if var_n not in ds.variables:
         #         raise KeyError(f"Could not find {var_n} in {ncf_name}")
-        #     self[self.adcp_namemapping(prefix)[var_n][0]] = self.adcp_namemapping(prefix)[var_n][1](ds.variables[var_n])
+        #     self[self.adcp_namemapping(prefix)[var_n][0]]
+        #         = self.adcp_namemapping(prefix)[var_n][1](ds.variables[var_n])
 
         for var_n, (int_name, map_func, required) in self.adcp_namemapping(prefix).items():
             if var_n not in ds.variables:
