@@ -31,6 +31,7 @@
 ADCPFiles.py - Routines to process Seaglider ADCP files
 """
 
+import collections
 import pathlib
 import sys
 from dataclasses import dataclass, field
@@ -79,6 +80,9 @@ class SaveToHDF5:
             grp.create_dataset(var_n, data=d)
 
 
+map_t = collections.namedtuple("map_t", ("int_name", "map_func", "required"))
+
+
 @dataclass
 class ADCPRealtimeData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
     """ADCP Realtime data from the seaglider netcdf file"""
@@ -103,6 +107,7 @@ class ADCPRealtimeData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
 
     blanking: float = 0
     cellSize: float = 0
+    coordinateSystem: float = 0  # ENU coordinate, 1 xyz, 2 beam
 
     #
     # Derived/calculated
@@ -126,24 +131,25 @@ class ADCPRealtimeData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
     Z: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
 
     # Load varaibles from netcdf files
-    def adcp_namemapping(self, prefix: str) -> dict[str, tuple]:
+    def adcp_namemapping(self, prefix: str) -> dict[str, map_t]:
         ret_dict = {
-            f"{prefix}_velX": ("U", lambda x: fetch_var(x).T),
-            f"{prefix}_velY": ("V", lambda x: fetch_var(x).T),
-            f"{prefix}_velZ": ("W", lambda x: fetch_var(x).T),
-            f"{prefix}_pitch": ("pitch", fetch_var),
-            f"{prefix}_roll": ("roll", fetch_var),
-            f"{prefix}_heading": ("heading", fetch_var),
-            f"{prefix}_cellSize": ("cellSize", fetch_var),
-            f"{prefix}_blanking": ("blanking", fetch_var),
-            f"{prefix}_pressure": ("pressure", fetch_var),
-            f"{prefix}_time": ("time", fetch_var),
-            # "ad2cp_foobar": ("foobar", fetch_var),  # for testing
+            f"{prefix}_velX": map_t("U", lambda x: fetch_var(x).T, True),
+            f"{prefix}_velY": map_t("V", lambda x: fetch_var(x).T, True),
+            f"{prefix}_velZ": map_t("W", lambda x: fetch_var(x).T, True),
+            f"{prefix}_pitch": map_t("pitch", fetch_var, True),
+            f"{prefix}_roll": map_t("roll", fetch_var, True),
+            f"{prefix}_heading": map_t("heading", fetch_var, True),
+            f"{prefix}_cellSize": map_t("cellSize", fetch_var, True),
+            f"{prefix}_coordinateSystem": map_t("coordinateSystem", fetch_var, False),
+            f"{prefix}_blanking": map_t("blanking", fetch_var, True),
+            f"{prefix}_pressure": map_t("pressure", fetch_var, True),
+            f"{prefix}_time": map_t("time", fetch_var, True),
+            # "ad2cp_foobar": map_t("foobar", fetch_var),  # for testing
         }
         # Ignore for the logdev adcp version
         # TODO - this is probably unneed as we take the sound velocity from the glider
         if prefix == "ad2cp":
-            ret_dict[f"{prefix}_soundspeed"] = ("Svel", lambda x: fetch_var(x) / 10.0)
+            ret_dict[f"{prefix}_soundspeed"] = map_t("Svel", lambda x: fetch_var(x) / 10.0, True)
         return ret_dict
 
     def init(self, ds: netCDF4.Dataset, ncf_name: pathlib.Path, params: ADCPConfig.Params) -> None:
@@ -154,10 +160,19 @@ class ADCPRealtimeData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
             prefix = "cp"
         else:
             raise KeyError(f"Neither ad2cp_time nor cp_time in {ncf_name}")
-        for var_n in self.adcp_namemapping(prefix):
+
+        # for var_n in self.adcp_namemapping(prefix):
+        #     if var_n not in ds.variables:
+        #         raise KeyError(f"Could not find {var_n} in {ncf_name}")
+        #     self[self.adcp_namemapping(prefix)[var_n][0]] = self.adcp_namemapping(prefix)[var_n][1](ds.variables[var_n])
+
+        for var_n, (int_name, map_func, required) in self.adcp_namemapping(prefix).items():
             if var_n not in ds.variables:
-                raise KeyError(f"Could not find {var_n} in {ncf_name}")
-            self[self.adcp_namemapping(prefix)[var_n][0]] = self.adcp_namemapping(prefix)[var_n][1](ds.variables[var_n])
+                if required:
+                    raise KeyError(f"Could not find {var_n} in {ncf_name}")
+                else:
+                    continue
+            self[int_name] = map_func(ds.variables[var_n])
 
         # Tilt factor : the Z component of (0,0,1) vector transformed
         # adcp_realtime.TiltFactor =  cos(pi*adcp_realtime.pitch/180).*cos(pi*adcp_realtime.roll/180);
