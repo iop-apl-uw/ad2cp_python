@@ -161,14 +161,6 @@ def ProcessConfigFile(config_file_name: pathlib.PosixPath) -> tuple[Params, Weig
     return (config_model.params, config_model.weights)
 
 
-# class AttributeDict(dict[Any, Any]):
-#     """Allow dot access for dictionaries"""
-
-#     __getattr__ = dict.__getitem__
-#     __setattr__ = dict.__setitem__  # type: ignore
-#     __delattr__ = dict.__delitem__  # type: ignore
-
-
 # class NCDataType(enum.Enum):
 #     f: str = "f"
 #     d: str = "d"

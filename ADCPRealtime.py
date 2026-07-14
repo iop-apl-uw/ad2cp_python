@@ -31,11 +31,11 @@ def TransformToInstrument(adcp_realtime: ADCPFiles.ADCPRealtimeData) -> None:
     if adcp_realtime.coordinateSystem == 1:
         adcp_realtime.Ux = adcp_realtime.U
         adcp_realtime.Uy = adcp_realtime.V
-        adcp_realtime.Uz  = adcp_realtime.W
+        adcp_realtime.Uz = adcp_realtime.W
         return
 
-    #ENU coordinateSystem (0)
-    
+    # ENU coordinateSystem (0)
+
     # B.VelENU(:,:,1)=adcp_realtime.U;
     # B.VelENU(:,:,2)=adcp_realtime.V;
     # B.VelENU(:,:,3)=adcp_realtime.W;

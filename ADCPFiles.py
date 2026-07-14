@@ -52,7 +52,7 @@ else:
     from ADCPLog import log_error
 
 
-def fetch_var(x: netCDF4._netCDF4.Variable) -> Any:
+def fetch_var(x: netCDF4.Variable) -> Any:
     """Helper function for data fetch"""
     # For netCDF4 datasets, singletons have an empty tuple for the shape
     if not x.shape:
@@ -69,6 +69,7 @@ def fetch_var(x: netCDF4._netCDF4.Variable) -> Any:
     return x
 
 
+@dataclass
 class SaveToHDF5:
     def save_to_hdf5(self, group_name: str, hdf) -> None:
         """Persist the dataclass fields to a group in a HDF5 file"""
@@ -188,15 +189,15 @@ class ADCPRealtimeData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
 class GPSData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
     """Glider data from the seaglider netcdf file"""
 
-    log_gps_time: npt.NDArray[np.complex128] = field(default_factory=(lambda: np.empty(0)))
+    log_gps_time: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     #
     # Derived/calculated
     #
 
     # GPS lat/lon on a complex plane
-    LL: npt.NDArray[np.complex128] = field(default_factory=(lambda: np.empty(0)))
+    LL: npt.NDArray[np.complex128] = field(default_factory=(lambda: np.empty(0, dtype=np.complex128)))
     # Distance from origin point on complex plane
-    XY: npt.NDArray[np.complex128] = field(default_factory=(lambda: np.empty(0)))
+    XY: npt.NDArray[np.complex128] = field(default_factory=(lambda: np.empty(0, dtype=np.complex128)))
 
 
 @dataclass
@@ -244,9 +245,9 @@ class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
     # vertical speed of the glider from active model
     Wmod: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     # Time for last GPS fix before dive
-    time0: np.float64 = 0
+    time0: np.float64 = np.float64(0)
     # Time for first GPS fix after dive
-    time1: np.float64 = 0
+    time1: np.float64 = np.float64(0)
 
     def load_vars(self) -> list[str]:
         """List of variables to be loaded from the netcdf file"""
@@ -323,10 +324,10 @@ class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
         # end
         next_dive_ncf = ncf_name.parent / f"p{param.sg_id:03d}{self.dive + 1:04d}.nc"
         if next_dive_ncf.exists():
-            ds = ADCPUtils.open_netcdf_file(next_dive_ncf)
-            if ds:
-                gps.LL = np.hstack((gps.LL, ds["log_gps_lon"][1] + 1j * ds["log_gps_lat"][1]))
-                gps.log_gps_time = np.hstack((gps.log_gps_time, ds["log_gps_time"][1]))
+            next_ds = ADCPUtils.open_netcdf_file(next_dive_ncf)
+            if next_ds:
+                gps.LL = np.hstack((gps.LL, next_ds["log_gps_lon"][1] + 1j * next_ds["log_gps_lat"][1]))
+                gps.log_gps_time = np.hstack((gps.log_gps_time, next_ds["log_gps_time"][1]))
 
         # LLgsm = glider.longitude_gsm+1i*glider.latitude_gsm;
         # LL = glider.longitude+1i*glider.latitude; % best estimate? includes dac.
@@ -386,9 +387,10 @@ class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
         ) + 1j * np.sqrt(self[speed_var] ** 2 - self[vert_speed_var] ** 2) / 100 * np.sin((90 - h) * np.pi / 180)
 
 
-# For full ADCP data sets
+# For full ADCP data sets - a superset of ADCPRealtimeData, for an eventual
+# denser data source than the realtime data
 @dataclass
-class ADCPData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
+class ADCPData(ADCPRealtimeData):
     pass
 
 
@@ -421,7 +423,7 @@ class ADCPProfile(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
     """ADCP profile results"""
 
     z: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
-    UVocn: npt.NDArray[np.complex128] = field(default_factory=(lambda: np.empty(0)))
+    UVocn: npt.NDArray[np.complex128] = field(default_factory=(lambda: np.empty(0, dtype=np.complex128)))
     UVttw_solution: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     UVttw_model: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     time: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
@@ -438,27 +440,27 @@ class ADCPInverseResults(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
     time: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     Z0: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     # observed horizontal velocity (relative)
-    UV: npt.NDArray[np.complex128] = field(default_factory=(lambda: np.empty(0)))
+    UV: npt.NDArray[np.complex128] = field(default_factory=(lambda: np.empty(0, dtype=np.complex128)))
     # observed vertical velocity (relative)
     W: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     # observed depth
     Z: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     # Boolean array to identify down and upcasts
-    upcast: npt.NDArray[bool] = field(default_factory=(lambda: np.empty(0)))
+    upcast: npt.NDArray[np.bool_] = field(default_factory=(lambda: np.empty(0, dtype=np.bool_)))
     # horizontal velocity of glider, without DAC in it, in ENU coordinate - on the ADCP time grid
     UVttw_model: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     # vertical speed of the glider from active model - on the ADCP time grid
     Wttw_model: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     # U_drift = Ocean velocity at the glider
-    UVocn_solution: npt.NDArray[np.complex128] = field(default_factory=(lambda: np.empty(0)))
+    UVocn_solution: npt.NDArray[np.complex128] = field(default_factory=(lambda: np.empty(0, dtype=np.complex128)))
     #  Glider speed through the water
-    UVttw_solution: npt.NDArray[np.complex128] = field(default_factory=(lambda: np.empty(0)))
+    UVttw_solution: npt.NDArray[np.complex128] = field(default_factory=(lambda: np.empty(0, dtype=np.complex128)))
     # % Total vehicle speed: U_ttw (speed through the water) + U_drift (ocean speed at the glider).
-    UVveh_solution: npt.NDArray[np.complex128] = field(default_factory=(lambda: np.empty(0)))
-    UVocn_adcp: npt.NDArray[np.complex128] = field(default_factory=(lambda: np.empty(0)))
-    UVerr: npt.NDArray[np.complex128] = field(default_factory=(lambda: np.empty(0)))
-    Wttw_solution: npt.NDArray[np.complex128] = field(default_factory=(lambda: np.empty(0)))
-    Wocn_solution: npt.NDArray[np.complex128] = field(default_factory=(lambda: np.empty(0)))
+    UVveh_solution: npt.NDArray[np.complex128] = field(default_factory=(lambda: np.empty(0, dtype=np.complex128)))
+    UVocn_adcp: npt.NDArray[np.complex128] = field(default_factory=(lambda: np.empty(0, dtype=np.complex128)))
+    UVerr: npt.NDArray[np.complex128] = field(default_factory=(lambda: np.empty(0, dtype=np.complex128)))
+    Wttw_solution: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
+    Wocn_solution: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
 
 
 @dataclass

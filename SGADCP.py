@@ -85,7 +85,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         cmdline_args=cmdline_args,
     )
     if adcp_opts is None:
-        return
+        return 1
 
     global DEBUG_PDB
     DEBUG_PDB = adcp_opts.debug_pdb
@@ -98,7 +98,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
 
     # Read the config file
     param, weights = ADCPConfig.ProcessConfigFile(adcp_opts.adcp_config_file)
-    if not param:
+    if not param or not weights:
         return 1
 
     # param.gz = (0:param.dz:1000)';
@@ -314,6 +314,10 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                     grp.create_dataset(k, data=v)
 
     # Output results
+
+    if depth_grid is None or output_filename is None:
+        log_error(f"No dives successfully processed in {adcp_opts.mission_dir} - bailing out")
+        return 1
 
     # Convert accumulator lists into arrays
     mission_var_arrs = {}

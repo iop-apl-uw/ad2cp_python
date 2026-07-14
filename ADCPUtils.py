@@ -536,7 +536,11 @@ def CreateNCVar(dso, template, key_name, data):
     """
     is_str = False
     if isinstance(data, str):
-        inp_data = netCDF4.stringtochar(np.array(data.encode()))
+        with warnings.catch_warnings():
+            # netCDF4 1.7.2 internally does an in-place ndarray.shape= reassignment here,
+            # which numpy 2.5 deprecates. Upstream issue in netCDF4, not fixable from our call site.
+            warnings.filterwarnings("ignore", category=DeprecationWarning, message="Setting the shape on a NumPy array")
+            inp_data = netCDF4.stringtochar(np.array(data.encode()))
         is_str = True
     elif np.ndim(data) == 0:
         # Scalar data
@@ -552,7 +556,7 @@ def CreateNCVar(dso, template, key_name, data):
         if inp_data == np.nan:
             inp_data = template[key_name].nc_attribs.FillValue
     elif not is_str:
-        inp_data[np.isnan(inp_data)] = template[key_name].nc_attribs.FillValue
+        inp_data[np.isnan(inp_data)] = template[key_name].nc_attribs.FillValue  # ty: ignore[invalid-assignment]
 
     # assert len(template[key_name]["nc_dimensions"]) == 1
     # if template[key_name]["nc_dimensions"][0] not in dso.dimensions:
@@ -573,7 +577,11 @@ def CreateNCVar(dso, template, key_name, data):
         compression="zlib",
         complevel=9,
     )
-    nc_var[:] = inp_data
+    with warnings.catch_warnings():
+        # netCDF4 1.7.2 internally does an in-place ndarray.shape= reassignment here,
+        # which numpy 2.5 deprecates. Upstream issue in netCDF4, not fixable from our call site.
+        warnings.filterwarnings("ignore", category=DeprecationWarning, message="Setting the shape on a NumPy array")
+        nc_var[:] = inp_data
     for a_name, attrib in iter(template[key_name].nc_attribs):
         # TODO - finish this off
         # if a_name in ("valid_min", "valid_max"):
