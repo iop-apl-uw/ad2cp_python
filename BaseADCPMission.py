@@ -307,6 +307,10 @@ def main(
         log_info("No ADCP found - finished processing")
         return 0
 
+    if depth_grid is None:
+        log_error("No profile depth data found - finished processing")
+        return 1
+
     mission_var_arrs = {}
     non_nans = []
     for k, is_profile in mission_vars.items():

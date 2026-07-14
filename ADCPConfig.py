@@ -53,7 +53,8 @@ from pydantic.dataclasses import dataclass
 import ExtendedDataClass
 
 if "BaseLog" in sys.modules:
-    from BaseLog import log_debug, log_error
+    # BaseLog is only resolvable when running under a basestation3 checkout
+    from BaseLog import log_debug, log_error  # ty: ignore[unresolved-import]
 else:
     from ADCPLog import log_debug, log_error
 

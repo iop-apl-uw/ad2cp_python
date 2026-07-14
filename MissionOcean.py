@@ -156,7 +156,7 @@ def mission_oceanvelocityprofile(
         return (ret_figs, ret_plots)
 
     try:
-        ds = Utils.open_netcdf_file(ncname, "r", mask_results=True)
+        ds = Utils.open_netcdf_file(str(ncname), "r", mask_results=True)
     except Exception:
         log_error(f"Unable to open {ncname}", "exc")
         return (ret_figs, ret_plots)

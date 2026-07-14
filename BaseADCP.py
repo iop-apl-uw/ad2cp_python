@@ -181,6 +181,10 @@ def init_extension(module_name: str, base_opts: BaseOpts.BaseOptions | None = No
         log_error("No datafile supplied for init_extension - version mismatch?")
         return -1
 
+    if base_opts is None:
+        log_error("No base_opts supplied for init_extension - version mismatch?")
+        return -1
+
     var_meta = ADCPConfig.LoadVarMeta(base_opts.adcp_var_meta_file)
 
     # CONSIDER - this should data driven from the above list
@@ -375,7 +379,7 @@ def main(
 
     # Read the config file
     param, weights = ADCPConfig.ProcessConfigFile(base_opts.adcp_config_file)
-    if not param:
+    if not param or weights is None:
         return 1
 
     var_meta = ADCPConfig.LoadVarMeta(base_opts.adcp_var_meta_file)
@@ -385,7 +389,7 @@ def main(
         dive_nc_file_name = pathlib.Path(dive_nc_file_name)
 
         try:
-            ds = Utils.open_netcdf_file(dive_nc_file_name)
+            ds = Utils.open_netcdf_file(str(dive_nc_file_name))
         except Exception:
             log_error(f"Failed to open {dive_nc_file_name} - skipping update", "exc")
             continue
@@ -511,7 +515,7 @@ def main(
         # Create temporary output netcdf file
         tmp_filename = dive_nc_file_name.with_suffix(".tmpnc")
         try:
-            dso = Utils.open_netcdf_file(tmp_filename, "w")
+            dso = Utils.open_netcdf_file(str(tmp_filename), "w")
         except Exception:
             log_error(f"Failed to open tempfile {tmp_filename} - skipping update to {dive_nc_file_name}", "exc")
             ds.close()

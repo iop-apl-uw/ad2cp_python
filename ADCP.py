@@ -45,7 +45,8 @@ import ADCPFiles
 import ADCPUtils
 
 if "BaseLog" in sys.modules:
-    from BaseLog import log_error, log_warning
+    # BaseLog is only resolvable when running under a basestation3 checkout
+    from BaseLog import log_error, log_warning  # ty: ignore[unresolved-import]
 else:
     from ADCPLog import log_error, log_warning
 

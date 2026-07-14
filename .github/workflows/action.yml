@@ -21,7 +21,7 @@ jobs:
       uses: astral-sh/setup-uv@v5
       with:
         # Install specific version of UV
-        version: "0.9.9"
+        version: "0.11.28"
         #enable-cache: true
 
     - name: Set up Python 3.14
@@ -37,6 +37,12 @@ jobs:
       with:
         path: /opt/playwright-browsers
         key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('uv.lock') }}
+
+    - name: Install Chromium OS dependencies
+      # Runs every time, even on a cache hit: the browser binary under
+      # /opt/playwright-browsers is cached across runs, but these apt-installed shared
+      # libraries live outside that path and aren't persisted by the runner/cache.
+      run: uv run playwright install-deps chromium
 
     - name: Install Chromium (if not cached)
       if: steps.playwright-cache.outputs.cache-hit != 'true'
@@ -157,7 +163,7 @@ jobs:
         uv run ruff check --output-format=github
 
     - name: Check with ty
-    run: |
+      run: |
         uv run --extra ci ty check --output-format github
 
     - name: Test with pytest

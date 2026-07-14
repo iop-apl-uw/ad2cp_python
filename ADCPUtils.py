@@ -44,7 +44,8 @@ import xarray as xr
 from numpy.typing import NDArray
 
 if "BaseLog" in sys.modules:
-    from BaseLog import log_critical, log_error, log_info, log_warning
+    # BaseLog is only resolvable when running under a basestation3 checkout
+    from BaseLog import log_critical, log_error, log_info, log_warning  # ty: ignore[unresolved-import]
 else:
     from ADCPLog import log_critical, log_error, log_info, log_warning
 
@@ -540,12 +541,7 @@ def CreateNCVar(dso, template, key_name, data):
             # netCDF4 1.7.2 internally does an in-place ndarray.shape= reassignment here,
             # which numpy 2.5 deprecates. Upstream issue in netCDF4, not fixable from our call site.
             warnings.filterwarnings("ignore", category=DeprecationWarning, message="Setting the shape on a NumPy array")
-            # stringtochar does its own utf-8 encoding internally, so pass the plain string
-            # array. Without an explicit n_strlen it falls back to a.dtype.itemsize, which
-            # for a numpy unicode ('U') dtype is 4 bytes/char, not the character count - so
-            # it must be passed explicitly. It also always adds a leading dimension sized
-            # for the (here, single) input string, which needs squeezing back out.
-            inp_data = netCDF4.stringtochar(np.array(data), n_strlen=len(data)).reshape(len(data))
+            inp_data = netCDF4.stringtochar(np.array(data.encode()))
         is_str = True
     elif np.ndim(data) == 0:
         # Scalar data
