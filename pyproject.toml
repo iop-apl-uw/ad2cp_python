@@ -54,6 +54,12 @@ extra-paths = [".."]
 [tool.pytest.ini_options]
 pythonpath = "."
 
+[tool.coverage.run]
+# netCDF4's compiled extension embeds a Cython debug reference to its own build-time
+# source path (src/netCDF4/_netCDF4.pyx), which coverage.py tries to resolve relative
+# to our project and can't find. Harmless - not one of our files.
+disable_warnings = ["couldnt-parse"]
+
 [tool.ruff]
 line-length = 120
 output-format = 'pylint'
