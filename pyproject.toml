@@ -12,7 +12,7 @@ dependencies = [
     "scipy==1.18.0",
     "gsw==3.6.19",
     "netCDF4==1.7.2",
-    "xarray==2024.10.0",
+    "xarray==2026.7.0",
     "h5py==3.16.0",
     "pyproj==3.7.2",
     "cmocean==4.0.3",

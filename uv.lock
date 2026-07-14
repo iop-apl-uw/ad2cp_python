@@ -1207,7 +1207,7 @@ requires-dist = [
     { name = "scipy", specifier = "==1.18.0" },
     { name = "ty", marker = "extra == 'ci'", specifier = "==0.0.32" },
     { name = "types-pyyaml", marker = "extra == 'dev'" },
-    { name = "xarray", specifier = "==2024.10.0" },
+    { name = "xarray", specifier = "==2026.7.0" },
 ]
 provides-extras = ["ci", "dev"]
 
@@ -1375,14 +1375,14 @@ wheels = [
 
 [[package]]
 name = "xarray"
-version = "2024.10.0"
+version = "2026.7.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
     { name = "packaging" },
     { name = "pandas" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b7/f2/a3e3ec1ffd29b0b5be800d2606c229f04f303ee9e61a1377dc5c1996cf8a/xarray-2024.10.0.tar.gz", hash = "sha256:e369e2bac430e418c2448e5b96f07da4635f98c1319aa23cfeb3fbcb9a01d2e0", size = 3788358, upload-time = "2024-10-24T21:45:48.532Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ea/96/3f7bdd00e505ec3698903415b30135024703e017b28c6b61f98da3193b0d/xarray-2026.7.0.tar.gz", hash = "sha256:361b495928fdbf5b58d0969bb6775339019da5e93ca74d61ddf4eb5edd6ce604", size = 3145348, upload-time = "2026-07-09T17:38:26.515Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a9/b7/9830def68e5575a24ca6d6f46b285d35ed27860beaa4f72848cd82870253/xarray-2024.10.0-py3-none-any.whl", hash = "sha256:ae1d38cb44a0324dfb61e492394158ae22389bf7de9f3c174309c17376df63a0", size = 1212984, upload-time = "2024-10-24T21:45:46.566Z" },
+    { url = "https://files.pythonhosted.org/packages/57/5b/28365212062939d213802e5e5fe855cdb231e1c2a93254ba1690066504e3/xarray-2026.7.0-py3-none-any.whl", hash = "sha256:bf9dd130b93806dc78e90c1b7ac24851b31557b888674c53622235691cf21824", size = 1426778, upload-time = "2026-07-09T17:38:24.224Z" },
 ]
