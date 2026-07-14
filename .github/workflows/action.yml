@@ -156,9 +156,9 @@ jobs:
       run: |
         uv run ruff check --output-format=github
 
-    #- name: Check with mypy
-    #  run: |
-    #    uv run mypy
+    - name: Check with ty
+    run: |
+        uv run --extra ci ty check --output-format github
 
     - name: Test with pytest
       run: |
