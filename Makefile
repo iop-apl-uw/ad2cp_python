@@ -10,7 +10,7 @@ rufffmt:
 	-uv run ruff format *py tests/*py
 
 typecheck:
-	-uv run --extra ci ty check
+	-uv run --extra ci ty check --output-format github 2>/dev/null
 
 test:
 	-uv run pytest --cov --cov-report term-missing tests/

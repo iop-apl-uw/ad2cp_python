@@ -46,6 +46,11 @@ dev = [
 [tool.ty.src]
 include = ['SGADCP.py','ADCPFiles.py','ExtendedDataClass.py','ADCPUtils.py','ADCPLog.py','ADCPOpts.py','ADCPConfig.py','ADCPRealtime.py', 'ADCP.py', ]
 
+[tool.ty.environment]
+# BaseLog is only importable when these files are loaded by the Seaglider Basestation
+# extension, which lives one directory up
+extra-paths = [".."]
+
 [tool.pytest.ini_options]
 pythonpath = "."
 
