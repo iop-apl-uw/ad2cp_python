@@ -5,7 +5,10 @@ name: Check In Actions
 
 on:
   push:
-    branches: [ "master" ]
+    branches:
+      -"master"
+      - 'chore/*'
+      - 'feature/*'
 
 permissions:
   contents: read
