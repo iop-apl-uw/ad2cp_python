@@ -537,11 +537,11 @@ def CreateNCVar(dso, template, key_name, data):
     """
     is_str = False
     if isinstance(data, str):
-        with warnings.catch_warnings():
-            # netCDF4 1.7.2 internally does an in-place ndarray.shape= reassignment here,
-            # which numpy 2.5 deprecates. Upstream issue in netCDF4, not fixable from our call site.
-            warnings.filterwarnings("ignore", category=DeprecationWarning, message="Setting the shape on a NumPy array")
-            inp_data = netCDF4.stringtochar(np.array(data.encode()))
+        # netCDF4.stringtochar() derives the char count from the input array's
+        # dtype itemsize, which for a numpy unicode scalar is 4 bytes per
+        # character - not the character count - so it pads the result to the
+        # wrong length. Build the char array directly instead.
+        inp_data = np.array(list(data), dtype="S1")
         is_str = True
     elif np.ndim(data) == 0:
         # Scalar data
