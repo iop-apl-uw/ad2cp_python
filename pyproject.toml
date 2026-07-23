@@ -1,6 +1,6 @@
 [project]
 name = "seaglider_nortex_adcp_processing"
-version = "0.0.1"
+version = "0.0.2"
 description = "Shore side processing software for the Nortek Signature 1000 ADCP system"
 readme = "Readme.md"
 requires-python = "==3.10.19"

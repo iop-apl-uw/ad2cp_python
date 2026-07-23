@@ -85,7 +85,7 @@ def check_versions() -> int:
         0 for no issue, 1 for version outside minimum
     """
 
-    log_info("ADCP version: 0.0.1")
+    log_info("ADCP version: 0.0.2")
 
     # TODO - get this working
     # Try for the commit id
