@@ -3,20 +3,20 @@ name = "seaglider_nortex_adcp_processing"
 version = "0.0.3"
 description = "Shore side processing software for the Nortek Signature 1000 ADCP system"
 readme = "Readme.md"
-requires-python = "==3.10.19"
+requires-python = "==3.14.6"
 dependencies = [
     # Note - these apply to the project being run stand-alone
     # When running via the Seaglider Basestation extension, the pyproject.toml for the project
     # should be used.
-    "numpy==1.26.4",
-    "scipy==1.14.1",
+    "numpy==2.5.0",
+    "scipy==1.18.0",
     "gsw==3.6.19",
     "netCDF4==1.7.2",
-    "xarray==2024.10.0",
-    "h5py==3.12.1",
-    "pyproj==3.7.0",
+    "xarray==2026.4.0",
+    "h5py==3.16.0",
+    "pyproj==3.7.2",
     "cmocean==4.0.3",
-    "pydantic==2.9.2",
+    "pydantic==2.13.4",
     "PyYAML==6.0.2",
 ]
 [project.optional-dependencies]
@@ -25,46 +25,29 @@ ci = [
     "pytest==8.3.3",
     "pytest-cov==6.0.0",
     ## Linting
-    "ruff==0.7.2",
+    "ruff==0.15.17",
+    # Static Typing
+    "ty==0.0.32", ## Latest    
 ]
 dev = [
     ## Static Typing
-    "mypy==1.13.0",
-    "types-PyYAML",
     ## Documentation (fill in)
     "mkdocs",
     "mkdocstrings[python]",
     "mkdocs-material",
     ## Misc
-    "ipython",
+    "ipython==9.14.1",
     "flynt",
 ]
-[tool.mypy]
-plugins = ['numpy.typing.mypy_plugin', 'pydantic.mypy']
-# This only applies to the basestation extension being checked
-mypy_path = '..'
-files = ['SGADCP.py','ADCPFiles.py','ExtendedDataClass.py','ADCPUtils.py','ADCPLog.py','ADCPOpts.py','ADCPConfig.py','ADCPRealtime.py', 'ADCP.py', ]
-#strict = true
-python_version = "3.10"
-
-# Much of the numerical computing stack doesn't have type annotations yet.
-[[tool.mypy.overrides]]
-ignore_missing_imports = true
-module = [
-    "gsw.*",
-    "seawater.*",
-    "netCDF4.*",
-    "scipy.*",
-]
-
 [tool.pytest.ini_options]
 pythonpath = "."
+testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 120
 output-format = 'pylint'
 include = ["./*py", "tests/*py"]
-target-version = "py310"
+target-version = "py314"
 
 [tool.ruff.lint]
 select = [
@@ -81,9 +64,11 @@ select = [
     # isort
     "I",
     # Numpy2.0 compat
-    "NPY201"
+    "NPY201",
     # Check docstrings
 #    "D"
+    # Annotations
+    #"ANN",
 ]
 ignore = [
   # redundant-open-modes
@@ -91,6 +76,15 @@ ignore = [
   # outdated-version-block
   "UP036",
 ]
-
 #[tool.ruff.lint.pydocstyle]
 #convention = "google"
+[tool.ty.src]
+exclude=["BaseADCP.py","BaseADCPMission.py","DiveOcean.py","MissionOcean.py"]
+
+[tool.coverage.html]
+directory = "coverage_html_report"
+[tool.coverage.run]
+omit = [
+    ".venv/*",
+     "src/netCDF4/*",
+    ]

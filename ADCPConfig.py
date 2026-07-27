@@ -270,7 +270,7 @@ def MergeDict(
                 a[key] = b[key]
             else:
                 # ruff: noqa: UP031
-                raise Exception("Conflict at %s" % ".".join(path + [str(key)]))
+                raise Exception(f"Conflict at {'.'.join(path + [str(key)])}")
         else:
             a[key] = b[key]
     return a

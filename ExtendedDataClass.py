@@ -81,13 +81,13 @@ class ExtendedDataClass:
         # but the member has been added to the dictionary
         if not hasattr(self, key) and key not in self.__dataclass_fields__:
             # ruff: noqa: UP031
-            raise TypeError("%r is a frozen class" % self)
+            raise TypeError(f"{self!r} is a frozen class")
         object.__setattr__(self, key, value)
 
     # Allows iteration over the data fields like a dictionary
-    def items(self) -> typing.Generator[tuple[typing.Any, typing.Any], None, None]:
+    def items(self) -> typing.Generator[tuple[typing.Any, typing.Any]]:
         for item in self.__dataclass_fields__:
             yield item, getattr(self, item)
 
-    def keys(self) -> typing.Generator[typing.Any, None, None]:
+    def keys(self) -> typing.Generator[typing.Any]:
         yield from self.__dataclass_fields__

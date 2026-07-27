@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -98,7 +98,7 @@ class ADCPLogger:
             # Catch warning, error and critical
 
             ADCPLogger.is_initialized = True
-            log_info("Process id = %d" % os.getpid())  # report our process id
+            log_info(f"Process id = {os.getpid():d}")  # report our process id
 
     def setHandler(self, handle: logging.Handler, opts: argparse.Namespace, include_time: bool) -> None:
         """
@@ -162,7 +162,7 @@ def __log_caller_info(s: object, loc: str | None) -> str:
                 frame = traceback.extract_stack(None, offset)[0]
                 module, lineno, function, _ = frame
                 module = os.path.basename(module)  # lose extension
-                s = "%s(%d): %s" % (module, lineno, s)
+                s = f"{module}({lineno:d}): {s}"
             elif loc == "exc":
                 exc = traceback.format_exc()
                 if exc:  # if no exception, nothing added
@@ -177,13 +177,7 @@ def __log_caller_info(s: object, loc: str | None) -> str:
                 for frame in frames[offset - 1 : -1]:  # drop our callers
                     module, lineno, function, _ = frame  # avoid the source code text
                     module = os.path.basename(module)  # lose extension
-                    stack = "%s\n%s %s(%d) %s()" % (
-                        stack,
-                        prefix,
-                        module,
-                        lineno,
-                        function,
-                    )
+                    stack = f"{stack}\n{prefix} {module}({lineno:d}) {function}()"
                     prefix = " "
                 s = f"{s}:{stack}"
             else:  # unknown location request

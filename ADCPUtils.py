@@ -102,7 +102,7 @@ def check_versions() -> int:
     #     log_info("Commit-ID: unknown")
 
     # Check python version
-    log_info("Python version %d.%d.%d" % (sys.version_info[0], sys.version_info[1], sys.version_info[2]))
+    log_info(f"{sys.version_info[0]:d}.{sys.version_info[1]:d}.{sys.version_info[2]:d}")
 
     # Python version
     if sys.version_info < (3, 10):
@@ -513,7 +513,12 @@ def StripVars(dsi, dso, var_meta):
                 compression="zlib",
                 complevel=9,
             )
-            nc_var[:] = var[:]
+            # netCDF4 is calling shape on the numpy array - which has been deprecated
+            # TODO - this may be fixed wit https://github.com/Unidata/netcdf4-python/pull/1469, once
+            # it gets out into release            with warnings.catch_warnings():
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", category=DeprecationWarning)
+                nc_var[:] = var[:]
             for a in var.ncattrs():
                 if a != "_FillValue":
                     nc_var.setncattr(a, var.getncattr(a))
@@ -536,7 +541,9 @@ def CreateNCVar(dso, template, key_name, data):
     """
     is_str = False
     if isinstance(data, str):
-        inp_data = netCDF4.stringtochar(np.array(data.encode()))
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=DeprecationWarning)
+            inp_data = netCDF4.stringtochar(np.array(data, dtype=f"S{len(data)}"), encoding="ascii").squeeze()
         is_str = True
     elif np.ndim(data) == 0:
         # Scalar data
@@ -573,7 +580,12 @@ def CreateNCVar(dso, template, key_name, data):
         compression="zlib",
         complevel=9,
     )
-    nc_var[:] = inp_data
+    # netCDF4 is calling shape on the numpy array - which has been deprecated
+    # TODO - this may be fixed wit https://github.com/Unidata/netcdf4-python/pull/1469, once
+    # it gets out into release
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=DeprecationWarning)
+        nc_var[:] = inp_data
     for a_name, attrib in iter(template[key_name].nc_attribs):
         # TODO - finish this off
         # if a_name in ("valid_min", "valid_max"):
@@ -607,7 +619,8 @@ def GetMissionStr(dive_nc_file):
         log_id = int(dive_nc_file.variables["log_ID"].getValue())
     if "sg_cal_mission_title" in dive_nc_file.variables:
         mission_title = dive_nc_file.variables["sg_cal_mission_title"][:].tobytes().decode("utf-8")
-    return f"sg{'%03d' % (log_id if log_id else 0,)} {mission_title}"
+    # return f"sg{'%03d' % (log_id if log_id else 0,)} {mission_title}"
+    return f"sg{log_id if log_id else 0:03d} {mission_title}"
 
 
 def SetupPlotDirectory(adcp_opts) -> int:

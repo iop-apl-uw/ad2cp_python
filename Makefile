@@ -9,8 +9,8 @@ rufffmt:
 	-uv run ruff check --select I --fix *py tests/*py
 	-uv run ruff format *py tests/*py 
 
-mypy:
-	-uv run mypy
+typecheck:
+	-uv run ty check --output-format github 2>/dev/null
 
 test:
 	-uv run pytest --cov --cov-report term-missing tests/
