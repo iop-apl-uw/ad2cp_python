@@ -83,4 +83,5 @@ def run_mission(
             if record.levelname in ["CRITICAL", "ERROR", "WARNING"]:
                 bad_errors += f"{record.levelname}:{record.getMessage()}\n"
     if bad_errors:
-        pytest.fail(bad_errors)
+        # pytest.fail's @_with_exception decorator confuses ty's overload resolution
+        pytest.fail(bad_errors)  # ty: ignore[invalid-argument-type]

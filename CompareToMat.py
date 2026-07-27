@@ -94,7 +94,7 @@ def main() -> None:
         help="Name of output logfile",
         action=ADCPOpts.FullPathlibAction,
     )
-    ap.add_argument("mat_file", help="Matlab file", action=ADCPOpts.FullPathliAction)
+    ap.add_argument("mat_file", help="Matlab file", action=ADCPOpts.FullPathlibAction)
 
     ap.add_argument("python_file", help="Python hdf5 file", action=ADCPOpts.FullPathlibAction)
 

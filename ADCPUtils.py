@@ -44,7 +44,7 @@ import xarray as xr
 from numpy.typing import NDArray
 
 if "BaseLog" in sys.modules:
-    from BaseLog import log_critical, log_error, log_info, log_warning
+    from BaseLog import log_critical, log_error, log_info, log_warning  # ty: ignore[unresolved-import]
 else:
     from ADCPLog import log_critical, log_error, log_info, log_warning
 
@@ -559,7 +559,8 @@ def CreateNCVar(dso, template, key_name, data):
         if inp_data == np.nan:
             inp_data = template[key_name].nc_attribs.FillValue
     elif not is_str:
-        inp_data[np.isnan(inp_data)] = template[key_name].nc_attribs.FillValue
+        # np.ndim(inp_data) == 0 scalar case is handled above; ty can't narrow on np.ndim()
+        inp_data[np.isnan(inp_data)] = template[key_name].nc_attribs.FillValue  # ty: ignore[invalid-assignment]
 
     # assert len(template[key_name]["nc_dimensions"]) == 1
     # if template[key_name]["nc_dimensions"][0] not in dso.dimensions:

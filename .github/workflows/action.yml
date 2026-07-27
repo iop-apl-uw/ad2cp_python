@@ -162,10 +162,8 @@ jobs:
     - name: Check with Ruff
       run: uv run ruff check --output-format=github
 
-    #- name: Check with ty
-    #  run: uv run ty check --output-format=github
-    # Disabled: 93 pre-existing type errors need cleanup before this can gate CI.
-    # See chore/adcp-ci-parity.
+    - name: Check with ty
+      run: uv run ty check --output-format=github
 
     - name: Test with pytest
       run: uv run pytest -rsx --cov --cov-report term-missing tests/

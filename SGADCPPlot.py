@@ -40,13 +40,13 @@ import time
 import traceback
 import warnings
 
-import cmocean
 import gsw
 import numpy as np
 import xarray as xr
 from plotly.subplots import make_subplots
 
 import ADCPOpts
+import ADCPPlotUtils
 import ADCPUtils
 from ADCPLog import ADCPLogger, log_critical, log_error, log_warning
 
@@ -65,40 +65,6 @@ def DEBUG_PDB_F() -> None:
         _, __, traceb = sys.exc_info()
         traceback.print_exc()
         pdb.post_mortem(traceb)
-
-
-def cmocean_to_plotly(cmapname, pl_entries):
-    maps = {
-        "thermal": cmocean.cm.thermal,
-        "haline": cmocean.cm.haline,
-        "solar": cmocean.cm.solar,
-        "ice": cmocean.cm.ice,
-        "gray": cmocean.cm.gray,
-        "oxy": cmocean.cm.oxy,
-        "deep": cmocean.cm.deep,
-        "dense": cmocean.cm.dense,
-        "algae": cmocean.cm.algae,
-        "matter": cmocean.cm.matter,
-        "turbid": cmocean.cm.turbid,
-        "speed": cmocean.cm.speed,
-        "amp": cmocean.cm.amp,
-        "tempo": cmocean.cm.tempo,
-        "phase": cmocean.cm.phase,
-        "balance": cmocean.cm.balance,
-        "delta": cmocean.cm.delta,
-        "curl": cmocean.cm.curl,
-    }
-
-    cmap = maps.get(cmapname, cmocean.cm.thermal)
-
-    h = 1.0 / (pl_entries - 1)
-    pl_colorscale = []
-
-    for k in range(pl_entries):
-        C = list(map(np.uint8, np.array(cmap(k * h)[:3]) * 255))
-        pl_colorscale.append([k * h, "rgb" + str((C[0], C[1], C[2]))])
-
-    return pl_colorscale
 
 
 def write_output_files(adcp_opts, base_file_name, fig):
@@ -341,7 +307,7 @@ def PlotOceanVelocity(ncf_name, ds, adcp_opts):
                 "y": 0.95,
             },
             "coloraxis": {
-                "colorscale": cmocean_to_plotly("balance", 100),
+                "colorscale": ADCPPlotUtils.cmocean_to_plotly("balance", 100),
                 "colorbar": {
                     # "title": "m s-1",
                     "title": {
@@ -414,7 +380,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         cmdline_args=cmdline_args,
     )
     if adcp_opts is None:
-        return
+        return 1
 
     global DEBUG_PDB
     DEBUG_PDB = adcp_opts.debug_pdb

@@ -53,7 +53,7 @@ from pydantic.dataclasses import dataclass
 import ExtendedDataClass
 
 if "BaseLog" in sys.modules:
-    from BaseLog import log_debug, log_error
+    from BaseLog import log_debug, log_error  # ty: ignore[unresolved-import]
 else:
     from ADCPLog import log_debug, log_error
 
@@ -165,8 +165,8 @@ def ProcessConfigFile(config_file_name: pathlib.PosixPath) -> tuple[Params, Weig
 #     """Allow dot access for dictionaries"""
 
 #     __getattr__ = dict.__getitem__
-#     __setattr__ = dict.__setitem__  # type: ignore
-#     __delattr__ = dict.__delitem__  # type: ignore
+#     __setattr__ = dict.__setitem__
+#     __delattr__ = dict.__delitem__
 
 
 # class NCDataType(enum.Enum):

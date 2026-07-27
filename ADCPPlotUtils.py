@@ -83,28 +83,31 @@ def isoSurface(field, target, dim):
 
 
 def cmocean_to_plotly(cmapname, pl_entries):
-    maps = {
-        "thermal": cmocean.cm.thermal,
-        "haline": cmocean.cm.haline,
-        "solar": cmocean.cm.solar,
-        "ice": cmocean.cm.ice,
-        "gray": cmocean.cm.gray,
-        "oxy": cmocean.cm.oxy,
-        "deep": cmocean.cm.deep,
-        "dense": cmocean.cm.dense,
-        "algae": cmocean.cm.algae,
-        "matter": cmocean.cm.matter,
-        "turbid": cmocean.cm.turbid,
-        "speed": cmocean.cm.speed,
-        "amp": cmocean.cm.amp,
-        "tempo": cmocean.cm.tempo,
-        "phase": cmocean.cm.phase,
-        "balance": cmocean.cm.balance,
-        "delta": cmocean.cm.delta,
-        "curl": cmocean.cm.curl,
-    }
+    # cmocean.cm injects its colormap names into the module namespace dynamically
+    # (locals().update(...)), so they aren't visible to static attribute access.
+    names = [
+        "thermal",
+        "haline",
+        "solar",
+        "ice",
+        "gray",
+        "oxy",
+        "deep",
+        "dense",
+        "algae",
+        "matter",
+        "turbid",
+        "speed",
+        "amp",
+        "tempo",
+        "phase",
+        "balance",
+        "delta",
+        "curl",
+    ]
+    maps = {name: getattr(cmocean.cm, name) for name in names}
 
-    cmap = maps.get(cmapname, cmocean.cm.thermal)
+    cmap = maps.get(cmapname, maps["thermal"])
 
     h = 1.0 / (pl_entries - 1)
     pl_colorscale = []

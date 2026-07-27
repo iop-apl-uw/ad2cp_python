@@ -45,7 +45,7 @@ import ADCPFiles
 import ADCPUtils
 
 if "BaseLog" in sys.modules:
-    from BaseLog import log_error, log_warning
+    from BaseLog import log_error, log_warning  # ty: ignore[unresolved-import]
 else:
     from ADCPLog import log_error, log_warning
 
@@ -244,7 +244,7 @@ def CleanADCP(
 
 # Matches ad2cp_inverse6 from matlab code
 def Inverse(
-    adcp: ADCPFiles.ADCPData | ADCPFiles.ADCPRealtimeData,
+    adcp: ADCPFiles.ADCPRealtimeData,
     gps: ADCPFiles.GPSData,
     glider: ADCPFiles.SGData,
     weights: ADCPConfig.Weights,
@@ -582,7 +582,7 @@ def Inverse(
     # end
 
     if weights.W_SURFACE:
-        ii_surface = np.nonzero(param.sfc_blank >= D.Z0)[0]
+        ii_surface = np.nonzero(param.sfc_blank >= D.Z0)[0]  # ty: ignore[no-matching-overload]
         G_sfc = sp.sparse.lil_array((ii_surface.shape[0], Nt + 2 * Nz))
         for kk in range(ii_surface.shape[0]):
             G_sfc[kk, ii_surface[kk]] = 1
@@ -592,7 +592,7 @@ def Inverse(
         G_sfc = []
         d_sfc = []
     if inverse_tmp is not None:
-        inverse_tmp["G_sfc"] = G_sfc.todense() if sp.sparse.issparse(G_sfc) else G_sfc
+        inverse_tmp["G_sfc"] = G_sfc.todense() if sp.sparse.issparse(G_sfc) else G_sfc  # ty: ignore[unresolved-attribute]
 
     # clear gps_constraints
     # for k=1:length(gps.Mtime)-1 % all GPS
@@ -788,7 +788,7 @@ def Inverse(
     else:
         Do = []
     if inverse_tmp is not None:
-        inverse_tmp["Do"] = Do.todense() if sp.sparse.issparse(Do) else Do
+        inverse_tmp["Do"] = Do.todense() if sp.sparse.issparse(Do) else Do  # ty: ignore[unresolved-attribute]
 
     # % Up and down ocean profile should be similar... (weighted by time interval)
     # if exist('W_OCN_DNUP','var')
@@ -820,6 +820,8 @@ def Inverse(
         #   time2 = interp_nm(glider.ctd_depth(imax:end), glider.Mtime(imax:end), gz);
         time1 = ADCPUtils.interp_nm(glider.ctd_depth[: imax + 1], glider.ctd_time[: imax + 1], gz, fill_value=np.nan)
         time2 = ADCPUtils.interp_nm(glider.ctd_depth[imax:], glider.ctd_time[imax:], gz, fill_value=np.nan)
+        if time1 is None or time2 is None:
+            raise ValueError("interp_nm failed to converge for W_OCN_DNUP weighting")
         #   ss = 1-(time2-time1); % 1-diff in days
         #   ss(ss<0)=0; % limit to zero.
         #   for k=1:length(ss)
@@ -852,7 +854,7 @@ def Inverse(
     else:
         Do2 = []
     if inverse_tmp is not None:
-        inverse_tmp["Do2"] = Do2.todense() if sp.sparse.issparse(Do2) else Do2
+        inverse_tmp["Do2"] = Do2.todense() if sp.sparse.issparse(Do2) else Do2  # ty: ignore[unresolved-attribute]
 
     # % Smoothness of vehicle velocity
     # Dv = [spdiags(repmat([-1 2 -1], Nt-2,1),[0 1 2], Nt-2,Nt), sparse(Nt-2,2*Nz) ]*VEH_SMOOTH  ; % d/dt
@@ -901,7 +903,7 @@ def Inverse(
         d_model = []
 
     if inverse_tmp is not None:
-        inverse_tmp["G_model"] = G_model.todense() if sp.sparse.issparse(G_model) else G_model
+        inverse_tmp["G_model"] = G_model.todense() if sp.sparse.issparse(G_model) else G_model  # ty: ignore[unresolved-attribute]
         inverse_tmp["d_model"] = d_model
 
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -941,7 +943,7 @@ def Inverse(
         d_deep = []
 
     if inverse_tmp is not None:
-        inverse_tmp["G_deep"] = G_deep.todense() if sp.sparse.issparse(G_deep) else G_deep
+        inverse_tmp["G_deep"] = G_deep.todense() if sp.sparse.issparse(G_deep) else G_deep  # ty: ignore[unresolved-attribute]
         inverse_tmp["d_deep"] = d_deep
     # Good to here
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1010,7 +1012,7 @@ def Inverse(
         if isinstance(B_vars[ii], list):
             continue
         elif sp.sparse.issparse(B_vars[ii]):
-            B_list.append(np.squeeze(B_vars[ii].todense()))
+            B_list.append(np.squeeze(B_vars[ii].todense()))  # ty: ignore[unresolved-attribute]
         else:
             B_list.append(B_vars[ii])
 
