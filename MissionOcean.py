@@ -134,7 +134,7 @@ def mission_oceanvelocityprofile(
         return (ret_figs, ret_plots)
 
     ncname = Utils2.get_mission_timeseries_name(base_opts, basename="adcp_profile_timeseries")
-    if not section_file_name.exists():
+    if not ncname.exists():
         return (ret_figs, ret_plots)
 
     try:
