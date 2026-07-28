@@ -27,9 +27,7 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""
-ADCPFiles.py - Routines to process Seaglider ADCP files
-"""
+"""ADCPFiles.py - Routines to process Seaglider ADCP files."""
 
 import collections
 import pathlib
@@ -37,6 +35,7 @@ import sys
 from dataclasses import dataclass, field
 from typing import Any
 
+import h5py
 import netCDF4
 import numpy as np
 import numpy.typing as npt
@@ -52,8 +51,16 @@ else:
     from ADCPLog import log_error
 
 
-def fetch_var(x: netCDF4.Variable) -> Any:
-    """Helper function for data fetch"""
+def fetch_var(x: netCDF4.Variable) -> Any:  # noqa: ANN401 -- genuinely dynamic: scalar or ndarray depending on x.shape
+    """Fetches a netCDF variable's data, filling in FillValue with NaN for arrays.
+
+    Args:
+        x: netCDF variable to read.
+
+    Returns:
+        The variable's singleton value if ``x`` has an empty shape, otherwise an
+        ndarray of its full contents with ``FillValue`` entries replaced by NaN.
+    """
     # For netCDF4 datasets, singletons have an empty tuple for the shape
     if not x.shape:
         # Singleton
@@ -70,8 +77,15 @@ def fetch_var(x: netCDF4.Variable) -> Any:
 
 
 class SaveToHDF5:
-    def save_to_hdf5(self, group_name: str, hdf) -> None:
-        """Persist the dataclass fields to a group in a HDF5 file"""
+    """Mixin adding HDF5 persistence to a dataclass, for debug output."""
+
+    def save_to_hdf5(self, group_name: str, hdf: h5py.File) -> None:
+        """Persists the dataclass fields to a group in a HDF5 file.
+
+        Args:
+            group_name: Name of the group to create in ``hdf`` and write fields into.
+            hdf: Open HDF5 file to write into.
+        """
         grp = hdf.create_group(group_name)
         for var_n in self.__dataclass_fields__:  # ty: ignore[unresolved-attribute]
             d = getattr(self, var_n)
@@ -85,7 +99,7 @@ map_t = collections.namedtuple("map_t", ("int_name", "map_func", "required"))
 
 @dataclass
 class ADCPRealtimeData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
-    """ADCP Realtime data from the seaglider netcdf file"""
+    """ADCP Realtime data from the seaglider netcdf file."""
 
     #
     # From current dive netcdf file
@@ -132,6 +146,15 @@ class ADCPRealtimeData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
 
     # Load varaibles from netcdf files
     def adcp_namemapping(self, prefix: str) -> dict[str, map_t]:
+        """Builds the mapping from output variable name to netCDF variable/loader for this instrument.
+
+        Args:
+            prefix: netCDF variable name prefix for this ADCP instrument (e.g. ``"ad2cp"`` or ``"cp"``).
+
+        Returns:
+            Mapping of output variable name to a ``map_t`` describing the source
+            netCDF variable name, the loader function to apply, and whether it's required.
+        """
         ret_dict = {
             f"{prefix}_velX": map_t("U", lambda x: fetch_var(x).T, True),
             f"{prefix}_velY": map_t("V", lambda x: fetch_var(x).T, True),
@@ -153,6 +176,17 @@ class ADCPRealtimeData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
         return ret_dict
 
     def init(self, ds: netCDF4.Dataset, ncf_name: pathlib.Path, params: ADCPConfig.Params) -> None:
+        """Loads ADCP realtime variables from a dive netCDF file into this instance.
+
+        Args:
+            ds: Open dive netCDF dataset to read variables from.
+            ncf_name: Path to ``ds``, used only for error messages.
+            params: Inverse processing parameters (used to orient ``TiltFactor``).
+
+        Raises:
+            KeyError: If neither ``ad2cp_time`` nor ``cp_time`` is present in ``ds``,
+                or if a required variable for the detected instrument is missing.
+        """
         # Load variables from dataset
         if "ad2cp_time" in ds.variables:
             prefix = "ad2cp"
@@ -186,7 +220,7 @@ class ADCPRealtimeData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
 
 @dataclass
 class GPSData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
-    """Glider data from the seaglider netcdf file"""
+    """Glider data from the seaglider netcdf file."""
 
     log_gps_time: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     #
@@ -201,7 +235,7 @@ class GPSData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
 
 @dataclass
 class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
-    """Glider data from the seaglider netcdf file and derived values"""
+    """Glider data from the seaglider netcdf file and derived values."""
 
     # From the current dives netcdf file
     dive: int = 0
@@ -249,7 +283,11 @@ class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
     time1: np.float64 = np.float64(0)
 
     def load_vars(self) -> list[str]:
-        """List of variables to be loaded from the netcdf file"""
+        """Lists the variables to be loaded from the netcdf file.
+
+        Returns:
+            Names of the netcdf/instance variables loaded by ``init``.
+        """
         return [
             "dive",
             "longitude",
@@ -276,6 +314,18 @@ class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
         ]
 
     def init(self, ds: netCDF4.Dataset, ncf_name: pathlib.Path, param: ADCPConfig.Params, gps: GPSData) -> None:
+        """Loads glider variables from a dive netCDF file and derives GPS/flight-model quantities.
+
+        Also updates ``gps`` in place: sets ``LL``/``log_gps_time`` from this dive
+        (and the next dive's first GPS fix, if available), and derives ``XY``, this
+        instance's ``time0``/``time1``/``Wmod``/``UV1``.
+
+        Args:
+            ds: Open dive netCDF dataset to read variables from.
+            ncf_name: Path to ``ds``, used to locate the next dive's netCDF file.
+            param: Inverse processing parameters (selects the vehicle flight model).
+            gps: GPS data for the dive, updated in place.
+        """
         for var_n in self.load_vars():
             v = self[var_n]
             if isinstance(v, np.ndarray):
@@ -389,13 +439,22 @@ class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
 # For full ADCP data sets
 @dataclass
 class ADCPData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
-    pass
+    """Placeholder for a full (non-realtime) ADCP data set. Currently unused/empty."""
 
 
 def ADCPReadSGNCF(
     ds: netCDF4.Dataset, ncf_name: pathlib.Path, param: ADCPConfig.Params
 ) -> tuple[SGData, GPSData, ADCPRealtimeData]:
-    """ """
+    """Reads and initializes glider, GPS, and ADCP realtime data from a dive netCDF file.
+
+    Args:
+        ds: Open dive netCDF dataset to read variables from.
+        ncf_name: Path to ``ds``.
+        param: Inverse processing parameters.
+
+    Returns:
+        A tuple ``(glider, gps, adcp_realtime_data)`` of the initialized data objects.
+    """
     adcp_realtime_data = ADCPRealtimeData()
     adcp_realtime_data.init(ds, ncf_name, param)
 
@@ -418,7 +477,7 @@ def ADCPReadSGNCF(
 
 @dataclass
 class ADCPProfile(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
-    """ADCP profile results"""
+    """ADCP profile results."""
 
     z: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     UVocn: npt.NDArray[np.complex128] = field(default_factory=(lambda: np.empty(0, dtype=np.complex128)))
@@ -433,7 +492,7 @@ class ADCPProfile(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
 
 @dataclass
 class ADCPInverseResults(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
-    """Results of the ADCP inverse processing at the glider location"""
+    """Results of the ADCP inverse processing at the glider location."""
 
     time: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     Z0: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
@@ -463,7 +522,7 @@ class ADCPInverseResults(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
 
 @dataclass
 class GPSConstraints(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
-    """GPS constraints"""
+    """GPS constraints."""
 
     dac: dict = field(default_factory=(dict))
     TL: dict = field(default_factory=(dict))

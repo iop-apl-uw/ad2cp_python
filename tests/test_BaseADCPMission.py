@@ -35,9 +35,8 @@ import testutils
 import xarray as xr
 
 
-def test_extension(caplog):
-    """Tests directly invoking the extension to process and existing Seaglider netCDF file"""
-
+def test_extension(caplog: pytest.LogCaptureFixture):
+    """Tests directly invoking the extension to process and existing Seaglider netCDF file."""
     # A test like this could be run out of the adcp project in the sub-directory - trying for the direct load of
     # the BaseADCPMission extension and skipping if it doesn't load (ie. being run as a github workflow)
 

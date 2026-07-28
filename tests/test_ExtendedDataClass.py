@@ -46,44 +46,48 @@ class edc_example2(ExtendedDataClass.ExtendedDataClass):
 
 
 @pytest.fixture
-def edc():
-    """Generates a new ExtendedDataClass with two fields populated"""
+def edc() -> edc_example:
+    """Generates a new ExtendedDataClass with two fields populated.
+
+    Returns:
+        An ``edc_example`` with ``x`` and ``y`` both set to ``[True, True]``.
+    """
     zz = edc_example()
     zz.x = [True, True]
     zz.y = [True, True]
     return zz
 
 
-def test_type_error(edc):
+def test_type_error(edc: edc_example):
     with pytest.raises(TypeError):
         # The line below should raise a [attr-defined] error from mypy
         edc.z = True
 
 
-def test_containment(edc):
+def test_containment(edc: edc_example):
     assert "x" in edc
     assert "z" not in edc
 
 
-def test_key_access(edc):
+def test_key_access(edc: edc_example):
     edc["x"]
     assert edc["x"] == [True, True]
     for _, v in edc.items():
         assert v == [True, True]
 
 
-def test_key_enumeration(edc):
+def test_key_enumeration(edc: edc_example):
     # ruff: noqa: SIM118
     assert [ii for ii in edc.keys()] == ["x", "y"]
 
 
-def test_key_assigment(edc):
+def test_key_assigment(edc: edc_example):
     edc["x"] = [True]
     with pytest.raises(TypeError):
         edc["items"] = True
 
 
-def test_keyerror(edc):
+def test_keyerror(edc: edc_example):
     with pytest.raises(KeyError):
         print(edc["z"])
 

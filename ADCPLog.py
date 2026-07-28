@@ -27,8 +27,7 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""
-ADCPLog.py - Logging infrastructure.
+"""ADCPLog.py - Logging infrastructure.
 
 Designed to be a subeset of the logging support in the Seaglider Basestation
 """
@@ -40,6 +39,7 @@ import logging
 import os
 import sys
 import traceback
+from pathlib import Path
 
 _stack_options = ["caller", "caller", "caller", "caller", "exc"]  # default
 
@@ -48,9 +48,7 @@ if "BaseLog" in sys.modules:
 
 
 class ADCPLogger:
-    """
-    ADCPLog: for use by all basestation code and utilities
-    """
+    """ADCPLog: for use by all basestation code and utilities."""
 
     self = None  # the global instance
     is_initialized = False
@@ -70,15 +68,12 @@ class ADCPLogger:
     debug_loc, info_loc, warning_loc, error_loc, critical_loc = _stack_options
 
     def __init__(self, opts: argparse.Namespace, include_time: bool = False) -> None:
-        """
-        Initializes a logging.Logger object, according to options (opts).
-        """
-
+        """Initializes a logging.Logger object, according to options (opts)."""
         if not ADCPLogger.is_initialized:
             ADCPLogger.self = self
             ADCPLogger.opts = opts
 
-            calling_module = os.path.splitext(os.path.split(inspect.stack()[1].filename)[1])[0]
+            calling_module = Path(inspect.stack()[1].filename).stem
 
             # create logger
             ADCPLogger.log = logging.getLogger(calling_module)
@@ -101,9 +96,7 @@ class ADCPLogger:
             log_info(f"Process id = {os.getpid():d}")  # report our process id
 
     def setHandler(self, handle: logging.Handler, opts: argparse.Namespace, include_time: bool) -> None:
-        """
-        Set a logging handle.
-        """
+        """Set a logging handle."""
         if include_time:
             formatter = logging.Formatter("%(asctime)s: %(levelname)s: %(message)s", "%H:%M:%S %d %b %Y %Z")
         else:
@@ -133,7 +126,11 @@ class ADCPLogger:
         warnings_logger.addHandler(handle)
 
     def getLogger(self) -> logging.Logger:
-        """getLogger: access function to log (static member)"""
+        """Access function to the log (static member).
+
+        Returns:
+            The shared ``ADCPLogger.log`` logger instance.
+        """
         if not ADCPLogger.is_initialized:
             # error condition
             pass
@@ -143,12 +140,16 @@ class ADCPLogger:
 
 
 def __log_caller_info(s: object, loc: str | None) -> str:
-    """Add stack or module: line number info for log caller to given string
-    Input:
-    s - string to be logged
+    """Adds stack or module/line number info for the log caller to a given string.
 
-    Return:
-    string with possible location information added
+    Args:
+        s: String to be logged.
+        loc: Location info to add: ``"caller"``/``"parent"`` for module(line), ``"exc"``
+            for the current exception traceback, ``"stack"`` for the full call stack,
+            or None for no location info.
+
+    Returns:
+        ``s``, with possible location information appended.
     """
     s = str(s)
     if loc:
@@ -161,7 +162,7 @@ def __log_caller_info(s: object, loc: str | None) -> str:
                     offset = offset + 1
                 frame = traceback.extract_stack(None, offset)[0]
                 module, lineno, function, _ = frame
-                module = os.path.basename(module)  # lose extension
+                module = Path(module).name  # lose extension
                 s = f"{module}({lineno:d}): {s}"
             elif loc == "exc":
                 exc = traceback.format_exc()
@@ -176,7 +177,7 @@ def __log_caller_info(s: object, loc: str | None) -> str:
                 frames.reverse()
                 for frame in frames[offset - 1 : -1]:  # drop our callers
                     module, lineno, function, _ = frame  # avoid the source code text
-                    module = os.path.basename(module)  # lose extension
+                    module = Path(module).name  # lose extension
                     stack = f"{stack}\n{prefix} {module}({lineno:d}) {function}()"
                     prefix = " "
                 s = f"{s}:{stack}"
@@ -188,9 +189,12 @@ def __log_caller_info(s: object, loc: str | None) -> str:
 
 
 def log_critical(s: object, loc: str = ADCPLogger.critical_loc, alert: str | None = None) -> None:
-    """Report string to baselog as a CRITICAL error
-    Input:
-    s - string
+    """Reports a string to baselog as a CRITICAL error.
+
+    Args:
+        s: String (or object convertible to one) to log.
+        loc: Location info to prepend/append; see ``__log_caller_info``.
+        alert: Unused; accepted for interface consistency with the other log_* functions.
     """
     s = __log_caller_info(s, loc)
     if ADCPLogger.log:
@@ -205,9 +209,14 @@ log_error_max_count: collections.defaultdict[str, int] = collections.defaultdict
 def log_error(
     s: object, loc: str = ADCPLogger.error_loc, alert: str | None = None, max_count: int | None = None
 ) -> None:
-    """Report string to baselog as an ERROR
-    Input:
-    s - string
+    """Reports a string to baselog as an ERROR.
+
+    Args:
+        s: String (or object convertible to one) to log.
+        loc: Location info to prepend/append; see ``__log_caller_info``.
+        alert: Unused; accepted for interface consistency with the other log_* functions.
+        max_count: If set, suppresses this message (by its prefix before the first
+            ``:``) once it has been logged more than ``max_count`` times.
     """
     s = __log_caller_info(s, loc)
 
@@ -231,13 +240,15 @@ log_warning_max_count: collections.defaultdict[str, int] = collections.defaultdi
 def log_warning(
     s: object, loc: str = ADCPLogger.warning_loc, alert: str | None = None, max_count: int | None = None
 ) -> None:
-    """Report string to baselog as a WARNING
-    Input:
-    s - string to be logged
-    alert - string indicating the class of alert this warning should be assigned to
-    max_count - maximum number of times this warning should be issued.
-                if a positive value, the count is indexed by the module name and line number
-                if a negative value, the count is indexed by the module name, line number andwarning string
+    """Reports a string to baselog as a WARNING.
+
+    Args:
+        s: String (or object convertible to one) to log.
+        loc: Location info to prepend/append; see ``__log_caller_info``.
+        alert: Unused; accepted for interface consistency with the other log_* functions.
+        max_count: If set, suppresses this message once it has been issued more than
+            ``abs(max_count)`` times. If positive, counted by message prefix (module
+            name and line number) alone; if negative, counted by prefix plus the full message.
     """
     s = __log_caller_info(s, loc)
 
@@ -261,9 +272,14 @@ log_info_max_count: collections.defaultdict[str, int] = collections.defaultdict(
 
 
 def log_info(s: object, loc: str = ADCPLogger.info_loc, alert: str | None = None, max_count: int | None = None) -> None:
-    """Report string to baselog as an ERROR
-    Input:
-    s - string
+    """Reports a string to baselog as INFO.
+
+    Args:
+        s: String (or object convertible to one) to log.
+        loc: Location info to prepend/append; see ``__log_caller_info``.
+        alert: Unused; accepted for interface consistency with the other log_* functions.
+        max_count: If set, suppresses this message (by its prefix before the first
+            ``:``) once it has been logged more than ``max_count`` times.
     """
     if not ADCPLogger.info_enabled:
         return
@@ -289,9 +305,14 @@ log_debug_max_count: collections.defaultdict[str, int] = collections.defaultdict
 def log_debug(
     s: object, loc: str | None = ADCPLogger.debug_loc, alert: str | None = None, max_count: int | None = None
 ) -> None:
-    """Report string to baselog as DEBUG info
-    Input:
-    s - string
+    """Reports a string to baselog as DEBUG info.
+
+    Args:
+        s: String (or object convertible to one) to log.
+        loc: Location info to prepend/append; see ``__log_caller_info``.
+        alert: Unused; accepted for interface consistency with the other log_* functions.
+        max_count: If set, suppresses this message (by its prefix before the first
+            ``:``) once it has been logged more than ``max_count`` times.
     """
     if not ADCPLogger.debug_enabled:
         return

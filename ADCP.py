@@ -27,15 +27,12 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""
-ADCP.py - Main caclulation functions
-"""
+"""ADCP.py - Main caclulation functions."""
 
 # TODO - review all code blocks and pull out the tight intermixed matlab
 
 import sys
 import warnings
-from typing import Any
 
 import numpy as np
 import scipy as sp
@@ -55,8 +52,21 @@ def CleanADCP(
     glider: ADCPFiles.SGData,
     param: ADCPConfig.Params,
 ) -> ADCPFiles.ADCPRealtimeData | None:
-    """Performs some housekeeping cleanup on the adcp data"""
+    """Performs some housekeeping cleanup on the adcp data.
 
+    Backs up the raw velocities, computes depth (``Z``/``Z0``) either from the glider's
+    CTD pressure or the ADCP's own pressure, and rescales velocities for sound speed
+    using the glider's sound velocity estimate.
+
+    Args:
+        adcp: Realtime ADCP data, updated in place.
+        glider: Glider (CTD/flight) data for the dive.
+        param: Inverse processing parameters.
+
+    Returns:
+        The same ``adcp`` object, updated in place, or None if sound-velocity
+        interpolation failed (all-NaN result).
+    """
     # ruff: noqa: SIM118
 
     # index_bins = param.index_bins;
@@ -250,7 +260,29 @@ def Inverse(
     weights: ADCPConfig.Weights,
     param: ADCPConfig.Params,
     inverse_tmp: dict | None = None,
-) -> Any:
+) -> tuple[ADCPFiles.ADCPInverseResults, ADCPFiles.ADCPProfile, None, dict | None]:
+    """Performs the ADCP shear-based inverse calculation for a single dive.
+
+    Matches ``ad2cp_inverse6`` from the original matlab code.
+
+    Args:
+        adcp: Realtime ADCP data for the dive.
+        gps: GPS fix data for the dive.
+        glider: Glider (CTD/flight) data for the dive.
+        weights: Inverse weighting configuration.
+        param: Inverse processing parameters.
+        inverse_tmp: If not None, populated with intermediate matrices/vectors for debugging.
+
+    Returns:
+        A tuple ``(D, profile, None, inverse_tmp)``:
+            D: Inverse results on the ADCP ensemble time grid.
+            profile: Inverse results on the glider profile depth grid.
+            None: Reserved for plotting variables (not currently populated).
+            inverse_tmp: The same dict passed in, if any, now populated.
+
+    Raises:
+        ValueError: If the ``W_OCN_DNUP`` weighting's CTD-time interpolation fails to converge.
+    """
     # gz = param.gz
     # dz = param.dz
 

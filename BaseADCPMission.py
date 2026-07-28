@@ -28,21 +28,21 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Simple basestation extension - starting point for new extensions"""
+"""Basestation extension for building the whole-mission ADCP netCDF file."""
 
-import os
 import pathlib
 import pdb
 import sys
 import time
 import traceback
 import uuid
+from typing import Any
 
 import numpy as np
 
 # This needs to be imported before the ADCP files to make sure the Logging infrastructure for the basestation
 # is picked up instead of that from the ADCP
-sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
+sys.path.append(str(pathlib.Path(__file__).resolve().parent.parent))
 # ruff: noqa: E402
 import BaseOpts
 import BaseOptsType
@@ -58,18 +58,25 @@ DEBUG_PDB = False
 
 
 def DEBUG_PDB_F() -> None:
-    """Enter the debugger on exceptions"""
+    """Enter the debugger on exceptions."""
     if DEBUG_PDB:
         _, __, traceb = sys.exc_info()
         traceback.print_exc()
         pdb.post_mortem(traceb)
 
 
-def load_additional_arguments():
+def load_additional_arguments() -> tuple[list[str], dict[str, str], dict[str, BaseOptsType.options_t]]:
     """Defines and extends arguments related to this extension.
-    Called by BaseOpts when the extension is set to be loaded
-    """
 
+    Called by BaseOpts when the extension is set to be loaded.
+
+    Returns:
+        A tuple ``(additional_arguments, additional_option_groups, extension_options)``:
+            additional_arguments: Names of options, defined elsewhere in BaseOpts,
+                that this extension also applies to.
+            additional_option_groups: Description for each option_group tag used below.
+            extension_options: Options local to this extension.
+    """
     return (
         # Add this module to these options defined in BaseOpts
         ["mission_dir", "netcdf_filename"],
@@ -122,18 +129,33 @@ def load_additional_arguments():
 
 def main(
     cmdline_args: list[str] = sys.argv[1:],
-    instrument_id=None,
-    base_opts=None,
-    sg_calib_file_name=None,
-    dive_nc_file_names=None,
-    nc_files_created=None,
-    processed_other_files=None,
-    known_mailer_tags=None,
-    known_ftp_tags=None,
-    processed_file_names=None,
-    session=None,
-):
-    """Basestation extension for building whole mission adcp netcdf file
+    instrument_id: int | None = None,
+    base_opts: BaseOpts.BaseOptions | None = None,
+    sg_calib_file_name: pathlib.Path | None = None,
+    dive_nc_file_names: list[pathlib.Path] | None = None,
+    nc_files_created: list[pathlib.Path] | None = None,
+    processed_other_files: list[pathlib.Path] | None = None,
+    known_mailer_tags: list[str] | None = None,
+    known_ftp_tags: list[str] | None = None,
+    processed_file_names: list[pathlib.Path] | None = None,
+    session: Any = None,  # noqa: ANN401 -- opaque db session object, untyped even in the reference extension template
+) -> int:
+    """Basestation extension for building the whole-mission ADCP netCDF file.
+
+    Args:
+        cmdline_args: Command line arguments, used only if ``base_opts`` is None.
+        instrument_id: Unused; accepted for basestation extension interface consistency.
+        base_opts: Basestation options. If None, parsed from ``cmdline_args``.
+        sg_calib_file_name: Unused; accepted for basestation extension interface consistency.
+        dive_nc_file_names: Dive netCDF files to process. If None, collected from
+            ``base_opts.mission_dir`` via ``MakeDiveProfiles.collect_nc_perdive_files``.
+        nc_files_created: Dive netCDF files created earlier in this run, when called
+            as an extension; if empty/None, bails out early (nothing new to add).
+        processed_other_files: Unused; accepted for basestation extension interface consistency.
+        known_mailer_tags: Unused; accepted for basestation extension interface consistency.
+        known_ftp_tags: Unused; accepted for basestation extension interface consistency.
+        processed_file_names: Unused; accepted for basestation extension interface consistency.
+        session: Unused; accepted for basestation extension interface consistency.
 
     Returns:
         0 for success (although there may have been individual errors in
@@ -141,7 +163,7 @@ def main(
         Non-zero for critical problems.
 
     Raises:
-        Any exceptions raised are considered critical errors and not expected
+        Any exceptions raised are considered critical errors and not expected.
     """
     # pylint: disable=unused-argument
     f_from_cli = False

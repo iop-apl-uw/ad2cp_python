@@ -33,11 +33,11 @@ import SGADCP
 
 downward_dir = "testdata/downward"
 upward_dir = "testdata/upward"
-cmd_lines = [("--verbose", "--mission_dir", downward_dir), ("--verbose", "--mission_dir", upward_dir)]
+cmd_lines = [["--verbose", "--mission_dir", downward_dir], ["--verbose", "--mission_dir", upward_dir]]
 
 
 @pytest.mark.parametrize("cmd_line", cmd_lines)
-def test_downward(caplog, cmd_line):
+def test_downward(caplog: pytest.LogCaptureFixture, cmd_line: list[str]):
     result = SGADCP.main(cmd_line)
     assert result == 0
     for record in caplog.records:

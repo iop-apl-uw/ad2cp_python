@@ -27,9 +27,7 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""
-CompareToMat.py - Compares single dive output between matlab and python implimentations
-"""
+"""CompareToMat.py - Compares single dive output between matlab and python implimentations."""
 
 import argparse
 import os
@@ -37,6 +35,8 @@ import pdb
 import sys
 import time
 import traceback
+from pathlib import Path
+from typing import Any
 
 import h5py
 import numpy as np
@@ -49,7 +49,7 @@ DEBUG_PDB = False
 
 
 def DEBUG_PDB_F() -> None:
-    """Enter the debugger on exceptions"""
+    """Enter the debugger on exceptions."""
     if DEBUG_PDB:
         _, __, traceb = sys.exc_info()
         traceback.print_exc()
@@ -58,8 +58,19 @@ def DEBUG_PDB_F() -> None:
 
 # From https://stackoverflow.com/questions/17316880/reading-v-7-3-mat-file-in-python
 # Loads matlab 7.3v files - handles the conversion from FORTRAN to C order
-def read_matlab(filename):
-    def conv(path=""):
+def read_matlab(filename: Path) -> dict[str, Any]:
+    """Loads a matlab v7.3 (HDF5-based) .mat file into a nested dict.
+
+    Args:
+        filename: Path to the .mat file to load.
+
+    Returns:
+        Nested dict mirroring the file's HDF5 group structure; leaf values are
+        ndarrays (with FORTRAN-to-C axis order swapped for 2D+ arrays), or lists
+        of resolved object references for cell/struct arrays.
+    """
+
+    def conv(path: str = "") -> dict[str, Any]:
         p = path or "/"
         paths[p] = ret = {}
         for k, v in f[p].items():
@@ -82,8 +93,7 @@ def read_matlab(filename):
 
 
 def main() -> None:
-    app_name, _ = os.path.splitext(__file__)
-
+    """Command line driver comparing matlab and python ADCP processing output for a single dive."""
     ap = argparse.ArgumentParser(description=__doc__)
 
     ap.add_argument("--verbose", default=False, action="store_true", help="enable verbose output")

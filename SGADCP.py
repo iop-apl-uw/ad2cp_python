@@ -27,10 +27,7 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""
-SGADCP.py - main entry point for stand alone processing of the Seaglider
-ADCP data
-"""
+"""SGADCP.py - main entry point for stand alone processing of the Seaglider ADCP data."""
 
 import collections
 import os
@@ -58,7 +55,7 @@ DEBUG_PDB = False
 
 
 def DEBUG_PDB_F() -> None:
-    """Enter the debugger on exceptions"""
+    """Enter the debugger on exceptions."""
     if DEBUG_PDB:
         _, __, traceb = sys.exc_info()
         traceback.print_exc()
@@ -66,7 +63,7 @@ def DEBUG_PDB_F() -> None:
 
 
 def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
-    """Command line driver Seaglider ADCP data processing
+    """Command line driver Seaglider ADCP data processing.
 
     Returns:
         0 for success
@@ -75,7 +72,6 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     Raises:
         Any exceptions raised are considered critical errors and not expected
     """
-
     # NOTE: Minimum options here - debug level and name for yaml config file
 
     # Get options
@@ -310,6 +306,9 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                 D.save_to_hdf5("D", hdf)
                 profile.save_to_hdf5("profile", hdf)
                 grp = hdf.create_group("inverse_tmp")
+                # inverse_tmp is the {} passed to ADCP.Inverse() above, guaranteed non-None here
+                # since we're inside the adcp_opts.save_details branch.
+                assert inverse_tmp is not None
                 for k, v in inverse_tmp.items():
                     grp.create_dataset(k, data=v)
 

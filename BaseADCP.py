@@ -27,22 +27,22 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Basestation extension for microstructure post-processing"""
+"""Basestation extension for per-dive ADCP post-processing."""
 
 import argparse
-import os
 import pathlib
 import pdb
 import shutil
 import sys
 import traceback
 
+import netCDF4
 import numpy as np
 from pyproj import Geod
 
 # This needs to be imported before the ADCP files to make sure the Logging infrastructure for the basestation
 # is picked up instead of that from the ADCP
-sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
+sys.path.append(str(pathlib.Path(__file__).resolve().parent.parent))
 # ruff: noqa: E402
 import BaseNetCDF
 import BaseOpts
@@ -61,14 +61,26 @@ DEBUG_PDB = False
 
 
 def DEBUG_PDB_F() -> None:
-    """Enter the debugger on exceptions"""
+    """Enter the debugger on exceptions."""
     if DEBUG_PDB:
         _, __, traceb = sys.exc_info()
         traceback.print_exc()
         pdb.post_mortem(traceb)
 
 
-def GenerateNewLatLons(ds, D):
+def GenerateNewLatLons(
+    ds: netCDF4.Dataset, D: ADCPFiles.ADCPInverseResults
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Dead-reckons lat/lon positions between the dive's two GPS fixes using the inverse solution.
+
+    Args:
+        ds: Open dive netCDF dataset, for the GPS fixes.
+        D: Inverse results on the ADCP ensemble time grid, for ocean/glider velocities.
+
+    Returns:
+        A tuple ``(lons, lats, times)`` of dead-reckoned positions and times
+        between the dive's GPS1 and GPS2 fixes.
+    """
     gps_lons = ds.variables["log_gps_lon"][:]
     gps_lats = ds.variables["log_gps_lat"][:]
     gps_times = ds.variables["log_gps_time"][:]
@@ -132,9 +144,21 @@ def GenerateNewLatLons(ds, D):
     return (np.array(lons), np.array(lats), np.array(times))
 
 
-def convert_to_base_meta(var_meta_d, nc_info, f_include):
-    """Converts a adcp var_meta entry to a basestation var_meta dict"""
+def convert_to_base_meta(
+    var_meta_d: ADCPConfig.NCVarMeta, nc_info: tuple[str, ...], f_include: bool
+) -> tuple[bool, str, dict, tuple[str, ...]]:
+    """Converts an adcp var_meta entry to a basestation var_meta tuple.
 
+    Args:
+        var_meta_d: adcp netCDF variable metadata to convert.
+        nc_info: Basestation sensor dim info tuple, passed through unchanged.
+        f_include: Whether this variable should be included by default in
+            MakeMissionTimeSeries/MakeMissionProfile output.
+
+    Returns:
+        A tuple ``(f_include, nc_type, attribs_d, nc_info)`` in the form expected
+        by the basestation's ``netcdf_metadata_adds`` dict.
+    """
     attribs_d = {}
 
     for k, v in iter(var_meta_d.nc_attribs):
@@ -147,15 +171,21 @@ def convert_to_base_meta(var_meta_d, nc_info, f_include):
     return (f_include, var_meta_d.nc_type, attribs_d, nc_info)
 
 
-def init_extension(module_name: str, base_opts: BaseOpts.BaseOptions | None = None, init_dict=None) -> int:
-    """
-    init_sensor
+def init_extension(
+    module_name: str, base_opts: BaseOpts.BaseOptions | None = None, init_dict: dict | None = None
+) -> int:
+    """Registers ADCP inverse-solution netCDF metadata with the basestation, for MMT/MMP.
+
+    Args:
+        module_name: This extension's module name, used as the key into ``init_dict``.
+        base_opts: Basestation options; ``base_opts.adcp_var_meta_file`` is used to load the var_meta.
+        init_dict: Basestation's per-extension init dict, updated in place with
+            this extension's ``netcdf_metadata_adds``.
 
     Returns:
         -1 - error in processing
          0 - success
     """
-
     # The only purpose of this function is to add metadata into the basestation's system to
     # allow MakeMissionTimeSeries and MakeMisionProfile to incorporte and act on the
     # ADCP timeseries solutions (along to plotting of those solutions).
@@ -223,11 +253,18 @@ def init_extension(module_name: str, base_opts: BaseOpts.BaseOptions | None = No
     return 0
 
 
-def load_additional_arguments():
+def load_additional_arguments() -> tuple[list[str], dict[str, str], dict[str, BaseOptsType.options_t]]:
     """Defines and extends arguments related to this extension.
-    Called by BaseOpts when the extension is set to be loaded
-    """
 
+    Called by BaseOpts when the extension is set to be loaded.
+
+    Returns:
+        A tuple ``(additional_arguments, additional_option_groups, extension_options)``:
+            additional_arguments: Names of options, defined elsewhere in BaseOpts,
+                that this extension also applies to.
+            additional_option_groups: Description for each option_group tag used below.
+            extension_options: Options local to this extension.
+    """
     return (
         # Add this module to these options defined in BaseOpts
         ["mission_dir", "netcdf_filename"],
@@ -318,17 +355,31 @@ def load_additional_arguments():
 
 def main(
     cmdline_args: list[str] = sys.argv[1:],
-    instrument_id=None,
-    base_opts=None,
-    sg_calib_file_name=None,
-    dive_nc_file_names=None,
-    nc_files_created=None,
-    processed_other_files=None,
-    known_mailer_tags=None,
-    known_ftp_tags=None,
-    processed_file_names=None,
-):
-    """Basestation extension for running microstructure processing
+    instrument_id: int | None = None,
+    base_opts: BaseOpts.BaseOptions | None = None,
+    sg_calib_file_name: pathlib.Path | None = None,
+    dive_nc_file_names: list[pathlib.Path] | None = None,
+    nc_files_created: list[pathlib.Path] | None = None,
+    processed_other_files: list[pathlib.Path] | None = None,
+    known_mailer_tags: list[str] | None = None,
+    known_ftp_tags: list[str] | None = None,
+    processed_file_names: list[pathlib.Path] | None = None,
+) -> int:
+    """Basestation extension for running ADCP processing.
+
+    Args:
+        cmdline_args: Command line arguments, used only if ``base_opts`` is None.
+        instrument_id: Unused; accepted for basestation extension interface consistency.
+        base_opts: Basestation options. If None, parsed from ``cmdline_args``.
+        sg_calib_file_name: Unused; accepted for basestation extension interface consistency.
+        dive_nc_file_names: Dive netCDF files to process. If None, collected from
+            ``base_opts.mission_dir`` or ``nc_files_created``.
+        nc_files_created: Dive netCDF files created by MakeDiveProfiles in this run,
+            when called as an extension.
+        processed_other_files: Unused; accepted for basestation extension interface consistency.
+        known_mailer_tags: Unused; accepted for basestation extension interface consistency.
+        known_ftp_tags: Unused; accepted for basestation extension interface consistency.
+        processed_file_names: Unused; accepted for basestation extension interface consistency.
 
     Returns:
         0 for success (although there may have been individual errors in
@@ -336,8 +387,7 @@ def main(
         Non-zero for critical problems.
 
     Raises:
-        Any exceptions raised are considered critical errors and not expected
-
+        Any exceptions raised are considered critical errors and not expected.
     """
     # pylint: disable=unused-argument
     if base_opts is None:

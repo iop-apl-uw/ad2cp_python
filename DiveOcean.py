@@ -28,7 +28,7 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Plots Ocean Velocity vs Depth"""
+"""Plots Ocean Velocity vs Depth."""
 
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
@@ -81,11 +81,21 @@ from Plotting import add_arguments, plotdivesingle
 def plot_ocean_velocity(
     base_opts: BaseOpts.BaseOptions,
     dive_nc_file: scipy.io._netcdf.netcdf_file,
-    generate_plots=True,
-    dbcon=None,
+    generate_plots: bool = True,
+    dbcon: typing.Any = None,  # noqa: ANN401 -- unused, accepted for @plotdivesingle interface consistency
 ) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
-    """Plots ocean velocity"""
+    """Plots ocean velocity vs depth for a single dive.
 
+    Args:
+        base_opts: Basestation options.
+        dive_nc_file: Open dive netCDF file to read ADCP inverse-solution variables from.
+        generate_plots: If False, skip plot generation and return empty results.
+        dbcon: Unused; accepted for ``@plotdivesingle`` interface consistency.
+
+    Returns:
+        A tuple ``(figures, plot_files)`` -- empty lists if plotting was skipped
+        or the required variables weren't available.
+    """
     ret_plots = []
     ret_figs = []
 
@@ -270,11 +280,21 @@ def plot_ocean_velocity(
 def plot_ocean_velocity_3d(
     base_opts: BaseOpts.BaseOptions,
     dive_nc_file: scipy.io._netcdf.netcdf_file,
-    generate_plots=True,
-    dbcon=None,
+    generate_plots: bool = True,
+    dbcon: typing.Any = None,  # noqa: ANN401 -- unused, accepted for @plotdivesingle interface consistency
 ) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
-    """Plots ocean velocity at glider location in 3d"""
+    """Plots ocean velocity at the glider location in 3d.
 
+    Args:
+        base_opts: Basestation options.
+        dive_nc_file: Open dive netCDF file to read ADCP inverse-solution variables from.
+        generate_plots: If False, skip plot generation and return empty results.
+        dbcon: Unused; accepted for ``@plotdivesingle`` interface consistency.
+
+    Returns:
+        A tuple ``(figures, plot_files)`` -- empty lists if plotting was skipped
+        or the required variables weren't available.
+    """
     ret_plots = []
     ret_figs = []
 

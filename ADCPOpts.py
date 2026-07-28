@@ -27,9 +27,7 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""
-ADCPOpts.py - SG ADCP processing options and command-line parsing
-"""
+"""ADCPOpts.py - SG ADCP processing options and command-line parsing."""
 
 import argparse
 import pathlib
@@ -39,7 +37,23 @@ from typing import Any
 
 
 class FullPathlibAction(argparse.Action):
-    def __init__(self, option_strings: Any, dest: Any, nargs: Any = None, **kwargs: Any) -> None:
+    """argparse action converting a string (or list of strings) into absolute pathlib.Path(s)."""
+
+    def __init__(
+        self,
+        option_strings: Sequence[str],
+        dest: str,
+        nargs: int | str | None = None,
+        **kwargs: Any,  # noqa: ANN401 -- forwarded to argparse.Action.__init__'s many optional params
+    ) -> None:
+        """Initializes the action, forwarding to argparse.Action.
+
+        Args:
+            option_strings: Command-line option strings, e.g. ``["--foo"]``.
+            dest: Namespace attribute name to store the value under.
+            nargs: Number of command-line arguments to consume; unused/unchecked here.
+            **kwargs: Forwarded to ``argparse.Action.__init__``.
+        """
         # if nargs is not None:
         #    raise ValueError("nargs not allowed")
         super().__init__(option_strings, dest, **kwargs)
@@ -51,6 +65,14 @@ class FullPathlibAction(argparse.Action):
         values: str | Sequence[Any] | None,
         option_string: str | None = None,
     ) -> None:
+        """Converts the parsed value(s) to absolute pathlib.Path(s) and stores them on the namespace.
+
+        Args:
+            parser: The argument parser (unused; accepted for the ``argparse.Action`` interface).
+            namespace: Namespace to update with the converted value.
+            values: The raw string, list of strings, or None parsed for this argument.
+            option_string: The option string used (unused; accepted for the ``argparse.Action`` interface).
+        """
         if values == "" or values is None:
             setattr(namespace, self.dest, "")
         elif isinstance(values, str):
@@ -62,6 +84,17 @@ class FullPathlibAction(argparse.Action):
 
 
 def ADCPOptions(description: str, calling_module: str, cmdline_args: list[str] = sys.argv) -> argparse.Namespace | None:
+    """Defines and parses command line options for the standalone adcp CLI entry points.
+
+    Args:
+        description: Description shown in ``--help`` output.
+        calling_module: Name of the calling module -- ``"SGADCP"`` or ``"SGADCPPlot"``,
+            selects which additional options are defined.
+        cmdline_args: Command line arguments to parse.
+
+    Returns:
+        Parsed options, or None if ``calling_module`` isn't recognized.
+    """
     if calling_module not in ("SGADCP", "SGADCPPlot"):
         sys.stderr.write(f"Unknown calling_module {calling_module}")
         return None

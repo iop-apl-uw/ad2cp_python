@@ -33,7 +33,6 @@ import pathlib
 import shutil
 import time
 from collections.abc import Callable
-from typing import Any
 
 import pytest
 
@@ -47,17 +46,18 @@ def run_mission(
     mission_dir: pathlib.Path,
     main_func: Callable[[list[str]], int],
     cmd_line: list[str],
-    caplog: Any,
+    caplog: pytest.LogCaptureFixture,
     allowed_msgs: list[str],
 ) -> None:
-    """Copies a mission to a test directory, executes it and checks warning and error output against a known list
+    """Copies a mission to a test directory, executes it and checks warning and error output against a known list.
 
     Args:
-    data_dir: original data
-    main_func: The main() toplevel entry point called from __main__ - takes a commnand line argument
-    cmd_line: argument to main_func
-    caplog: logging capture from pytest fixture
-    allow_msgs: list of allowed messages that can appear in the caplog
+        data_dir: Original data directory to copy from (testdata/XXXX).
+        mission_dir: Test mission directory to populate and run in; wiped first if it exists.
+        main_func: The main() toplevel entry point called from __main__ - takes a command line argument.
+        cmd_line: Argument list to pass to main_func.
+        caplog: Logging capture from the pytest ``caplog`` fixture.
+        allowed_msgs: List of allowed messages that can appear in the caplog without failing the test.
     """
     os.environ["TZ"] = "UTC"
     time.tzset()

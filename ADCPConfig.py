@@ -27,9 +27,7 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""
-ADCPConfig.py - Routines to process SG ADCP config file
-"""
+"""ADCPConfig.py - Routines to process SG ADCP config file."""
 
 # import pdb
 import pathlib
@@ -60,6 +58,8 @@ else:
 
 @dataclass(config=dict(extra="forbid", arbitrary_types_allowed=True))
 class Params(ExtendedDataClass.ExtendedDataClass):
+    """Inverse processing parameters for a single ADCP processing run."""
+
     # Gilder number int
     sg_id: int = field(default=0)
     # Size of vertical grid bins used in inverse solution
@@ -88,6 +88,7 @@ class Params(ExtendedDataClass.ExtendedDataClass):
     time_limits: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
 
     def __post_init__(self) -> None:
+        """Coerces yaml-sourced list values for array fields into numpy arrays."""
         # TODO - short term hack for new input from the config yaml.  Right now, these
         # are not converted to the correct type by pydantic.
         try:
@@ -104,6 +105,8 @@ class Params(ExtendedDataClass.ExtendedDataClass):
 
 @dataclass(config=dict(extra="forbid"))
 class Weights(ExtendedDataClass.ExtendedDataClass):
+    """Relative weights for each constraint in the ADCP shear-based inverse solution."""
+
     W_MEAS: float = field(default=1)  # measurement weight: ~ 1/(0.05);
     OCN_SMOOTH: float = field(default=2)  # 100/param.dz; % smoothness factors
     VEH_SMOOTH: float = field(default=1)  # smoothness factors
@@ -119,12 +122,14 @@ class Weights(ExtendedDataClass.ExtendedDataClass):
 
 @dataclass(config=dict(extra="forbid"))
 class ConfigModel:
+    """Top-level schema for the ADCP processing config yaml file."""
+
     weights: Weights | None
     params: Params | None
 
 
 def ProcessConfigFile(config_file_name: pathlib.PosixPath) -> tuple[Params, Weights] | tuple[None, None]:
-    """Return the default set of options, with updated by a config file if present
+    """Return the default set of options, with updated by a config file if present.
 
     Args:
         config_file_name: Fully qualified path to config file or empty
@@ -132,11 +137,10 @@ def ProcessConfigFile(config_file_name: pathlib.PosixPath) -> tuple[Params, Weig
     Returns:
         Tuple of Params object and Weights object
     """
-
     cfg_dict = {}
     if config_file_name:
         try:
-            with open(config_file_name, "r") as fi:
+            with config_file_name.open("r") as fi:
                 cfg_dict = yaml.safe_load(fi.read())
         except Exception:
             log_error(f"Failed to process {config_file_name} - continuing", "exc")
@@ -184,6 +188,8 @@ def ProcessConfigFile(config_file_name: pathlib.PosixPath) -> tuple[Params, Weig
 
 
 class NCAttribs(BaseModel):
+    """netCDF variable attributes, as specified in a var_meta.yml entry."""
+
     FillValue: StrictFloat
     description: StrictStr
     units: StrictStr
@@ -195,6 +201,8 @@ class NCAttribs(BaseModel):
 
 
 class NCVarMeta(BaseModel):
+    """netCDF variable metadata, as specified by a var_meta.yml entry."""
+
     nc_varname: StrictStr
     nc_dimensions: list[StrictStr]
     nc_attribs: NCAttribs
@@ -204,10 +212,18 @@ class NCVarMeta(BaseModel):
 
 
 def LoadVarMeta(var_meta_file: pathlib.Path) -> dict[str, NCVarMeta]:
-    """Loads and validates yaml data"""
+    """Loads and validates the var_meta.yml file.
+
+    Args:
+        var_meta_file: Fully qualified path to the var_meta.yml file.
+
+    Returns:
+        Mapping of netCDF variable name to its validated metadata. Entries that
+        fail validation are logged and skipped rather than raising.
+    """
     var_meta = {}
     try:
-        with open(var_meta_file, "r") as fi:
+        with var_meta_file.open("r") as fi:
             var_meta_tmp = yaml.safe_load(fi)
 
         for k, v in var_meta_tmp.items():
@@ -233,19 +249,28 @@ def LoadVarMeta(var_meta_file: pathlib.Path) -> dict[str, NCVarMeta]:
 
 
 def LoadGlobalMeta(global_meta_file_local: pathlib.Path) -> dict[str, Any]:
+    """Loads global netCDF attribute metadata, merging a local override file if present.
+
+    Args:
+        global_meta_file_local: Fully qualified path to a local override yaml file,
+            merged over the package's default ``config/global_meta.yml``.
+
+    Returns:
+        Merged mapping of global netCDF attribute name to value.
+    """
     global_meta = {}
 
     global_meta_file = pathlib.Path(__file__).parent.joinpath("config/global_meta.yml")
 
     try:
-        with open(global_meta_file, "r") as fi:
+        with global_meta_file.open("r") as fi:
             global_meta = yaml.safe_load(fi)
     except Exception:
         log_error(f"Could not process {global_meta_file}", "exc")
 
     if global_meta_file_local is not None:
         try:
-            with open(global_meta_file_local, "r") as fi:
+            with global_meta_file_local.open("r") as fi:
                 global_meta_local = yaml.safe_load(fi)
         except Exception:
             log_error(f"Could not process {global_meta_file_local}", "exc")
@@ -257,7 +282,23 @@ def LoadGlobalMeta(global_meta_file_local: pathlib.Path) -> dict[str, Any]:
 def MergeDict(
     a: dict[Any, Any], b: dict[Any, Any], path: list[str] | None = None, allow_override: bool = False
 ) -> dict[Any, Any]:
-    "Merges dict b into dict a"
+    """Recursively merges dict b into dict a.
+
+    Args:
+        a: Destination dict, updated in place.
+        b: Source dict to merge into ``a``.
+        path: Key path so far, used to build conflict error messages in recursive calls.
+            Callers should omit this (defaults to the top level).
+        allow_override: If True, conflicting leaf values in ``b`` silently replace those in ``a``.
+            If False, a conflicting leaf value raises.
+
+    Returns:
+        ``a``, updated in place with ``b``'s entries merged in.
+
+    Raises:
+        Exception: If a leaf key exists in both dicts with different values and
+            ``allow_override`` is False.
+    """
     if path is None:
         path = []
     for key in b:

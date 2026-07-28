@@ -8,9 +8,7 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""
-ADCPRealtine.py - Utilities related to ADCP realtime data processing
-"""
+"""ADCPRealtine.py - Utilities related to ADCP realtime data processing."""
 
 import numpy as np
 from scipy import linalg
@@ -19,10 +17,17 @@ import ADCPFiles
 
 
 def TransformToInstrument(adcp_realtime: ADCPFiles.ADCPRealtimeData) -> None:
-    """
-    Performs the inverse transformation to get the velocities in the instruments frame
-    """
+    """Performs the inverse transformation to get the velocities in the instrument's frame.
 
+    Updates ``adcp_realtime`` in place, setting ``Ux``/``Uy``/``Uz`` from the raw
+    ``U``/``V``/``W`` velocities according to its ``coordinateSystem``.
+
+    Args:
+        adcp_realtime: Realtime ADCP data, read/written in place.
+
+    Raises:
+        ValueError: If ``adcp_realtime.coordinateSystem`` is an unsupported or unknown value.
+    """
     if adcp_realtime.coordinateSystem == 2:
         raise ValueError("Beam coordinateSystem not supported")
     if adcp_realtime.coordinateSystem > 2:

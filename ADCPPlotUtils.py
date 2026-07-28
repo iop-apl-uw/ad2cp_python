@@ -27,62 +27,24 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""
-ADCPPlotUtils.py - Utility functions for plotting
-"""
+"""ADCPPlotUtils.py - Utility functions for plotting."""
 
 import cmocean
 import numpy as np
-import xarray as xr
 
 
-def isoSurface(field, target, dim):
+def cmocean_to_plotly(cmapname: str, pl_entries: int) -> list[list[float | str]]:
+    """Converts a cmocean colormap into a plotly colorscale.
+
+    Args:
+        cmapname: Name of the cmocean colormap (e.g. ``"balance"``); falls back to
+            ``"thermal"`` if not recognized.
+        pl_entries: Number of colorscale stops to generate.
+
+    Returns:
+        Plotly colorscale: a list of ``[position, "rgb(r, g, b)"]`` entries, with
+        ``position`` in ``[0, 1]``.
     """
-    Linearly interpolate a coordinate isosurface where a field
-    equals a target
-
-    Parameters
-    ----------
-    field : xarray DataArray
-        The field in which to interpolate the target isosurface
-    target : float
-        The target isosurface value
-    dim : str
-        The field dimension to interpolate
-
-    Examples
-    --------
-    Calculate the depth of an isotherm with a value of 5.5:
-
-    >>> temp = xr.DataArray(
-    ...     range(10,0,-1),
-    ...     coords={"depth": range(10)}
-    ... )
-    >>> isoSurface(temp, 5.5, dim="depth")
-    <xarray.DataArray ()>
-    array(4.5)
-    """
-    slice0 = {dim: slice(None, -1)}
-    slice1 = {dim: slice(1, None)}
-
-    field0 = field.isel(slice0).drop_vars(dim)
-    field1 = field.isel(slice1).drop_vars(dim)
-
-    crossing_mask_decr = (field0 > target) & (field1 <= target)
-    crossing_mask_incr = (field0 < target) & (field1 >= target)
-    crossing_mask = xr.where(crossing_mask_decr | crossing_mask_incr, 1, np.nan)
-
-    coords0 = crossing_mask * field[dim].isel(slice0).drop_vars(dim)
-    coords1 = crossing_mask * field[dim].isel(slice1).drop_vars(dim)
-    field0 = crossing_mask * field0
-    field1 = crossing_mask * field1
-
-    iso = coords0 + (target - field0) * (coords1 - coords0) / (field1 - field0)
-
-    return iso.max(dim, skipna=True)
-
-
-def cmocean_to_plotly(cmapname, pl_entries):
     # cmocean.cm injects its colormap names into the module namespace dynamically
     # (locals().update(...)), so they aren't visible to static attribute access.
     names = [

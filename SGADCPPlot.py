@@ -27,11 +27,9 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""
-SGADCP.py - main entry point for stand alone processing of the Seaglider
-ADCP data
-"""
+"""SGADCPPlot.py - main entry point for stand alone plotting of the Seaglider ADCP data."""
 
+import argparse
 import os
 import pathlib
 import pdb
@@ -41,7 +39,9 @@ import traceback
 import warnings
 
 import gsw
+import netCDF4
 import numpy as np
+import plotly.graph_objects
 import xarray as xr
 from plotly.subplots import make_subplots
 
@@ -60,24 +60,26 @@ std_scale = 1.0
 
 
 def DEBUG_PDB_F() -> None:
-    """Enter the debugger on exceptions"""
+    """Enter the debugger on exceptions."""
     if DEBUG_PDB:
         _, __, traceb = sys.exc_info()
         traceback.print_exc()
         pdb.post_mortem(traceb)
 
 
-def write_output_files(adcp_opts, base_file_name, fig):
-    """
-    Helper routine to output various file formats - .png and .div all the time
-    and standalone .html and .svg based on conf file settings
+def write_output_files(
+    adcp_opts: argparse.Namespace, base_file_name: str | pathlib.Path, fig: plotly.graph_objects.Figure
+) -> list[str]:
+    """Writes a plotly figure out as html (always) and webp (image).
 
-    Input:
-        adcp_opts - all options
-        base_file_name - file name base for the output file names (i.e. no extension)
-        fig - plotly figure object
+    Args:
+        adcp_opts: Command line options; uses ``adcp_opts.plot_directory``.
+        base_file_name: File name base for the output file names (i.e. no extension).
+        fig: Plotly figure object to write out.
+
     Returns:
-        List of fully qualified filenames that have been generated.
+        Fully qualified filenames that have been generated, or an empty list if
+        ``adcp_opts.plot_directory`` isn't set.
     """
     std_config_dict = {
         "modeBarButtonsToRemove": ["lasso2d", "select2d"],
@@ -89,7 +91,7 @@ def write_output_files(adcp_opts, base_file_name, fig):
         log_warning("plot_directory not specified - bailing out")
         return []
 
-    base_file_name = os.path.join(adcp_opts.plot_directory, base_file_name)
+    base_file_name = str(pathlib.Path(adcp_opts.plot_directory) / base_file_name)
 
     ret_list = []
 
@@ -106,7 +108,7 @@ def write_output_files(adcp_opts, base_file_name, fig):
     )
     ret_list.append(output_name)
 
-    def save_img_file(output_fmt):
+    def save_img_file(output_fmt: str) -> str:
         output_name = base_file_name + "." + output_fmt
         # No return code
         # TODO - for kelido 0.2.1 and python 3.10 (and later) we get this warning:
@@ -138,7 +140,20 @@ def write_output_files(adcp_opts, base_file_name, fig):
 #
 
 
-def PlotOceanVelocity(ncf_name, ds, adcp_opts):
+def PlotOceanVelocity(
+    ncf_name: pathlib.Path, ds: netCDF4.Dataset, adcp_opts: argparse.Namespace
+) -> tuple[list[plotly.graph_objects.Figure], list[str]] | None:
+    """Plots ocean velocity (north/east) vs depth and dive number for the whole mission.
+
+    Args:
+        ncf_name: Path to the whole-mission ADCP netCDF file, used to name output files.
+        ds: Open whole-mission ADCP netCDF dataset to read inverse-solution variables from.
+        adcp_opts: Command line options; uses ``adcp_opts.min_plot_depth``/``max_plot_depth``.
+
+    Returns:
+        A tuple ``([fig], outs)`` of the generated figure and its output filenames,
+        or None if required variables couldn't be loaded.
+    """
     # Preliminaries
     try:
         vocn = ds.variables["ad2cp_inv_profile_vocn"][:].filled(fill_value=np.nan)
@@ -340,7 +355,13 @@ def PlotOceanVelocity(ncf_name, ds, adcp_opts):
     )
 
 
-def GeneratePlots(ncf_name, adcp_opts) -> None:
+def GeneratePlots(ncf_name: pathlib.Path, adcp_opts: argparse.Namespace) -> None:
+    """Generates all ADCP plots for the whole-mission netCDF file.
+
+    Args:
+        ncf_name: Path to the whole-mission ADCP netCDF file.
+        adcp_opts: Command line options.
+    """
     ds = ADCPUtils.open_netcdf_file(ncf_name, mask_results=True)
     if ds is None:
         return
@@ -361,7 +382,7 @@ def GeneratePlots(ncf_name, adcp_opts) -> None:
 
 
 def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
-    """Command line driver Seaglider ADCP plotting
+    """Command line driver Seaglider ADCP plotting.
 
     Returns:
         0 for success
@@ -370,7 +391,6 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     Raises:
         Any exceptions raised are considered critical errors and not expected
     """
-
     # NOTE: Minimum options here - debug level and name for yaml config file
 
     # Get options

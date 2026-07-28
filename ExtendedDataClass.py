@@ -27,7 +27,7 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-""" """
+"""ExtendedDataClass.py - A dataclass base with dict-like access and frozen-attribute enforcement."""
 
 import typing
 from dataclasses import dataclass
@@ -42,23 +42,45 @@ from dataclasses import dataclass
 
 @dataclass
 class ExtendedDataClass:
-    """An derivative data class with the following features:
+    """A derivative dataclass with the following features.
 
     - All data attributes must be assigned at object initialization (run-time enforcing of
     mypy [attr-defined] error)
     - `'field' in object` test works for data attributes
     - Allows iteration over data attributes like a dictionary
-
     """
 
     # Allow the object["field"] access to work
-    def __getitem__(self, item: str) -> typing.Any:
+    def __getitem__(self, item: str) -> typing.Any:  # noqa: ANN401 -- value type depends on the field
+        """Gets a dataclass field's value by name, dict-style.
+
+        Args:
+            item: Field name to look up.
+
+        Returns:
+            The field's current value.
+
+        Raises:
+            KeyError: If ``item`` isn't a declared dataclass field.
+        """
         if item in self.__dataclass_fields__:
             return getattr(self, item)
         else:
             raise KeyError(item) from None
 
-    def __setitem__(self, item: str, value: typing.Any) -> typing.Any:
+    def __setitem__(self, item: str, value: typing.Any) -> typing.Any:  # noqa: ANN401 -- value type depends on the field
+        """Sets a dataclass field's value by name, dict-style.
+
+        Args:
+            item: Field name to set.
+            value: New value for the field.
+
+        Returns:
+            The result of ``setattr`` (None).
+
+        Raises:
+            TypeError: If ``item`` isn't a declared dataclass field.
+        """
         if item in self.__dataclass_fields__:
             return setattr(self, item, value)
         else:
@@ -66,6 +88,14 @@ class ExtendedDataClass:
 
     # Allow "'field' in object" to work
     def __contains__(self, item: str) -> bool:
+        """Checks whether ``item`` is a declared dataclass field.
+
+        Args:
+            item: Field name to check.
+
+        Returns:
+            True if ``item`` is a declared field of this dataclass.
+        """
         # return hasattr(self, item)
         return item in self.__dataclass_fields__
 
@@ -75,7 +105,17 @@ class ExtendedDataClass:
     # Needs the no_type_check attribute because mypy will use this type
     # check for all added attributes if present, instead of raising an error
     @typing.no_type_check
-    def __setattr__(self, key: str, value: typing.Any) -> None:
+    def __setattr__(self, key: str, value: typing.Any) -> None:  # noqa: ANN401 -- value type depends on the field
+        """Sets an attribute, raising if it would add a new attribute after initialization.
+
+        Args:
+            key: Attribute name to set.
+            value: New value for the attribute.
+
+        Raises:
+            TypeError: If ``key`` is not an existing attribute or declared dataclass field
+                (i.e. this would add a new attribute rather than update an existing one).
+        """
         # The extra check for the key in __dataclass_fields__ covers the
         # case in the constructor for a field that a mutable - the attribute is not yet set,
         # but the member has been added to the dictionary
@@ -86,8 +126,18 @@ class ExtendedDataClass:
 
     # Allows iteration over the data fields like a dictionary
     def items(self) -> typing.Generator[tuple[typing.Any, typing.Any]]:
+        """Iterates over this dataclass's fields like ``dict.items()``.
+
+        Yields:
+            ``(field_name, value)`` for each declared field.
+        """
         for item in self.__dataclass_fields__:
             yield item, getattr(self, item)
 
     def keys(self) -> typing.Generator[typing.Any]:
+        """Iterates over this dataclass's field names like ``dict.keys()``.
+
+        Yields:
+            Each declared field name.
+        """
         yield from self.__dataclass_fields__

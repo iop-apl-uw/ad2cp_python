@@ -28,12 +28,11 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Plots Ocean Velocity profiles"""
+"""Plots Ocean Velocity profiles."""
 
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 
-import os
 import pathlib
 import sys
 import typing
@@ -55,11 +54,33 @@ import Utils2
 from BaseLog import log_error, log_info, log_warning
 from Plotting import plotmissionsingle
 
-sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+sys.path.append(str(pathlib.Path(__file__).resolve().parent))
 import ADCPPlotUtils
+import ADCPUtils
 
 
-def getValue(x, v, sk, vk, fallback):
+def getValue(
+    x: dict[str, typing.Any],
+    v: str,
+    sk: str,
+    vk: str,
+    fallback: typing.Any,  # noqa: ANN401 -- genuinely dynamic: int, bool, or str depending on the section key
+) -> typing.Any:  # noqa: ANN401 -- see fallback
+    """Looks up a section/variable override value, falling back to a default.
+
+    Checks ``x["sections"][sk]``, then ``x["adcp_variables"][vk]``, then
+    ``x["defaults"]``, in that order, for key ``v``.
+
+    Args:
+        x: Parsed sections.yml content.
+        v: Setting name to look up (e.g. ``"start"``, ``"colormap"``).
+        sk: Section key to check first.
+        vk: ADCP variable key to check second.
+        fallback: Value to use if ``v`` isn't found anywhere.
+
+    Returns:
+        The first matching value found, or ``fallback``.
+    """
     if v in x["sections"][sk]:
         y = x["sections"][sk][v]
     elif v in x["adcp_variables"][vk]:
@@ -76,10 +97,24 @@ def getValue(x, v, sk, vk, fallback):
 def mission_oceanvelocityprofile(
     base_opts: BaseOpts.BaseOptions,
     mission_str: list,
-    dive=None,
-    generate_plots=True,
-    dbcon=None,
+    dive: int | None = None,
+    generate_plots: bool = True,
+    dbcon: typing.Any = None,  # noqa: ANN401 -- opaque db connection object
 ) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
+    """Plots ocean velocity vs depth profiles for the whole mission.
+
+    Args:
+        base_opts: Basestation options.
+        mission_str: Unused; accepted for ``@plotmissionsingle`` interface consistency.
+        dive: Unused; accepted for ``@plotmissionsingle`` interface consistency.
+        generate_plots: If False, skip plot generation and return empty results.
+        dbcon: Open mission database connection to reuse; if None, one is opened
+            (and closed) internally.
+
+    Returns:
+        A tuple ``(figures, plot_files)`` -- empty lists if plotting was skipped
+        or the required section/database data wasn't available.
+    """
     ret_plots = []
     ret_figs = []
 
@@ -97,11 +132,11 @@ def mission_oceanvelocityprofile(
         return (ret_figs, ret_plots)
 
     ncname = Utils2.get_mission_timeseries_name(base_opts, basename="adcp_profile_timeseries")
-    if not os.path.exists(section_file_name):
+    if not section_file_name.exists():
         return (ret_figs, ret_plots)
 
     try:
-        with open(section_file_name, "r") as f:
+        with section_file_name.open("r") as f:
             section_dict = yaml.safe_load(f.read())
     except Exception:
         log_error(f"Problem processing {section_file_name}", "exc")
@@ -243,7 +278,7 @@ def mission_oceanvelocityprofile(
         # Isopycnals
         contours = {}
         for dc in density_contours:
-            temp = ADCPPlotUtils.isoSurface(pd_ds, dc, "depth")
+            temp = ADCPUtils.isoSurface(pd_ds, dc, "depth")
             temp[temp < top] = np.nan
             temp[temp > bott] = np.nan
             if np.logical_not(np.isnan(temp)).size != 0:

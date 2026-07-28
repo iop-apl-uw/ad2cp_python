@@ -27,21 +27,22 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""
-ADCPUtils.py - Utility functions
-"""
+"""ADCPUtils.py - Utility functions."""
 
+import argparse
 import pathlib
 import re
 import sys
 import warnings
-from typing import Literal
+from typing import Any, Literal
 
 import netCDF4
 import numpy as np
 import scipy
 import xarray as xr
 from numpy.typing import NDArray
+
+import ADCPConfig
 
 if "BaseLog" in sys.modules:
     from BaseLog import log_critical, log_error, log_info, log_warning  # ty: ignore[unresolved-import]
@@ -54,7 +55,15 @@ required_scipy_version = "1.14.0"
 
 
 def normalize_version(v: str) -> list[int]:
-    """Normalizes version stamps"""
+    """Normalizes version stamps.
+
+    Args:
+        v: Version string (or number), e.g. ``"1.2.0"``.
+
+    Returns:
+        Version as a list of integer components, e.g. ``[1, 2]`` (trailing
+        ``.0`` components are dropped).
+    """
     if not isinstance(v, str):
         v = str(v)  # very old versions of base_station_version for example were stored as floats
     return [int(x) for x in re.sub(r"(\.0+)*$", "", v).split(".")]
@@ -78,13 +87,11 @@ def normalize_version(v: str) -> list[int]:
 
 
 def check_versions() -> int:
-    """
-    Checks for minimum versions of critical libraries and python.
+    """Checks for minimum versions of critical libraries and python.
 
     Returns:
         0 for no issue, 1 for version outside minimum
     """
-
     log_info("ADCP version: 0.0.3")
 
     # TODO - get this working
@@ -126,6 +133,16 @@ def open_netcdf_file(
     mode: Literal["r", "w", "r+", "a", "x", "rs", "ws", "r+s", "as"] = "r",
     mask_results: bool = False,
 ) -> None | netCDF4.Dataset:
+    """Opens a netCDF file, removing any existing file first if opening for write.
+
+    Args:
+        ncf_name: Path to the netCDF file to open.
+        mode: netCDF4 file mode.
+        mask_results: If True, masked arrays are returned for variables with missing data.
+
+    Returns:
+        The open dataset, or None if the file could not be opened.
+    """
     # netCDF4 tries to open with a write exclusive, which will fail if some other process has
     # the file open for read.
     if "w" in mode:
@@ -145,8 +162,17 @@ def open_netcdf_file(
 
 
 def intnan(y: NDArray[np.float64]) -> NDArray[np.float64] | None:
-    """Interpolate over NaNs.  Leading and trailing NaNs are replaced wtih the first/last
-    non-nan value. Works on one dimensional items only
+    """Interpolates over NaNs.
+
+    Leading and trailing NaNs are replaced with the first/last non-nan value.
+    Works on one dimensional items only.
+
+    Args:
+        y: Array to interpolate over, updated in place.
+
+    Returns:
+        ``y``, with interior NaNs interpolated over, or None if ``y`` has no
+        non-NaN values to interpolate from.
     """
     sz = y.size
     good_mask = np.logical_not(np.isnan(y))
@@ -183,6 +209,15 @@ def intnan(y: NDArray[np.float64]) -> NDArray[np.float64] | None:
 
 
 def lon_to_m(dlon: NDArray[np.float64], alat: np.float64) -> NDArray[np.float64]:
+    """Converts a longitude difference to a distance in meters.
+
+    Args:
+        dlon: Longitude difference(s), in degrees.
+        alat: Average latitude between the two fixes, in degrees.
+
+    Returns:
+        Distance(s) in meters corresponding to ``dlon`` at latitude ``alat``.
+    """
     rlat = alat * np.pi / 180.0
     p = 111415.13 * np.cos(rlat) - 94.55 * np.cos(3 * rlat)
     ret_val: NDArray[np.float64] = dlon * p
@@ -203,6 +238,17 @@ def lon_to_m(dlon: NDArray[np.float64], alat: np.float64) -> NDArray[np.float64]
 
 
 def lat_to_m(dlat: NDArray[np.float64], alat: np.float64) -> NDArray[np.float64]:
+    """Converts a latitude difference to a distance in meters.
+
+    Reference: American Practical Navigator, Vol II, 1975 Edition, p 5.
+
+    Args:
+        dlat: Latitude difference(s), in degrees.
+        alat: Average latitude between the two fixes, in degrees.
+
+    Returns:
+        Distance(s) in meters corresponding to ``dlat`` at latitude ``alat``.
+    """
     rlat = alat * np.pi / 180.0
     m = 111132.09 - 566.05 * np.cos(2 * rlat) + 1.2 * np.cos(4 * rlat)
     retval: NDArray[np.float64] = dlat * m
@@ -210,6 +256,15 @@ def lat_to_m(dlat: NDArray[np.float64], alat: np.float64) -> NDArray[np.float64]
 
 
 def latlon2xy(ll: NDArray[np.complex128], ll0: np.complex128) -> NDArray[np.complex128]:
+    """Converts lon/lat positions (encoded as complex numbers) to an xy displacement in km.
+
+    Args:
+        ll: Positions as ``lon + 1j*lat``, in degrees. Updated in place (shifted by ``ll0``).
+        ll0: Origin position as ``lon + 1j*lat``, in degrees.
+
+    Returns:
+        Displacement from ``ll0`` to each of ``ll``, as ``x + 1j*y`` in kilometers.
+    """
     ll -= ll0
 
     # xy =      lon_to_m(real(ll),imag(ll0))+...
@@ -219,9 +274,20 @@ def latlon2xy(ll: NDArray[np.complex128], ll0: np.complex128) -> NDArray[np.comp
     return xy * 1e-3
 
 
-def IT_sg_interp_AP(x: NDArray[np.float64], y: NDArray[np.complex128], xi: NDArray[np.float64]) -> NDArray[np.float64]:
-    """complex interpolation, where the amplitude and phase of y are linearly interpolated
-    does not require a regular xi.
+def IT_sg_interp_AP(
+    x: NDArray[np.float64], y: NDArray[np.complex128], xi: NDArray[np.float64]
+) -> NDArray[np.complex128]:
+    """Complex interpolation, where the amplitude and phase of y are linearly interpolated.
+
+    Does not require a regular ``xi``.
+
+    Args:
+        x: Sample locations for ``y``. Only finite entries are used.
+        y: Complex sample values at each ``x``.
+        xi: Locations to interpolate onto.
+
+    Returns:
+        Complex-interpolated values of ``y`` at ``xi``.
     """
     # ii = find(isfinite(x));
     ii = np.nonzero(np.isfinite(x))[0]
@@ -267,7 +333,7 @@ def IT_sg_interp_AP(x: NDArray[np.float64], y: NDArray[np.complex128], xi: NDArr
         )
         Pi = f(xi)
 
-    yi: NDArray[np.float64] = Ai * np.exp(1j * Pi)
+    yi: NDArray[np.complex128] = Ai * np.exp(1j * Pi)
     return yi
 
 
@@ -281,7 +347,16 @@ def IT_sg_interp_AP(x: NDArray[np.float64], y: NDArray[np.complex128], xi: NDArr
 def course_interp(
     time: NDArray[np.float64], heading: NDArray[np.float64], new_time: NDArray[np.float64]
 ) -> NDArray[np.float64]:
-    """Interpolate course (heading) onto new time grid"""
+    """Interpolates course (heading) onto a new time grid.
+
+    Args:
+        time: Sample times for ``heading``.
+        heading: Heading samples, in degrees, at each ``time``.
+        new_time: Times to interpolate onto.
+
+    Returns:
+        Interpolated heading, in degrees in ``[0, 360)``, at each ``new_time``.
+    """
     time0 = IT_sg_interp_AP(time, np.exp(1j * heading * np.pi / 180), new_time)
     timei = np.angle(time0) * 180 / np.pi
     timei[timei < 0] = timei[timei < 0] + 360
@@ -297,10 +372,20 @@ def interp1d(
         "linear", "nearest", "nearest-up", "zero", "slinear", "quadratic", "cubic", "previous", "next"
     ] = "linear",
 ) -> NDArray[np.float64]:
-    """For each data point data_v at first_epoch_time_s_v, determine the value at second_epoch_time_s_v
-    Interpolate according to type
-    Assumes both epoch_time_s_v arrays increase monotonically
-    Ensures first_epoch_time_s_v and data_v cover second_epoch_time_s_v using 'nearest' values
+    """For each data point in ``data_v`` at ``first_epoch_time_s_v``, determines the value at ``second_epoch_time_s_v``.
+
+    Interpolates according to ``kind``. Assumes both epoch-time arrays increase
+    monotonically. Extends ``first_epoch_time_s_v``/``data_v`` with 'nearest' values
+    at the ends so they cover the full range of ``second_epoch_time_s_v``.
+
+    Args:
+        first_epoch_time_s_v: Sample times, in epoch seconds, for ``data_v``.
+        data_v: Data samples at each ``first_epoch_time_s_v``.
+        second_epoch_time_s_v: Times, in epoch seconds, to interpolate onto.
+        kind: Interpolation kind, passed to ``scipy.interpolate.interp1d``.
+
+    Returns:
+        Interpolated data at each ``second_epoch_time_s_v``.
     """
     # add 'nearest' data item to the ends of data and first_epoch_time_s_v
     if second_epoch_time_s_v[0] < first_epoch_time_s_v[0]:
@@ -322,7 +407,18 @@ def interp1d(
 def interp_nm(
     x: NDArray[np.float64], y: NDArray[np.float64], xi: NDArray[np.float64], fill_value: float = np.nan
 ) -> NDArray[np.float64] | None:
-    """interpolate a non-monotonic x along a monotonic xi"""
+    """Interpolates a non-monotonic x along a monotonic xi.
+
+    Args:
+        x: Sample locations (non-monotonic), paired with ``y``.
+        y: Sample values at each ``x``.
+        xi: Monotonic locations to interpolate onto.
+        fill_value: Value used for ``xi`` outside the range of (sorted) ``x``.
+
+    Returns:
+        Interpolated values of ``y`` at ``xi``, or None if the fit failed to
+        converge after too many iterations.
+    """
     index = np.nonzero(np.logical_and(np.isfinite(x), np.isfinite(y)))[0]
     if np.shape(index)[0] <= 2:
         return np.zeros(np.shape(xi)[0]) * np.nan
@@ -380,36 +476,40 @@ def interp_nm(
 
 
 # From https://stackoverflow.com/questions/40890960/numpy-scipy-equivalent-of-matlabs-sparse-function
-def sparse(i, j, v, m, n):
-    """
-    Create and compressing a matrix that have many zeros
-    Parameters:
-        i: 1-D array representing the index 1 values
-            Size n1
-        j: 1-D array representing the index 2 values
-            Size n1
-        v: 1-D array representing the values
-            Size n1
-        m: integer representing x size of the matrix >= n1
-        n: integer representing y size of the matrix >= n1
+def sparse(
+    i: NDArray[np.int_], j: NDArray[np.int_], v: NDArray[np.float64], m: int, n: int
+) -> scipy.sparse.csr_array:
+    """Creates a compressed sparse matrix that has many zeros.
+
+    Args:
+        i: 1-D array of index-1 values, size n1.
+        j: 1-D array of index-2 values, size n1.
+        v: 1-D array of values, size n1.
+        m: x size of the matrix, >= n1.
+        n: y size of the matrix, >= n1.
+
     Returns:
-        s: 2-D array
-            Matrix full of zeros excepting values v at indexes i, j
+        2-D sparse matrix, full of zeros excepting values ``v`` at indexes ``(i, j)``.
     """
     return scipy.sparse.csr_array((v, (i, j)), shape=(m, n))
 
 
-def bindata(x, y, gx):
+def bindata(
+    x: NDArray[np.float64], y: NDArray[np.float64], gx: NDArray[np.float64]
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
     """Bins y(x) onto b(gx), gx defining centers of the bins. NaNs ignored.
 
+    Note: current implementation only handles the 1-D case.
+
     Args:
+        x: Sample locations, paired with ``y``.
+        y: Sample values at each ``x``. NaNs are ignored.
+        gx: Bin center locations.
 
     Returns:
-        b: binned data (averaged)
-        n: number of points in each bin
-
-    Notes:
-        Current implimentation only handles the 1-D case
+        A tuple ``(b, n)``:
+            b: Binned (averaged) data, one value per bin in ``gx``.
+            n: Number of points in each bin.
     """
     # x=x(:);y=y(:);
     x = np.atleast_1d(np.squeeze(x))
@@ -477,11 +577,16 @@ def bindata(x, y, gx):
     return (b, nn)
 
 
-def StripVars(dsi, dso, var_meta):
-    """Copies dsi to dso, excliding any varables in the var_meta dict
+def StripVars(dsi: netCDF4.Dataset, dso: netCDF4.Dataset, var_meta: dict[str, ADCPConfig.NCVarMeta]) -> None:
+    """Copies dsi to dso, excluding any variables in the var_meta dict.
 
-    Note: at this time, the dimensions are not addressed
+    Note: at this time, the dimensions are not addressed.
 
+    Args:
+        dsi: Input dataset to copy from.
+        dso: Output dataset to copy into, updated in place.
+        var_meta: Mapping of netCDF variable name to metadata; variables named
+            here are excluded from the copy (along with any dimensions unique to them).
     """
     strip_names = [var_meta[k].nc_varname for k in var_meta]
 
@@ -527,17 +632,20 @@ def StripVars(dsi, dso, var_meta):
         dso.setncattr(a, dsi.getncattr(a))
 
 
-def CreateNCVar(dso, template, key_name, data):
-    """Creates a nc variable and sets meta data
-    Input:
-        dso - output dataset
-        template - dictionary of metadata
-        var_name - name of variable as appears in teamplate
-        data - input data
+def CreateNCVar(
+    dso: netCDF4.Dataset,
+    template: dict[str, ADCPConfig.NCVarMeta],
+    key_name: str,
+    data: Any,  # noqa: ANN401 -- genuinely dynamic: str, scalar, or ndarray depending on key_name's nc_type
+) -> None:
+    """Creates a netCDF variable in dso and sets its metadata, from template.
 
-    Returns:
-        dataarray for variable and matching qc variable
-
+    Args:
+        dso: Output dataset, updated in place.
+        template: Mapping of variable name to metadata.
+        key_name: Name of the variable as it appears in ``template``.
+        data: Input data for the variable -- a string, scalar, or ndarray,
+            depending on ``template[key_name].nc_type``/``nc_dimensions``.
     """
     is_str = False
     if isinstance(data, str):
@@ -559,8 +667,7 @@ def CreateNCVar(dso, template, key_name, data):
         if inp_data == np.nan:
             inp_data = template[key_name].nc_attribs.FillValue
     elif not is_str:
-        # np.ndim(inp_data) == 0 scalar case is handled above; ty can't narrow on np.ndim()
-        inp_data[np.isnan(inp_data)] = template[key_name].nc_attribs.FillValue  # ty: ignore[invalid-assignment]
+        inp_data[np.isnan(inp_data)] = template[key_name].nc_attribs.FillValue
 
     # assert len(template[key_name]["nc_dimensions"]) == 1
     # if template[key_name]["nc_dimensions"][0] not in dso.dimensions:
@@ -595,25 +702,49 @@ def CreateNCVar(dso, template, key_name, data):
             nc_var.setncattr(a_name, attrib)
 
 
-def CreateNCVars(dso, ad2cp_var_map, var_meta):
+def CreateNCVars(
+    dso: netCDF4.Dataset, ad2cp_var_map: dict[str, Any], var_meta: dict[str, ADCPConfig.NCVarMeta]
+) -> None:
+    """Creates a netCDF variable for each entry in ad2cp_var_map.
+
+    Args:
+        dso: Output dataset, updated in place.
+        ad2cp_var_map: Mapping of variable name to its data (scalar or ndarray).
+        var_meta: Mapping of variable name to metadata.
+    """
     for key_name, data in ad2cp_var_map.items():
         CreateNCVar(dso, var_meta, key_name, data)
 
 
 def WriteParamsWeights(
     dso: netCDF4.Dataset,
-    weights,
-    params,
-    template,
+    weights: ADCPConfig.Weights,
+    params: ADCPConfig.Params,
+    template: dict[str, ADCPConfig.NCVarMeta],
 ) -> None:
+    """Writes the inverse weights and processing parameters as netCDF variables.
+
+    Args:
+        dso: Output dataset, updated in place.
+        weights: Inverse weighting configuration to write out.
+        params: Inverse processing parameters to write out.
+        template: Mapping of variable name to metadata.
+    """
     for key_name, data in weights.items():
         CreateNCVar(dso, template, key_name, data)
     for key_name, data in params.items():
         CreateNCVar(dso, template, key_name, data)
 
 
-def GetMissionStr(dive_nc_file):
-    """Assembles the mission str"""
+def GetMissionStr(dive_nc_file: netCDF4.Dataset) -> str:
+    """Assembles the mission string from a dive netCDF file's log_ID and mission title.
+
+    Args:
+        dive_nc_file: Open dive netCDF dataset to read ``log_ID``/``sg_cal_mission_title`` from.
+
+    Returns:
+        Mission string, e.g. ``"sg171 EKAMSAT_Apr24"``.
+    """
     log_id = None
     mission_title = ""
     if "log_ID" in dive_nc_file.variables:
@@ -624,13 +755,14 @@ def GetMissionStr(dive_nc_file):
     return f"sg{log_id if log_id else 0:03d} {mission_title}"
 
 
-def SetupPlotDirectory(adcp_opts) -> int:
-    """Ensures plot_directory is set in base_opts and creates it if needed
+def SetupPlotDirectory(adcp_opts: argparse.Namespace) -> int:
+    """Ensures plot_directory exists, creating it if needed.
+
+    Args:
+        adcp_opts: Command line options; uses/updates ``adcp_opts.plot_directory``.
 
     Returns:
-        0 for success
-        1 for failure
-
+        0 for success, 1 for failure.
     """
     if adcp_opts.plot_directory.exists():
         if adcp_opts.plot_directory.is_dir():
@@ -647,31 +779,27 @@ def SetupPlotDirectory(adcp_opts) -> int:
     return 0
 
 
-def isoSurface(field, target, dim):
-    """
-    Linearly interpolate a coordinate isosurface where a field
-    equals a target
+def isoSurface(field: xr.DataArray, target: float, dim: str) -> xr.DataArray:
+    """Linearly interpolates a coordinate isosurface where a field equals a target.
 
-    Parameters
-    ----------
-    field : xarray DataArray
-        The field in which to interpolate the target isosurface
-    target : float
-        The target isosurface value
-    dim : str
-        The field dimension to interpolate
+    Args:
+        field: The field in which to interpolate the target isosurface.
+        target: The target isosurface value.
+        dim: The field dimension to interpolate.
 
-    Examples
-    --------
-    Calculate the depth of an isotherm with a value of 5.5:
+    Returns:
+        The ``dim`` coordinate value(s) where ``field`` crosses ``target``.
 
-    >>> temp = xr.DataArray(
-    ...     range(10,0,-1),
-    ...     coords={"depth": range(10)}
-    ... )
-    >>> isoSurface(temp, 5.5, dim="depth")
-    <xarray.DataArray ()>
-    array(4.5)
+    Examples:
+        Calculate the depth of an isotherm with a value of 5.5:
+
+        >>> temp = xr.DataArray(
+        ...     range(10,0,-1),
+        ...     coords={"depth": range(10)}
+        ... )
+        >>> isoSurface(temp, 5.5, dim="depth")
+        <xarray.DataArray ()>
+        array(4.5)
     """
     slice0 = {dim: slice(None, -1)}
     slice1 = {dim: slice(1, None)}
