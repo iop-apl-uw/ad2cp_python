@@ -42,6 +42,8 @@ import plotly.subplots
 import scipy
 
 if typing.TYPE_CHECKING:
+    import sqlite3
+
     import BaseOpts
 
 import BaseOptsType
@@ -82,7 +84,7 @@ def plot_ocean_velocity(
     base_opts: BaseOpts.BaseOptions,
     dive_nc_file: scipy.io._netcdf.netcdf_file,
     generate_plots: bool = True,
-    dbcon: typing.Any = None,  # noqa: ANN401 -- unused, accepted for @plotdivesingle interface consistency
+    dbcon: sqlite3.Connection | None = None,  # unused, accepted for @plotdivesingle interface consistency
 ) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots ocean velocity vs depth for a single dive.
 
@@ -281,7 +283,7 @@ def plot_ocean_velocity_3d(
     base_opts: BaseOpts.BaseOptions,
     dive_nc_file: scipy.io._netcdf.netcdf_file,
     generate_plots: bool = True,
-    dbcon: typing.Any = None,  # noqa: ANN401 -- unused, accepted for @plotdivesingle interface consistency
+    dbcon: sqlite3.Connection | None = None,  # unused, accepted for @plotdivesingle interface consistency
 ) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots ocean velocity at the glider location in 3d.
 

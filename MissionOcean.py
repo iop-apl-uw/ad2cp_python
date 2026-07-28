@@ -46,6 +46,8 @@ from plotly.subplots import make_subplots
 
 # pylint: disable=wrong-import-position
 if typing.TYPE_CHECKING:
+    import sqlite3
+
     import BaseOpts
 
 import PlotUtilsPlotly
@@ -99,7 +101,7 @@ def mission_oceanvelocityprofile(
     mission_str: list,
     dive: int | None = None,
     generate_plots: bool = True,
-    dbcon: typing.Any = None,  # noqa: ANN401 -- opaque db connection object
+    dbcon: sqlite3.Connection | None = None,
 ) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots ocean velocity vs depth profiles for the whole mission.
 
