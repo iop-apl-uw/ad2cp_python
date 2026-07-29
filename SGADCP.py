@@ -386,6 +386,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     dso.setncattr("file_version", "1.0")
     dso.setncattr("uuid", str(uuid.uuid1()))
 
+    a, value = None, None
     try:
         for attr, value in copy_ncattrs.items():
             dso.setncattr(attr, value)

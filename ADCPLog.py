@@ -50,13 +50,13 @@ if "BaseLog" in sys.modules:
 class ADCPLogger:
     """ADCPLog: for use by all basestation code and utilities."""
 
-    self = None  # the global instance
+    self: ADCPLogger | None = None  # the global instance
     is_initialized = False
-    opts = None  # whatever starting options
-    log = None  # the logger
+    opts: argparse.Namespace | None = None  # whatever starting options
+    log: logging.Logger | None = None  # the logger
     # for transient string logging
-    stringHandler = None
-    stringBuffer = None
+    stringHandler: logging.Handler | None = None
+    stringBuffer: str | None = None
     # Turns out that calling the logging calls is expensive
     # it always generates its own line info for a logging record before
     # finally handing it off to each handler
@@ -67,7 +67,7 @@ class ADCPLogger:
     debug_enabled = info_enabled = False
     debug_loc, info_loc, warning_loc, error_loc, critical_loc = _stack_options
 
-    def __init__(self, opts: argparse.Namespace, include_time: bool = False) -> None:
+    def __init__(self, opts: argparse.Namespace | None, include_time: bool = False) -> None:
         """Initializes a logging.Logger object, according to options (opts)."""
         if not ADCPLogger.is_initialized:
             ADCPLogger.self = self
@@ -95,7 +95,7 @@ class ADCPLogger:
             ADCPLogger.is_initialized = True
             log_info(f"Process id = {os.getpid():d}")  # report our process id
 
-    def setHandler(self, handle: logging.Handler, opts: argparse.Namespace, include_time: bool) -> None:
+    def setHandler(self, handle: logging.Handler, opts: argparse.Namespace | None, include_time: bool) -> None:
         """Set a logging handle."""
         if include_time:
             formatter = logging.Formatter("%(asctime)s: %(levelname)s: %(message)s", "%H:%M:%S %d %b %Y %Z")
@@ -188,7 +188,7 @@ def __log_caller_info(s: object, loc: str | None) -> str:
     return s
 
 
-def log_critical(s: object, loc: str = ADCPLogger.critical_loc, alert: str | None = None) -> None:
+def log_critical(s: object, loc: str | None = ADCPLogger.critical_loc, alert: str | None = None) -> None:
     """Reports a string to baselog as a CRITICAL error.
 
     Args:
@@ -207,7 +207,7 @@ log_error_max_count: collections.defaultdict[str, int] = collections.defaultdict
 
 
 def log_error(
-    s: object, loc: str = ADCPLogger.error_loc, alert: str | None = None, max_count: int | None = None
+    s: object, loc: str | None = ADCPLogger.error_loc, alert: str | None = None, max_count: int | None = None
 ) -> None:
     """Reports a string to baselog as an ERROR.
 
@@ -238,7 +238,7 @@ log_warning_max_count: collections.defaultdict[str, int] = collections.defaultdi
 
 
 def log_warning(
-    s: object, loc: str = ADCPLogger.warning_loc, alert: str | None = None, max_count: int | None = None
+    s: object, loc: str | None = ADCPLogger.warning_loc, alert: str | None = None, max_count: int | None = None
 ) -> None:
     """Reports a string to baselog as a WARNING.
 
@@ -271,7 +271,9 @@ def log_warning(
 log_info_max_count: collections.defaultdict[str, int] = collections.defaultdict(int)
 
 
-def log_info(s: object, loc: str = ADCPLogger.info_loc, alert: str | None = None, max_count: int | None = None) -> None:
+def log_info(
+    s: object, loc: str | None = ADCPLogger.info_loc, alert: str | None = None, max_count: int | None = None
+) -> None:
     """Reports a string to baselog as INFO.
 
     Args:

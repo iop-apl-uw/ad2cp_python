@@ -128,17 +128,19 @@ class ConfigModel:
     params: Params | None
 
 
-def ProcessConfigFile(config_file_name: pathlib.PosixPath) -> tuple[Params, Weights] | tuple[None, None]:
+def ProcessConfigFile(config_file_name: pathlib.Path | str) -> tuple[Params, Weights] | tuple[None, None]:
     """Return the default set of options, with updated by a config file if present.
 
     Args:
-        config_file_name: Fully qualified path to config file or empty
+        config_file_name: Fully qualified path to config file, or an empty
+            string (the default when no ``--adcp_config_file`` is given)
 
     Returns:
         Tuple of Params object and Weights object
     """
     cfg_dict = {}
     if config_file_name:
+        config_file_name = pathlib.Path(config_file_name)
         try:
             with config_file_name.open("r") as fi:
                 cfg_dict = yaml.safe_load(fi.read())
@@ -248,12 +250,13 @@ def LoadVarMeta(var_meta_file: pathlib.Path) -> dict[str, NCVarMeta]:
     return var_meta
 
 
-def LoadGlobalMeta(global_meta_file_local: pathlib.Path) -> dict[str, Any]:
+def LoadGlobalMeta(global_meta_file_local: pathlib.Path | None) -> dict[str, Any]:
     """Loads global netCDF attribute metadata, merging a local override file if present.
 
     Args:
         global_meta_file_local: Fully qualified path to a local override yaml file,
-            merged over the package's default ``config/global_meta.yml``.
+            merged over the package's default ``config/global_meta.yml``, or None
+            if no local override is configured.
 
     Returns:
         Merged mapping of global netCDF attribute name to value.
@@ -272,9 +275,9 @@ def LoadGlobalMeta(global_meta_file_local: pathlib.Path) -> dict[str, Any]:
         try:
             with global_meta_file_local.open("r") as fi:
                 global_meta_local = yaml.safe_load(fi)
+            global_meta = MergeDict(global_meta, global_meta_local)
         except Exception:
             log_error(f"Could not process {global_meta_file_local}", "exc")
-        global_meta = MergeDict(global_meta, global_meta_local)
 
     return global_meta
 

@@ -54,11 +54,12 @@ required_numpy_version = "1.26.0"
 required_scipy_version = "1.14.0"
 
 
-def normalize_version(v: str) -> list[int]:
+def normalize_version(v: str | float) -> list[int]:
     """Normalizes version stamps.
 
     Args:
-        v: Version string (or number), e.g. ``"1.2.0"``.
+        v: Version string (or number), e.g. ``"1.2.0"``. Very old versions of
+            base_station_version, for example, were stored as floats.
 
     Returns:
         Version as a list of integer components, e.g. ``[1, 2]`` (trailing

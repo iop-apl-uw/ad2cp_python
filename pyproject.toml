@@ -96,7 +96,32 @@ exclude=["BaseADCP.py","BaseADCPMission.py","DiveOcean.py","MissionOcean.py"]
 [tool.coverage.html]
 directory = "coverage_html_report"
 [tool.coverage.run]
+source = ["."]
 omit = [
     ".venv/*",
-     "src/netCDF4/*",
+    "tests/*",
+    # netCDF4's compiled extension embeds this build-time relative path; coverage.py
+    # resolves it against our project root and warns since the file doesn't exist here.
+    "src/netCDF4/*",
+    # Extension hooks: real coverage is measured via basestation3's own test
+    # suite when adcp is loaded as an extension there, not standalone here.
+    "BaseADCP.py",
+    "BaseADCPMission.py",
+    # Basestation plot-extension modules: import Plotting/Utils/PlotUtilsPlotly/
+    # BaseOptsType, which only exist one directory up in a full basestation3
+    # checkout (same reason these two are already excluded from ty type-checking
+    # via [tool.ty.src] exclude) - can't even be imported standalone here.
+    "DiveOcean.py",
+    "MissionOcean.py",
+    ]
+[tool.coverage.report]
+exclude_also = [
+    # Extension-integration branch: which side runs is fixed for the whole
+    # process by import order (whichever test happens to import BaseLog
+    # first during collection), so it isn't reliably testable per-test here.
+    # Real coverage of the BaseLog-import path is measured via basestation3's
+    # own test suite, same rationale as the BaseADCP.py/BaseADCPMission.py
+    # omit above.
+    'if "BaseLog" in sys.modules:',
+    "from BaseLog import",
     ]

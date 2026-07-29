@@ -79,9 +79,12 @@ def read_matlab(filename: Path) -> dict[str, Any]:
                 continue
             v = v[()]  # It's a Numpy array now
             if v.dtype == "object":
-                # HDF5ObjectReferences are converted into a list of actual pointers
-                # The extra check for np.bytes_ excludes vars that are bytearrays (strings)
-                ret[k] = [r.dtype.type is not np.bytes_ and r and paths.get(f[r].name, f[r].name) for r in v.flat]
+                # HDF5ObjectReferences are converted into a list of actual pointers.
+                # The isinstance(r, bytes) check excludes vars that are bytearrays
+                # (strings) - r.dtype isn't reliable here since h5py returns plain
+                # bytes/h5py.h5r.Reference objects, neither of which has a .dtype
+                # attribute (unlike the numpy.bytes_ scalars this was written against).
+                ret[k] = [not isinstance(r, bytes) and r and paths.get(f[r].name, f[r].name) for r in v.flat]
             else:
                 # Matrices and other numeric arrays
                 ret[k] = v if v.ndim < 2 else v.swapaxes(-1, -2)
@@ -92,8 +95,81 @@ def read_matlab(filename: Path) -> dict[str, Any]:
         return conv()
 
 
-def main() -> None:
-    """Command line driver comparing matlab and python ADCP processing output for a single dive."""
+# (f_plot, py_grp, py_name, mat_grp, mat_name) tuples: each names one variable to compare
+# between the python and matlab output for a single dive. mat_grp is "adcp" for all
+# adcp_realtime-derived variables (matlab's ad2cp_inverse6 doesn't distinguish the
+# raw/realtime struct name the way the python port does).
+COMPARISON_VARS = (
+    (False, "adcp_realtime", "Z", "adcp", "Z"),
+    (False, "adcp_realtime", "Z0", "adcp", "Z0"),
+    (False, "adcp_realtime", "Svel", "adcp", "Svel"),
+    (False, "adcp_realtime", "U", "adcp", "U"),
+    (False, "gps", "XY", "gps", "XY"),
+    (False, "glider", "Wmod", "glider", "Wmod"),
+    (False, "glider", "UV1", "glider", "UV1"),
+    (False, "glider", "ctd_depth", "glider", "ctd_depth"),
+    (False, "glider", "ctd_time", "glider", "Mtime"),
+    (False, "D", "time", "D", "Mtime"),
+    (False, "D", "Z0", "D", "Z0"),
+    (False, "D", "UV", "D", "UV"),
+    (False, "D", "W", "D", "W"),
+    (False, "D", "Z", "D", "Z"),
+    (False, "D", "upcast", "D", "upcast"),
+    (False, "D", "UVttw_model", "D", "UVttw_model"),
+    (False, "D", "Wttw_model", "D", "Wttw_model"),
+    (False, "inverse_tmp", "d_adcp", "inverse_tmp", "d_adcp"),
+    (False, "inverse_tmp", "z", "inverse_tmp", "z"),
+    (False, "inverse_tmp", "TT", "inverse_tmp", "TT"),
+    (False, "inverse_tmp", "Z0", "inverse_tmp", "Z0"),
+    (False, "inverse_tmp", "upcast", "inverse_tmp", "upcast"),
+    (False, "inverse_tmp", "jprof", "inverse_tmp", "jprof"),
+    (False, "inverse_tmp", "Av", "inverse_tmp", "Av"),
+    (False, "inverse_tmp", "rz", "inverse_tmp", "rz"),
+    (False, "inverse_tmp", "iz", "inverse_tmp", "iz"),
+    (False, "inverse_tmp", "wz", "inverse_tmp", "wz"),
+    (False, "inverse_tmp", "AiM", "inverse_tmp", "AiM"),
+    (False, "inverse_tmp", "rrz", "inverse_tmp", "rrz"),
+    (False, "inverse_tmp", "iiz", "inverse_tmp", "iiz"),
+    (False, "inverse_tmp", "wwz", "inverse_tmp", "wwz"),
+    (False, "inverse_tmp", "Ai0", "inverse_tmp", "Ai0"),
+    (False, "inverse_tmp", "AiG", "inverse_tmp", "AiG"),
+    (False, "inverse_tmp", "G_adcp", "inverse_tmp", "G_adcp"),
+    (False, "inverse_tmp", "G_sfc", "inverse_tmp", "G_sfc"),
+    (False, "inverse_tmp", "d_sfc", "inverse_tmp", "d_sfc"),
+    (False, "inverse_tmp", "G_dac", "inverse_tmp", "G_dac"),
+    (False, "inverse_tmp", "d_dac", "inverse_tmp", "d_dac"),
+    (False, "inverse_tmp", "dd", "inverse_tmp", "dd"),
+    (False, "inverse_tmp", "Do", "inverse_tmp", "Do"),
+    (False, "inverse_tmp", "time1", "inverse_tmp", "time1"),
+    (False, "inverse_tmp", "time2", "inverse_tmp", "time2"),
+    (False, "inverse_tmp", "dd_dnup", "inverse_tmp", "dd_dnup"),
+    (False, "inverse_tmp", "Do2", "inverse_tmp", "Do2"),
+    (False, "inverse_tmp", "Dv", "inverse_tmp", "Dv"),
+    (False, "inverse_tmp", "G_model", "inverse_tmp", "G_model"),
+    (False, "inverse_tmp", "d_model", "inverse_tmp", "d_model"),
+    (False, "inverse_tmp", "G_deep", "inverse_tmp", "G_deep"),
+    (False, "inverse_tmp", "d_deep", "inverse_tmp", "d_deep"),
+    (True, "inverse_tmp", "UVttw", "inverse_tmp", "UVttw"),
+    (True, "inverse_tmp", "UVocn", "inverse_tmp", "UVocn"),
+    (False, "D", "UVocn_solution", "D", "UVocn_solution"),
+    (False, "D", "UVttw_solution", "D", "UVttw_solution"),
+    (False, "D", "UVveh_solution", "D", "UVveh_solution"),
+    (False, "D", "UVocn_adcp", "D", "UVocn_adcp"),
+    (False, "D", "UVerr", "D", "UVerr"),
+    (False, "D", "Wttw_solution", "D", "Wttw_solution"),
+    (False, "D", "Wocn_solution", "D", "Wocn_solution"),
+    (False, "profile", "UVocn", "profile", "UVocn"),
+    (False, "profile", "Wocn", "profile", "Wocn"),
+    (False, "profile", "UVttw_solution", "profile", "UVttw_solution"),
+)
+
+
+def main(cmdline_args: list[str] = sys.argv[1:]) -> None:
+    """Command line driver comparing matlab and python ADCP processing output for a single dive.
+
+    Args:
+        cmdline_args: Command line arguments to parse.
+    """
     ap = argparse.ArgumentParser(description=__doc__)
 
     ap.add_argument("--verbose", default=False, action="store_true", help="enable verbose output")
@@ -108,7 +184,7 @@ def main() -> None:
 
     ap.add_argument("python_file", help="Python hdf5 file", action=ADCPOpts.FullPathlibAction)
 
-    args = ap.parse_args()
+    args = ap.parse_args(cmdline_args)
 
     global DEBUG_PDB
     DEBUG_PDB = args.debug_pdb
@@ -122,71 +198,7 @@ def main() -> None:
     python_file = h5py.File(args.python_file, "r")
 
     # log_info(np.allclose(python_file["adcp_realtime"]["Z"],  mat_file["adcp_realtime"]["ZZ"]))
-    mat_group_name = "adcp"
-    # mat_group_name = "adcp_realtime"
-    for f_plot, py_grp, py_name, mat_grp, mat_name in (  # noqa: B007
-        (False, "adcp_realtime", "Z", mat_group_name, "Z"),
-        (False, "adcp_realtime", "Z0", mat_group_name, "Z0"),
-        (False, "adcp_realtime", "Svel", mat_group_name, "Svel"),
-        (False, "adcp_realtime", "U", mat_group_name, "U"),
-        (False, "gps", "XY", "gps", "XY"),
-        (False, "glider", "Wmod", "glider", "Wmod"),
-        (False, "glider", "UV1", "glider", "UV1"),
-        (False, "glider", "ctd_depth", "glider", "ctd_depth"),
-        (False, "glider", "ctd_time", "glider", "Mtime"),
-        (False, "D", "time", "D", "Mtime"),
-        (False, "D", "Z0", "D", "Z0"),
-        (False, "D", "UV", "D", "UV"),
-        (False, "D", "W", "D", "W"),
-        (False, "D", "Z", "D", "Z"),
-        (False, "D", "upcast", "D", "upcast"),
-        (False, "D", "UVttw_model", "D", "UVttw_model"),
-        (False, "D", "Wttw_model", "D", "Wttw_model"),
-        (False, "inverse_tmp", "d_adcp", "inverse_tmp", "d_adcp"),
-        (False, "inverse_tmp", "z", "inverse_tmp", "z"),
-        (False, "inverse_tmp", "TT", "inverse_tmp", "TT"),
-        (False, "inverse_tmp", "Z0", "inverse_tmp", "Z0"),
-        (False, "inverse_tmp", "upcast", "inverse_tmp", "upcast"),
-        (False, "inverse_tmp", "jprof", "inverse_tmp", "jprof"),
-        (False, "inverse_tmp", "Av", "inverse_tmp", "Av"),
-        (False, "inverse_tmp", "rz", "inverse_tmp", "rz"),
-        (False, "inverse_tmp", "iz", "inverse_tmp", "iz"),
-        (False, "inverse_tmp", "wz", "inverse_tmp", "wz"),
-        (False, "inverse_tmp", "AiM", "inverse_tmp", "AiM"),
-        (False, "inverse_tmp", "rrz", "inverse_tmp", "rrz"),
-        (False, "inverse_tmp", "iiz", "inverse_tmp", "iiz"),
-        (False, "inverse_tmp", "wwz", "inverse_tmp", "wwz"),
-        (False, "inverse_tmp", "Ai0", "inverse_tmp", "Ai0"),
-        (False, "inverse_tmp", "AiG", "inverse_tmp", "AiG"),
-        (False, "inverse_tmp", "G_adcp", "inverse_tmp", "G_adcp"),
-        (False, "inverse_tmp", "G_sfc", "inverse_tmp", "G_sfc"),
-        (False, "inverse_tmp", "d_sfc", "inverse_tmp", "d_sfc"),
-        (False, "inverse_tmp", "G_dac", "inverse_tmp", "G_dac"),
-        (False, "inverse_tmp", "d_dac", "inverse_tmp", "d_dac"),
-        (False, "inverse_tmp", "dd", "inverse_tmp", "dd"),
-        (False, "inverse_tmp", "Do", "inverse_tmp", "Do"),
-        (False, "inverse_tmp", "time1", "inverse_tmp", "time1"),
-        (False, "inverse_tmp", "time2", "inverse_tmp", "time2"),
-        (False, "inverse_tmp", "dd_dnup", "inverse_tmp", "dd_dnup"),
-        (False, "inverse_tmp", "Do2", "inverse_tmp", "Do2"),
-        (False, "inverse_tmp", "Dv", "inverse_tmp", "Dv"),
-        (False, "inverse_tmp", "G_model", "inverse_tmp", "G_model"),
-        (False, "inverse_tmp", "d_model", "inverse_tmp", "d_model"),
-        (False, "inverse_tmp", "G_deep", "inverse_tmp", "G_deep"),
-        (False, "inverse_tmp", "d_deep", "inverse_tmp", "d_deep"),
-        (True, "inverse_tmp", "UVttw", "inverse_tmp", "UVttw"),
-        (True, "inverse_tmp", "UVocn", "inverse_tmp", "UVocn"),
-        (False, "D", "UVocn_solution", "D", "UVocn_solution"),
-        (False, "D", "UVttw_solution", "D", "UVttw_solution"),
-        (False, "D", "UVveh_solution", "D", "UVveh_solution"),
-        (False, "D", "UVocn_adcp", "D", "UVocn_adcp"),
-        (False, "D", "UVerr", "D", "UVerr"),
-        (False, "D", "Wttw_solution", "D", "Wttw_solution"),
-        (False, "D", "Wocn_solution", "D", "Wocn_solution"),
-        (False, "profile", "UVocn", "profile", "UVocn"),
-        (False, "profile", "Wocn", "profile", "Wocn"),
-        (False, "profile", "UVttw_solution", "profile", "UVttw_solution"),
-    ):
+    for f_plot, py_grp, py_name, mat_grp, mat_name in COMPARISON_VARS:  # noqa: B007
         # py_var = python_file[py_grp][py_name]
         py_var = np.squeeze(python_file[py_grp][py_name])
         # Note: By applying np.squeeze here, matlab column vectors are converted to row.
@@ -212,9 +224,9 @@ def main() -> None:
                 _ = np.broadcast(py_var, mat_var)
             except ValueError:
                 log_error(f"{name_str} shapes don't match ({py_shape}:{mat_shape} and NOT broadcastable")
+                continue
             else:
                 log_warning(f"{name_str} shapes don't match ({py_shape}:{mat_shape}, but is broadcastable")
-            # continue
         # Matlab complex is stored as separate real and imaginary
         if py_var.dtype in (np.complex64, np.complex128) and mat_var.dtype != py_var.dtype:
             mat_var = np.squeeze(mat_var)
