@@ -145,13 +145,12 @@ def test_log_caller_info_exc_loc_appends_traceback_when_exception_active():
     assert "ValueError: boom" in result
 
 
-def test_log_caller_info_exc_loc_outside_exception_appends_none_placeholder():
-    # traceback.format_exc() returns the literal string "NoneType: None\n" (not
-    # an empty string) when there's no active exception, so the "if exc:"
-    # guard is always true in practice - documenting actual behavior rather
-    # than the "no-op" behavior the source comment implies.
+def test_log_caller_info_exc_loc_outside_exception_is_noop():
+    # sys.exc_info() is checked instead of relying on traceback.format_exc()'s
+    # truthiness, since the latter returns the literal "NoneType: None\n" even
+    # with no active exception - so nothing should be appended here.
     result = ADCPLog.__log_caller_info("oops", "exc")
-    assert result == "oops:\nNoneType: None\n"
+    assert result == "oops"
 
 
 def test_log_caller_info_stack_loc_includes_full_stack():
@@ -194,17 +193,13 @@ def test_log_uninitialized_writes_to_stderr(
     assert captured.err.rstrip().endswith("boom")
 
 
-def test_log_critical_uninitialized_writes_to_stderr_with_exc_noise(capsys: pytest.CaptureFixture[str]):
-    # log_critical's default loc is "exc", and traceback.format_exc() always
-    # returns a truthy string even with no active exception, so every
-    # log_critical() call made outside an except block gets "NoneType: None"
-    # noise appended (see test_log_caller_info_exc_loc_outside_exception_...
-    # above). Documenting actual behavior; not fixed as part of this pass -
-    # flagged separately since ADCPUtils.check_versions() hits this in
-    # production.
+def test_log_critical_uninitialized_writes_to_stderr_without_exc_noise(capsys: pytest.CaptureFixture[str]):
+    # log_critical's default loc is "exc"; called outside an except block, no
+    # traceback noise should be appended (see
+    # test_log_caller_info_exc_loc_outside_exception_is_noop above).
     ADCPLog.log_critical("boom")
     captured = capsys.readouterr()
-    assert captured.err == "CRITICAL: boom:\nNoneType: None\n\n"
+    assert captured.err == "CRITICAL: boom\n"
 
 
 def test_log_info_and_log_debug_noop_when_disabled(capsys: pytest.CaptureFixture[str]):

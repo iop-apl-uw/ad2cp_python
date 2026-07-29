@@ -30,6 +30,7 @@
 import argparse
 import pathlib
 import shutil
+from typing import cast
 
 import netCDF4
 import plotly.graph_objects
@@ -38,6 +39,24 @@ import pytest
 import ADCPUtils
 import SGADCP
 import SGADCPPlot
+
+
+class _RaisingGetncattrDataset:
+    """Proxy forwarding to a real Dataset but with getncattr made to raise.
+
+    netCDF4.Dataset is a compiled extension type; on some platform builds it
+    is an immutable type that rejects monkeypatching class attributes, so this
+    wraps an instance instead of patching netCDF4.Dataset directly.
+    """
+
+    def __init__(self, wrapped: netCDF4.Dataset) -> None:
+        self._wrapped = wrapped
+
+    def __getattr__(self, name: str) -> object:
+        return getattr(self._wrapped, name)
+
+    def getncattr(self, *_args: object, **_kwargs: object) -> None:
+        raise RuntimeError("boom")
 
 
 def _single_dive_mission(tmp_path: pathlib.Path) -> pathlib.Path:
@@ -128,7 +147,7 @@ def test_plot_ocean_velocity_missing_variable_returns_none(tmp_path: pathlib.Pat
     ds.close()
 
 
-def test_plot_ocean_velocity_generic_exception_returns_none(monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path):
+def test_plot_ocean_velocity_generic_exception_returns_none(tmp_path: pathlib.Path):
     output_nc = _build_output_nc(tmp_path)
     ds = ADCPUtils.open_netcdf_file(output_nc, mask_results=True)
     assert ds is not None
@@ -136,12 +155,9 @@ def test_plot_ocean_velocity_generic_exception_returns_none(monkeypatch: pytest.
     # getncattr is the last statement in PlotOceanVelocity's variable-reading
     # try block, so raising here (a non-KeyError) hits the generic
     # "except Exception:" branch specifically, distinct from the KeyError one.
-    def _raise(_self: netCDF4.Dataset, *_args: object, **_kwargs: object) -> None:
-        raise RuntimeError("boom")
-
-    monkeypatch.setattr(netCDF4.Dataset, "getncattr", _raise)
     opts = argparse.Namespace(min_plot_depth=0.0, max_plot_depth=1000.0)
-    assert SGADCPPlot.PlotOceanVelocity(output_nc, ds, opts) is None
+    wrapped_ds = cast(netCDF4.Dataset, _RaisingGetncattrDataset(ds))
+    assert SGADCPPlot.PlotOceanVelocity(output_nc, wrapped_ds, opts) is None
     ds.close()
 
 
