@@ -165,8 +165,10 @@ def __log_caller_info(s: object, loc: str | None) -> str:
                 module = Path(module).name  # lose extension
                 s = f"{module}({lineno:d}): {s}"
             elif loc == "exc":
-                exc = traceback.format_exc()
-                if exc:  # if no exception, nothing added
+                # traceback.format_exc() returns the literal string "NoneType: None\n"
+                # (not an empty string) when there's no active exception
+                if sys.exc_info()[0] is not None:
+                    exc = traceback.format_exc()
                     s = f"{s}:\n{exc}"
             elif loc == "stack":
                 # frame_num = 0
