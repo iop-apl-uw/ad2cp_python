@@ -54,7 +54,7 @@ def _load_raw() -> tuple[ADCPFiles.ADCPRealtimeData, ADCPFiles.SGData, ADCPFiles
     assert ds is not None
     glider, gps, adcp_realtime = ADCPFiles.ADCPReadSGNCF(ds, DIVE_NCF, param)
     param.time_limits = np.array((np.min(gps.log_gps_time), np.max(gps.log_gps_time)))
-    ADCPRealtime.TransformToInstrument(adcp_realtime)
+    ADCPRealtime.TransformToInstrument(adcp_realtime, glider, param)
     ds.close()
     return adcp_realtime, glider, gps, param
 

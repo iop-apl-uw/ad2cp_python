@@ -83,6 +83,9 @@ class Params(ExtendedDataClass.ExtendedDataClass):
     UMAX: float = field(default=0.5)
     # Is the ADCP mounted upward or downward looking
     up_looking: bool = field(default=True)
+    # For coordinateSystem==1 (instrument frame) realtime data, use the glider's own
+    # compass (heading/pitch/roll) instead of the ADCP's, before transforming to Earth frame.
+    use_glider_compass: bool = field(default=True)
 
     # Min and max time for each data set
     time_limits: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))

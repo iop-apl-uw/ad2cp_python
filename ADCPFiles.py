@@ -258,6 +258,8 @@ class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
     # CONSIDER - rename to sg_time or eng_time for clarity
     time: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     eng_head: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
+    eng_pitchAng: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
+    eng_rollAng: npt.NDArray[np.float64] = field(default_factory=(lambda: np.empty(0)))
     magnetic_variation: float = 0
     depth_avg_curr_east: float = 0
     depth_avg_curr_north: float = 0
@@ -308,6 +310,8 @@ class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
             "log_gps_lon",
             "time",
             "eng_head",
+            "eng_pitchAng",
+            "eng_rollAng",
             "magnetic_variation",
             "depth_avg_curr_east",
             "depth_avg_curr_north",

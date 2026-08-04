@@ -649,6 +649,16 @@ up_looking:
     units: bool
   nc_type: i
   decimal_pts: -1
+use_glider_compass:
+  nc_dimensions: []
+  nc_varname: ad2cp_param_use_glider_compass
+  nc_attribs:
+    FillValue: -999
+    description: For coordinateSystem==1 realtime data, use the glider's compass instead of the ADCP's own
+    coverage_content_type: auxiliaryInformation
+    units: bool
+  nc_type: i
+  decimal_pts: -1
 time_limits:
   nc_dimensions: ["time_limits_dim"]
   nc_varname: ad2cp_param_time_limits

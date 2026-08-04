@@ -231,7 +231,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
 
         # Transform velocites to instrument frame
         try:
-            ADCPRealtime.TransformToInstrument(adcp_realtime)
+            ADCPRealtime.TransformToInstrument(adcp_realtime, glider, param)
         except Exception:
             DEBUG_PDB_F()
             log_error("Problem transforming compass data", "exc")
