@@ -331,6 +331,7 @@ def main(
 
     mission_var_arrs = {}
     non_nans = []
+
     for k, is_profile in mission_vars.items():
         try:
             mission_var_arrs[k] = np.hstack(mission_accums[k])
@@ -338,8 +339,8 @@ def main(
                 tmp = np.logical_not(np.isnan(mission_var_arrs[k]))
                 # log_info(f"{k}:{np.shape(tmp)}:{tmp.dtype}")
                 non_nans.append(tmp)
-        except ValueError:
-            log_warning(f"No data found for variable {k} - skipping")
+        except ValueError as e:
+            log_warning(f"No data found for variable {k} ({e})- skipping")
             continue
 
     # Find the deepest data for profile
