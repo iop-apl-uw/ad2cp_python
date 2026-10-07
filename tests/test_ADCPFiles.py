@@ -285,3 +285,104 @@ def test_adcp_read_sgncf(tmp_path: pathlib.Path):
     assert isinstance(adcp_realtime, ADCPFiles.ADCPRealtimeData)
     assert glider.dive == 7
     assert adcp_realtime.U.shape == (3, 2)
+
+
+# --- dives without the glider data the ADCP processing needs ---------------
+
+# What MakeDiveProfiles leaves out when it bails before CTD processing
+# (sg267 SG267_WHIRLS_CRUISE, dead Legato, 2026-08-29..09-07)
+_NO_CTD = (
+    "longitude",
+    "latitude",
+    "ctd_depth",
+    "ctd_time",
+    "temperature",
+    "salinity",
+    "speed",
+    "vert_speed",
+    "sound_velocity",
+    "depth_avg_curr_east",
+    "depth_avg_curr_north",
+)
+
+
+def _init_glider(ncf: pathlib.Path, param: ADCPConfig.Params | None = None) -> ADCPFiles.SGData:
+    ds = netCDF4.Dataset(ncf, "r")
+    ds.set_auto_mask(False)
+    try:
+        glider = ADCPFiles.SGData()
+        glider.init(ds, ncf, param or ADCPConfig.Params(), ADCPFiles.GPSData())
+    finally:
+        ds.close()
+    return glider
+
+
+def test_sgdata_init_no_ctd_results_raises_missing_dive_data(
+    tmp_path: pathlib.Path, caplog: pytest.LogCaptureFixture, capsys: pytest.CaptureFixture[str]
+):
+    """One exception naming every missing required variable - not a traceback per variable."""
+    ncf = tmp_path / "p2670294.nc"
+    _make_glider_nc(ncf, omit=_NO_CTD)
+    with pytest.raises(ADCPFiles.MissingDiveData) as excinfo:
+        _init_glider(ncf)
+    assert excinfo.value.args[0] == (
+        "p2670294.nc: no ctd_time, ctd_depth, sound_velocity, depth_avg_curr_east, "
+        "depth_avg_curr_north, speed, vert_speed - skipping ADCP processing for this dive"
+    )
+    assert isinstance(excinfo.value, KeyError)  # SGADCP skips a dive on KeyError
+    captured = capsys.readouterr()
+    assert "Traceback" not in caplog.text + captured.out + captured.err
+
+
+def test_sgdata_init_missing_scalar_raises_missing_dive_data(tmp_path: pathlib.Path):
+    """A missing scalar used to escape init as a bare KeyError."""
+    ncf = tmp_path / "glider.nc"
+    _make_glider_nc(ncf, omit=("depth_avg_curr_east",))
+    with pytest.raises(ADCPFiles.MissingDiveData, match="no depth_avg_curr_east -"):
+        _init_glider(ncf)
+
+
+@pytest.mark.parametrize(
+    "vehicle_model, omit, raises",
+    [
+        ("gsm", ("speed", "vert_speed"), False),
+        ("gsm", ("vert_speed_gsm",), True),
+        ("FlightModel", ("speed_gsm", "vert_speed_gsm"), False),
+        ("FlightModel", ("vert_speed",), True),
+    ],
+)
+def test_sgdata_init_speeds_required_by_vehicle_model(
+    tmp_path: pathlib.Path, vehicle_model: str, omit: tuple[str, ...], raises: bool
+):
+    ncf = tmp_path / "glider.nc"
+    _make_glider_nc(ncf, omit=omit)
+    param = ADCPConfig.Params(VEHICLE_MODEL=vehicle_model)
+    if raises:
+        with pytest.raises(ADCPFiles.MissingDiveData, match=f"no {omit[0]} -"):
+            _init_glider(ncf, param)
+    else:
+        _init_glider(ncf, param)
+
+
+def test_sgdata_init_missing_optional_is_one_warning(
+    tmp_path: pathlib.Path, caplog: pytest.LogCaptureFixture, capsys: pytest.CaptureFixture[str]
+):
+    ncf = tmp_path / "glider.nc"
+    _make_glider_nc(ncf, omit=("temperature", "salinity"))
+    glider = _init_glider(ncf)
+    assert glider.temperature.size == 0 and glider.salinity.size == 0
+    # ADCPLog writes to stdout/stderr standalone; under basestation3 it's BaseLog (caplog)
+    captured = capsys.readouterr()
+    logged = caplog.text + captured.out + captured.err
+    assert "glider.nc: no temperature, salinity, eng_pitchAng, eng_rollAng - continuing without them" in logged
+    assert "Traceback" not in logged
+
+
+def test_sgdata_init_no_gps_after_dive_raises(tmp_path: pathlib.Path):
+    """sg267 dive 20 (2026-07-18): no fix after the last ctd_time - min() of an empty array."""
+    ncf = tmp_path / "p2670020.nc"
+    _make_glider_nc(ncf)
+    with netCDF4.Dataset(ncf, "a") as ds:
+        ds.variables["log_gps_time"][:] = [50.0, 150.0]  # both before ctd_time[-1] = 200
+    with pytest.raises(ADCPFiles.MissingDiveData, match="p2670020.nc: no GPS fix after the dive"):
+        _init_glider(ncf)

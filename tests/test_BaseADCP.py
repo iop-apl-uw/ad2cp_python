@@ -73,3 +73,42 @@ def test_extension(caplog: pytest.LogCaptureFixture):
     for v, t in var_dict.items():
         assert v in dsi.variables
         assert dsi.variables[v].dtype == t
+
+
+def test_extension_skips_dive_without_ctd_results(
+    tmp_path: pathlib.Path, caplog: pytest.LogCaptureFixture, capsys: pytest.CaptureFixture[str]
+):
+    """A partial dive file (MakeDiveProfiles bailed before CTD processing) is skipped with one line.
+
+    sg267 SG267_WHIRLS_CRUISE (dead Legato, 2026-08-29..09-07) logged 11 tracebacks per dive here.
+    """
+    BaseADCP = pytest.importorskip("BaseADCP", reason="Not installed under basestation3")
+
+    mission_dir = tmp_path / "mission_dir"
+    mission_dir.mkdir()
+    no_ctd = [
+        "longitude",
+        "latitude",
+        "ctd_depth",
+        "ctd_time",
+        "temperature",
+        "salinity",
+        "speed",
+        "vert_speed",
+        "sound_velocity",
+        "depth_avg_curr_east",
+        "depth_avg_curr_north",
+    ]
+    with xr.open_dataset(
+        pathlib.Path("testdata/sg171_EKAMSAT_Apr24/p1710100.nc"), decode_times=False, mask_and_scale=False
+    ) as ds:
+        ds.drop_vars([v for v in no_ctd if v in ds.variables]).to_netcdf(mission_dir / "p1710100.nc")
+
+    assert BaseADCP.main(["--mission_dir", str(mission_dir)]) == 0
+
+    captured = capsys.readouterr()
+    logged = caplog.text + captured.out + captured.err
+    assert "p1710100.nc: no ctd_time, ctd_depth, sound_velocity" in logged
+    assert "skipping ADCP processing for this dive" in logged
+    assert "Problem loading data" not in logged
+    assert "Traceback" not in logged

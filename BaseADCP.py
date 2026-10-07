@@ -452,6 +452,12 @@ def main(
         # Read real-time
         try:
             glider, gps, adcp_realtime = ADCPFiles.ADCPReadSGNCF(ds, dive_nc_file_name, param)
+        except ADCPFiles.MissingDiveData as e:
+            # The dive file lacks the glider data the inverse needs (e.g. a partial
+            # file from a failed MakeDiveProfiles run) - say what, not a traceback
+            log_error(e.args[0])
+            ds.close()
+            continue
         except Exception:
             DEBUG_PDB_F()
             log_error("Problem loading data", "exc")

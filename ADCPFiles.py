@@ -46,9 +46,17 @@ import ADCPUtils
 import ExtendedDataClass
 
 if "BaseLog" in sys.modules:
-    from BaseLog import log_error  # ty: ignore[unresolved-import]
+    from BaseLog import log_error, log_warning  # ty: ignore[unresolved-import]
 else:
-    from ADCPLog import log_error
+    from ADCPLog import log_error, log_warning
+
+
+class MissingDiveData(KeyError):
+    """A dive file lacks glider data the ADCP processing needs, so the dive is skipped.
+
+    A KeyError, so callers that already skip a dive on KeyError (SGADCP) keep
+    doing so. args[0] is the full message, naming the file and what's missing.
+    """
 
 
 def fetch_var(x: netCDF4.Variable) -> Any:  # noqa: ANN401 -- genuinely dynamic: scalar or ndarray depending on x.shape
@@ -317,6 +325,38 @@ class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
             "depth_avg_curr_north",
         ]
 
+    def required_vars(self, param: ADCPConfig.Params) -> list[str]:
+        """Lists the dive file variables the ADCP processing can't do without.
+
+        The rest of load_vars() is optional: position, temperature and salinity
+        only feed mission-level products, the other vehicle model's speeds go
+        unused, and eng_pitchAng/eng_rollAng are only used with
+        use_glider_compass on instrument-frame data. A dive without them is
+        still processed.
+
+        Args:
+            param: Inverse processing parameters (selects the vehicle model's speeds).
+
+        Returns:
+            Variable names, with "trajectory" standing in for ``dive``.
+        """
+        speeds = ["speed_gsm", "vert_speed_gsm"] if param.VEHICLE_MODEL == "gsm" else ["speed", "vert_speed"]
+        return [
+            "trajectory",
+            "ctd_time",
+            "ctd_depth",
+            "sound_velocity",
+            "time",
+            "eng_head",
+            "magnetic_variation",
+            "log_gps_time",
+            "log_gps_lat",
+            "log_gps_lon",
+            "depth_avg_curr_east",
+            "depth_avg_curr_north",
+            *speeds,
+        ]
+
     def init(self, ds: netCDF4.Dataset, ncf_name: pathlib.Path, param: ADCPConfig.Params, gps: GPSData) -> None:
         """Loads glider variables from a dive netCDF file and derives GPS/flight-model quantities.
 
@@ -329,14 +369,28 @@ class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
             ncf_name: Path to ``ds``, used to locate the next dive's netCDF file.
             param: Inverse processing parameters (selects the vehicle flight model).
             gps: GPS data for the dive, updated in place.
+
+        Raises:
+            MissingDiveData: The dive lacks a required variable (e.g. no CTD
+                results after MakeDiveProfiles bailed out - sg267's dead Legato),
+                or has no GPS fix before or after the dive.
         """
+        missing = [v for v in self.required_vars(param) if v not in ds.variables]
+        if missing:
+            raise MissingDiveData(f"{ncf_name.name}: no {', '.join(missing)} - skipping ADCP processing for this dive")
+
+        absent_optional = []
         for var_n in self.load_vars():
             v = self[var_n]
             if isinstance(v, np.ndarray):
+                if var_n not in ds.variables:
+                    # Optional - required ones were checked above
+                    absent_optional.append(var_n)
+                    continue
                 try:
                     self[var_n] = ds.variables[var_n][:]
                 except Exception:
-                    log_error(f"Failed to load {var_n}", "exc")
+                    log_error(f"Failed to load {var_n} from {ncf_name}", "exc")
                     continue
                 if var_n.endswith("_qc"):
                     self[var_n] = np.array(list(map(ord, self[var_n])), np.float64) - ord("0")
@@ -350,6 +404,8 @@ class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
                 self[var_n] = ds.variables[var_n][0]
             else:
                 log_error(f"Don't know how to handle {var_n}")
+        if absent_optional:
+            log_warning(f"{ncf_name.name}: no {', '.join(absent_optional)} - continuing without them")
         for var_n in self.load_vars():
             if var_n.endswith("_qc"):
                 continue
@@ -398,9 +454,17 @@ class SGData(ExtendedDataClass.ExtendedDataClass, SaveToHDF5):
         # gps.XY = latlon2xy(gps.LL,LL0)*1e3; % m
 
         # Last GPS before the dive
-        ig1 = np.where(gps.log_gps_time < self.ctd_time[0])[0].max()
+        before = np.where(gps.log_gps_time < self.ctd_time[0])[0]
         # First GPS after the dive
-        ig2 = np.where(gps.log_gps_time > self.ctd_time[-1])[0].min()
+        after = np.where(gps.log_gps_time > self.ctd_time[-1])[0]
+        if not before.size or not after.size:
+            # e.g. sg267 dive 20 (2026-07-18): no fix after the last ctd_time
+            raise MissingDiveData(
+                f"{ncf_name.name}: no GPS fix {'before' if not before.size else 'after'} the dive"
+                " - skipping ADCP processing for this dive"
+            )
+        ig1 = before.max()
+        ig2 = after.min()
         # Origin
         LL0 = gps.LL[ig1]
         self.time0 = gps.log_gps_time[ig1]
