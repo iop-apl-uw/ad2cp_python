@@ -72,7 +72,10 @@ To enable plotting of the whole misison netcdf file (see ```adcp/BaseADCPMission
 
 	ln -s /usr/local/basestation3/adcp/MissionOcean.py /usr/local/basestation3/Plotting/local/MissionOcean.py	
 
-*Note* You will also need to make entries in the Seaglider's mission `sections.yml` file to enable plotting - please see the sample [sections.yml](docs/sections.yml) for more details.
+*Note* You will also need to make entries in the Seaglider's mission `sections.yml` file to enable plotting - please see the sample [sections.yml](docs/sections.yml) for more details. The ADCP plots read the `adcp_variables` entries (plus the shared `defaults` and `sections`); they're checked
+with basestation's `SectionsModel`, so the keys are the same as for `variables` (the list is
+`SectionsModel.ENTRY_KEYS`), and a bad key or value is reported (`SECTIONS_CONFIG` alert) and ignored. Check a
+mission's file with `SectionsModel.py check sections.yml` from the basestation directory.
 
 # Use
 

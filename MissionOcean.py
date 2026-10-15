@@ -41,7 +41,6 @@ import gsw
 import numpy as np
 import plotly.graph_objects
 import xarray as xr
-import yaml
 from plotly.subplots import make_subplots
 
 # pylint: disable=wrong-import-position
@@ -51,6 +50,7 @@ if typing.TYPE_CHECKING:
     import BaseOpts
 
 import PlotUtilsPlotly
+import SectionsModel
 import Utils
 import Utils2
 from BaseLog import log_error, log_info, log_warning
@@ -70,11 +70,11 @@ def getValue(
 ) -> typing.Any:  # noqa: ANN401 -- see fallback
     """Looks up a section/variable override value, falling back to a default.
 
-    Checks ``x["sections"][sk]``, then ``x["adcp_variables"][vk]``, then
-    ``x["defaults"]``, in that order, for key ``v``.
+    basestation's SectionsModel.get_value on adcp_variables: ``x["sections"][sk]``,
+    then ``x["adcp_variables"][vk]``, then ``x["defaults"]``, in that order, for key ``v``.
 
     Args:
-        x: Parsed sections.yml content.
+        x: The checked sections.yml (SectionsModel.check_file).
         v: Setting name to look up (e.g. ``"start"``, ``"colormap"``).
         sk: Section key to check first.
         vk: ADCP variable key to check second.
@@ -83,16 +83,7 @@ def getValue(
     Returns:
         The first matching value found, or ``fallback``.
     """
-    if v in x["sections"][sk]:
-        y = x["sections"][sk][v]
-    elif v in x["adcp_variables"][vk]:
-        y = x["adcp_variables"][vk][v]
-    elif v in x["defaults"]:
-        y = x["defaults"][v]
-    else:
-        y = fallback
-
-    return y
+    return SectionsModel.get_value(x, v, sk, vk, fallback, "adcp_variables")
 
 
 @plotmissionsingle
@@ -137,19 +128,21 @@ def mission_oceanvelocityprofile(
     if not ncname.exists():
         return (ret_figs, ret_plots)
 
-    try:
-        with section_file_name.open("r") as f:
-            section_dict = yaml.safe_load(f.read())
-    except Exception:
-        log_error(f"Problem processing {section_file_name}", "exc")
+    # Checked by basestation's SectionsModel (warn and proceed: a bad key or value is left
+    # out). Only the adcp_variables warnings are reported here - mission_profiles reports
+    # the shared defaults/sections - and an unusable file is mission_profiles' to alert on.
+    section_dict, warnings, problems = SectionsModel.check_file(
+        section_file_name, "adcp_variables", report_levels={"adcp_variables"}, require_variables=False
+    )
+    for warning in warnings:
+        log_warning(warning, alert="SECTIONS_CONFIG")
+    if section_dict is None:
+        for problem in problems:
+            log_warning(f"{problem} - no ADCP section plots")
         return (ret_figs, ret_plots)
 
-    if "adcp_variables" not in section_dict or len(section_dict["adcp_variables"]) == 0:
+    if not section_dict["adcp_variables"]:
         log_info(f"No 'adcp_variables' key found in {section_file_name} - not plotting")
-        return (ret_figs, ret_plots)
-
-    if "sections" not in section_dict or len(section_dict["sections"]) == 0:
-        log_error(f"No 'sections' key found in {section_file_name} - not plotting")
         return (ret_figs, ret_plots)
 
     if dbcon is None:
